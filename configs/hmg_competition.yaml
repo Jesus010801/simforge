@@ -1,0 +1,76 @@
+project:
+
+  name: hmg_competition
+  description: Competitive inhibition system
+
+
+components:
+
+  - id: protein_1
+    role: protein
+    file: hmg.pdb
+
+    biological_context:
+      - membrane_associated
+      - partially_truncated
+
+  - id: substrate_1
+    role: substrate
+    file: hmgcoa.sdf
+
+  - id: ligand_1
+    role: competitive_ligand
+    file: xanthone.sdf
+
+
+environment:
+
+  membrane:
+    enabled: false
+
+  solvent:
+    water_model: tip3p
+
+  ions:
+    concentration: 0.15
+
+
+forcefields:
+
+  protein: charmm36
+  ligands: cgenff
+
+
+simulation_objectives:
+
+  - competitive_binding
+  - active_site_stability
+
+
+restraints:
+
+  - type: terminal_restraints
+    target: protein_1
+
+
+analysis:
+
+  - type: rmsd
+
+  - type: hydrogen_bonds
+
+  - type: distance_analysis
+
+    selection:
+      group1: substrate_1
+      group2: ligand_1
+
+
+output:
+
+  figures:
+    format: svg
+    style: publication
+
+  reports:
+    format: pdf
