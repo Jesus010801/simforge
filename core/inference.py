@@ -11,7 +11,7 @@ Cada función recibe y retorna SystemState.
 Agregar nuevas reglas = agregar función + registrarla en run_inference().
 """
 
-from core.models import SystemState
+from core.models import SystemState, Warning, Risk, Recommendation, Severity
 
 
 # ─── 1. Inferencia de tipo de sistema ────────────────────────────────────────
@@ -56,27 +56,58 @@ def infer_biological_risks(state: SystemState) -> SystemState:
 
     # membrane_associated sin membrana habilitada
     if state.has_biological_context("membrane_associated") and not state.has_membrane():
-        state.warnings.append(
-            "membrane_associated detectado pero membrane.enabled=False. "
-            "La proteína puede mostrar inestabilidad en terminales transmembranales. "
-            "Se recomienda aplicar terminal_restraints."
-        )
+        state.warnings.append(Warning(
+            message  = "membrane_associated detectado pero membrane.enabled=False",
+            target   = "environment.membrane",
+            severity = Severity.MEDIUM,
+        ))
+        state.risks.append(Risk(
+            message  = "Inestabilidad en terminales transmembranales durante equilibración",
+            target   = "protein_1",
+            severity = Severity.HIGH,
+        ))
+        state.recommendations.append(Recommendation(
+            message = "Habilitar membrana o aplicar restraints en terminales expuestos",
+            target  = "protein_1",
+            action  = "Agregar terminal_restraints o establecer membrane.enabled=True",
+        ))
 
     # membrane_associated sin terminal_restraints
     if (state.has_biological_context("membrane_associated")
             and "terminal_restraints" not in restraint_types):
-        state.warnings.append(
-            "Proteína membrane_associated sin terminal_restraints definidos. "
-            "Los extremos transmembranales pueden desenrollarse durante equilibración."
-        )
+        state.warnings.append(Warning(
+            message  = "Proteína membrane_associated sin terminal_restraints definidos",
+            target   = "restraints",
+            severity = Severity.HIGH,
+        ))
+        state.risks.append(Risk(
+            message  = "Extremos transmembranales pueden desenrollarse durante equilibración",
+            target   = "protein_1",
+            severity = Severity.HIGH,
+        ))
+        state.recommendations.append(Recommendation(
+            message = "Definir terminal_restraints para protein_1",
+            target  = "restraints",
+            action  = "Agregar type: terminal_restraints con target: protein_1 en el YAML",
+        ))
 
     # partially_truncated
     if state.has_biological_context("partially_truncated"):
-        state.warnings.append(
-            "Proteína parcialmente truncada detectada. "
-            "Verificar que los terminales artificiales no generen artefactos. "
-            "Considerar capping (ACE/NME) en los extremos expuestos."
-        )
+        state.warnings.append(Warning(
+            message  = "Proteína parcialmente truncada detectada",
+            target   = "protein_1",
+            severity = Severity.MEDIUM,
+        ))
+        state.risks.append(Risk(
+            message  = "Terminales artificiales pueden generar artefactos estructurales",
+            target   = "protein_1",
+            severity = Severity.MEDIUM,
+        ))
+        state.recommendations.append(Recommendation(
+            message = "Verificar y aplicar capping en terminales artificiales",
+            target  = "protein_1",
+            action  = "Aplicar ACE/NME en extremos expuestos durante protein_builder",
+        ))
 
     return state
 
@@ -89,18 +120,30 @@ def infer_analysis_gaps(state: SystemState) -> SystemState:
     # competitive-inhibition requiere distance_analysis
     if (state.inferred_system_type == "competitive-inhibition"
             and "distance_analysis" not in analysis_types):
-        state.warnings.append(
-            "Sistema competitive-inhibition sin distance_analysis definido. "
-            "Se recomienda monitorear distancias substrate↔active_site y ligand↔active_site."
-        )
+        state.warnings.append(Warning(
+            message  = "Sistema competitive-inhibition sin distance_analysis definido",
+            target   = "analysis",
+            severity = Severity.MEDIUM,
+        ))
+        state.recommendations.append(Recommendation(
+            message = "Agregar distance_analysis para monitorear competencia en sitio activo",
+            target  = "analysis",
+            action  = "Definir distance_analysis con group1: substrate_1 y group2: ligand_1",
+        ))
 
     # distance_analysis sin selection explícita
     for da in state.analysis:
         if da.type == "distance_analysis" and da.selection is None:
-            state.warnings.append(
-                "distance_analysis definido sin selection explícita. "
-                "Especificar group1 y group2 para substrate y competitive_ligand."
-            )
+            state.warnings.append(Warning(
+                message  = "distance_analysis sin selection explícita",
+                target   = "analysis.distance_analysis",
+                severity = Severity.LOW,
+            ))
+            state.recommendations.append(Recommendation(
+                message = "Especificar group1 y group2 en distance_analysis",
+                target  = "analysis.distance_analysis",
+                action  = "Agregar selection con group1: substrate_1 y group2: ligand_1",
+            ))
 
     return state
 
