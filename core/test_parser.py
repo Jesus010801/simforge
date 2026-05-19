@@ -57,6 +57,8 @@ if proteins:
             print(f"  HETATM       : {pv.has_hetatm}")
             print(f"  Faltantes    : {len(pv.missing_residues)}")
             print(f"  Terminales   : {pv.exposed_termini}")
+            print(f"  Oligómero    : {pv.likely_oligomer} → {pv.oligomeric_state}")
+            print(f"  Tamaño cadenas: {pv.chain_sizes}")
 
             print(f"\n[yellow]Warnings ({len(pv.warnings)})[/yellow]")
             for w in pv.warnings:
