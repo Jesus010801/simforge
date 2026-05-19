@@ -165,6 +165,69 @@ for role in ligand_roles:
                 f"  Param. dif.  : "
                 f"{lv.parametrization_difficulty}"
             )
+            
+
+            # ─── Geometry / Polarity descriptors ───────────────────────────
+
+            if hasattr(lv, "geometry") and lv.geometry:
+
+                geom = lv.geometry
+
+                print(
+                    f"  Shape          : "
+                    f"{geom.shape.shape_class.value}"
+                )
+
+                print(
+                    f"  Planario       : "
+                    f"{geom.planarity.is_planar} "
+                    f"({geom.planarity.rmsd_from_plane:.3f}Å)"
+                )
+
+                print(
+                    f"  Rg             : "
+                    f"{geom.shape.radius_of_gyration:.2f}Å"
+                )
+
+            if hasattr(lv, "polarity") and lv.polarity:
+
+                pol = lv.polarity
+
+                print(
+                    f"  logP           : "
+                    f"{pol.logp_estimate:.1f} "
+                    f"({pol.logp_class})"
+                )
+
+                print(
+                    f"  HBD/HBA        : "
+                    f"{pol.hbond_donors} / "
+                    f"{pol.hbond_acceptors}"
+                )
+
+                print(
+                    f"  Lipinski       : "
+                    f"{pol.lipinski_compliant}"
+                )
+
+                if pol.functional_groups:
+
+                    fg_str = ", ".join(
+                        sorted({
+                            fg.name
+                            for fg in pol.functional_groups
+                        })
+                    )
+
+                    print(
+                        f"  Grupos         : "
+                        f"{fg_str}"
+                    )
+
+                print(
+                    f"  Solubilidad    : "
+                    f"{pol.solubility_class}"
+                )
 
             # ─── Warnings ────────────────────────────────────────────────────
 
