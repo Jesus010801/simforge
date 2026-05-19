@@ -71,3 +71,28 @@ validators/ligand_validator.py
 - Detectar: número de átomos, carga formal, presencia de anillos aromáticos
 - Verificar que el archivo SDF es parseable
 - Generar LigandValidationResult con mismo patrón de contrato
+## Completado
+- core/ontology.py
+- core/models.py
+- core/inference.py
+- core/parser.py
+- validators/protein_validator.py  — completo y funcionando
+- validators/ligand_validator.py   — reasoning engine completo, parsers pendientes
+
+## Próximo paso INMEDIATO — primera tarea de la siguiente sesión
+Refactorizar ligand_validator para arquitectura de parsers modulares:
+
+validators/
+├── ligand_validator.py        ← interfaz pública + reasoning engine
+└── ligand_parsers/
+    ├── __init__.py
+    ├── sdf_parser.py          ← extraer _parse_sdf() del validator actual
+    └── pdb_parser.py          ← construir nuevo, sin CONECT
+
+## Decisión de diseño pendiente
+Los PDB de ligandos NO tienen sección CONECT.
+Sin CONECT: no hay conectividad explícita.
+El pdb_parser inferirá conectividad por distancia entre átomos
+(si dos átomos están a <1.9Å se asume enlace).
+Aromaticidad se infiere por geometría plana + elementos típicos (C,N,O en anillo).
+Esto es heurística, no química exacta — RDKit lo resolverá correctamente después.
