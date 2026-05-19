@@ -262,11 +262,12 @@ def validate_protein(path: str | Path) -> ProteinValidationResult:
             result.recommendations.append(Recommendation(
                 message = (
                     f"Decidir unidad de simulación: "
-                    f"monómero funcional (1 cadena) o complejo completo ({n} cadenas)"
+                    f"dimero funcional (2 cadenas) o complejo completo ({n} cadenas)"
                 ),
                 target  = str(path.name),
                 action  = (
-                    f"Para monómero: extraer cadena A con 'grep ^ATOM hmg.pdb | awk $5==\"A\"'. "
+                    f"Para unidad mínima funcional: usar cadenas A/B o C/D. "
+                    f"Ejemplo para extraer A/B:'grep ^ATOM hmg.pdb | awk '$5==\"A\" || $5==\"B\"''. "
                     f"Para complejo completo: usar el PDB tal como está. "
                     f"HMG-CoA reductasa es funcionalmente activa como {classification}."
                 ),
