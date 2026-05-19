@@ -77,3 +77,168 @@ if proteins:
             print(f"  [yellow]Archivo no encontrado: {pdb_path}[/yellow]")
 else:
     print("  [yellow]No hay componentes con role: protein[/yellow]")
+
+# ─── Ligand Validator ─────────────────────────────────────────────────────────
+
+from pathlib import Path
+from validators.ligand_validator import validate_ligand
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+print("\n[bold green]── Ligand Validator ──[/bold green]\n")
+
+ligand_roles = [
+    "substrate",
+    "competitive_ligand",
+]
+
+for role in ligand_roles:
+
+    components = state.get_components_by_role(role)
+
+    for comp in components:
+
+        # ─── Resolver ruta absoluta ──────────────────────────────────────────
+        lig_path = BASE_DIR / comp.file
+
+        if lig_path.exists():
+
+            lv = validate_ligand(
+                lig_path,
+                role = comp.role,
+            )
+
+            print(
+                f"  Componente   : "
+                f"{comp.id} [{lv.role}]"
+            )
+
+            print(
+                f"  Archivo      : "
+                f"{lv.source_file}"
+            )
+
+            print(
+                f"  Parser       : "
+                f"{lv.parser_used}"
+            )
+
+            print(
+                f"  Completo     : "
+                f"{lv.is_complete}"
+            )
+
+            print(
+                f"  Átomos       : "
+                f"{lv.n_atoms}"
+                f"  |  Bonds: {lv.n_bonds}"
+            )
+
+            print(
+                f"  Elementos    : "
+                f"{sorted(lv.atom_elements)}"
+            )
+
+            print(
+                f"  Carga neta   : "
+                f"{lv.net_charge:+d}"
+            )
+
+            print(
+                f"  Aromático    : "
+                f"{lv.has_aromatic} "
+                f"({lv.aromatic_atoms} átomos)"
+            )
+
+            print(
+                f"  Flexibilidad : "
+                f"{lv.estimated_flexibility} "
+                f"({lv.n_rotatable_bonds} rot. bonds)"
+            )
+
+            print(
+                f"  Polaridad    : "
+                f"{lv.estimated_polarity}"
+            )
+
+            print(
+                f"  Param. dif.  : "
+                f"{lv.parametrization_difficulty}"
+            )
+
+            # ─── Warnings ────────────────────────────────────────────────────
+
+            print(
+                f"\n  [yellow]"
+                f"Warnings ({len(lv.warnings)})"
+                f"[/yellow]"
+            )
+
+            for w in lv.warnings:
+
+                print(
+                    f"    ⚠  "
+                    f"[{w.severity.value}] "
+                    f"{w.message}"
+                    + (
+                        f" → {w.target}"
+                        if w.target
+                        else ""
+                    )
+                )
+
+            # ─── Risks ───────────────────────────────────────────────────────
+
+            print(
+                f"  [red]"
+                f"Risks ({len(lv.risks)})"
+                f"[/red]"
+            )
+
+            for r in lv.risks:
+
+                print(
+                    f"    ✖  "
+                    f"[{r.severity.value}] "
+                    f"{r.message}"
+                    + (
+                        f" → {r.target}"
+                        if r.target
+                        else ""
+                    )
+                )
+
+            # ─── Recommendations ─────────────────────────────────────────────
+
+            print(
+                f"  [cyan]"
+                f"Recommendations "
+                f"({len(lv.recommendations)})"
+                f"[/cyan]"
+            )
+
+            for rec in lv.recommendations:
+
+                print(
+                    f"    →  "
+                    f"{rec.message}"
+                )
+
+                if rec.action:
+
+                    print(
+                        f"       [dim]"
+                        f"{rec.action}"
+                        f"[/dim]"
+                    )
+
+            print()
+
+        else:
+
+            print(
+                f"  [yellow]"
+                f"Archivo no encontrado: "
+                f"{lig_path}"
+                f"[/yellow]\n"
+            )

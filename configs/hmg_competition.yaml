@@ -16,11 +16,11 @@ components:
 
   - id: substrate_1
     role: substrate
-    file: hmgcoa.sdf
+    file: hmgcoa.pdb
 
   - id: ligand_1
     role: competitive_ligand
-    file: xanthone.sdf
+    file: A1.pdb
 
 
 environment:
