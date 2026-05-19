@@ -8,14 +8,6 @@ from core.inference import run_inference
 
 
 def parse_yaml(path: str | Path) -> SystemState:
-    """
-    Lee un YAML y retorna un SystemState completamente inferido.
-
-    Orden garantizado:
-      1. Cargar YAML
-      2. Validar estructura con Pydantic
-      3. Ejecutar pipeline de inferencia biológica
-    """
     path = Path(path)
 
     if not path.exists():
@@ -27,11 +19,19 @@ def parse_yaml(path: str | Path) -> SystemState:
     with open(path, "r") as f:
         raw = yaml.safe_load(f)
 
+    # Resolver paths de componentes relativos al YAML
+    base_dir = path.parent
+    if "components" in raw:
+        for component in raw["components"]:
+            if "file" in component:
+                component_path = Path(component["file"])
+                if not component_path.is_absolute():
+                    component["file"] = str(base_dir / component_path)
+
     try:
         state = SystemState(**raw)
     except Exception as e:
         raise ValueError(f"Error validando YAML:\n{e}")
 
     state = run_inference(state)
-
     return state
