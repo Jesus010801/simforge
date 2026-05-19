@@ -15,6 +15,30 @@ from core.ontology import (
     SIMULATION_GOALS,
 )
 
+from enum import Enum
+
+class Severity(str, Enum):
+    LOW    = "low"
+    MEDIUM = "medium"
+    HIGH   = "high"
+
+
+class Warning(BaseModel):
+    message:  str
+    target:   Optional[str] = None
+    severity: Severity = Severity.MEDIUM
+
+
+class Risk(BaseModel):
+    message:  str
+    target:   Optional[str] = None
+    severity: Severity = Severity.HIGH
+
+
+class Recommendation(BaseModel):
+    message:  str
+    target:   Optional[str] = None
+    action:   Optional[str] = None
 
 class ComponentModel(BaseModel):
     id: str
@@ -159,8 +183,9 @@ class SystemState(BaseModel):
     output: OutputModel = OutputModel()
 
     # Estado interno — enriquecido por inference.py
-    warnings: list[str] = []
-    risks: list[str] = []
+    warnings: list[Warning] = []
+    risks: list[Risk] = []
+    recommendations: list[Recommendation] = []
     inferred_system_type: Optional[str] = None
 
     @field_validator("simulation_objectives")
