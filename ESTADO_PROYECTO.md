@@ -27,3 +27,21 @@ sustrato HMG-CoA, inhibidor xantona, sin membrana, charmm36 + cgenff
 ## Para retomar con Claude
 Pega este archivo al inicio de la conversación y di:
 "Continuamos SimForge. Lee el estado y seguimos desde el próximo paso."
+## Completado
+- core/ontology.py
+- core/models.py      — SystemState, Warning, Risk, Recommendation, Severity
+- core/inference.py   — pipeline: infer_system_type → infer_biological_risks → infer_analysis_gaps
+- core/parser.py      — YAML → SystemState → run_inference()
+
+## Decisiones tomadas
+- Pydantic solo estructura, inferencia separada en inference.py
+- Tres categorías distintas: warnings / risks / recommendations
+- Cada item tiene: message, target, severity (warnings/risks) o action (recommendations)
+- competitive-inhibition inferido por roles: protein + substrate + competitive_ligand
+
+## Próximo paso
+Semana 3-4: protein_validator.py
+- Detectar residuos faltantes
+- Verificar terminales
+- Detectar clashes básicos
+- Integrar output al SystemState como ValidationResult

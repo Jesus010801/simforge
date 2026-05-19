@@ -35,3 +35,43 @@ for rec in state.recommendations:
     print(f"  →  {rec.message}")
     if rec.action:
         print(f"     [dim]{rec.action}[/dim]")
+
+# ─── Protein Validator ────────────────────────────────────────────────────────
+from validators.protein_validator import validate_protein
+from pathlib import Path
+
+print("\n[bold green]── Protein Validator ──[/bold green]\n")
+
+proteins = state.get_components_by_role("protein")
+
+if proteins:
+    for protein in proteins:
+        pdb_path = Path(protein.file)
+        if pdb_path.exists():
+            pv = validate_protein(pdb_path)
+            print(f"  Componente   : {protein.id}")
+            print(f"  Archivo      : {pv.source_file}")
+            print(f"  Cadenas      : {pv.chains}")
+            print(f"  Residuos     : {pv.total_residues}")
+            print(f"  Hidrógenos   : {pv.has_hydrogens}")
+            print(f"  HETATM       : {pv.has_hetatm}")
+            print(f"  Faltantes    : {len(pv.missing_residues)}")
+            print(f"  Terminales   : {pv.exposed_termini}")
+
+            print(f"\n[yellow]Warnings ({len(pv.warnings)})[/yellow]")
+            for w in pv.warnings:
+                print(f"  ⚠  [{w.severity.value}] {w.message}")
+
+            print(f"\n[red]Risks ({len(pv.risks)})[/red]")
+            for r in pv.risks:
+                print(f"  ✖  [{r.severity.value}] {r.message}")
+
+            print(f"\n[cyan]Recommendations ({len(pv.recommendations)})[/cyan]")
+            for rec in pv.recommendations:
+                print(f"  →  {rec.message}")
+                if rec.action:
+                    print(f"     [dim]{rec.action}[/dim]")
+        else:
+            print(f"  [yellow]Archivo no encontrado: {pdb_path}[/yellow]")
+else:
+    print("  [yellow]No hay componentes con role: protein[/yellow]")
