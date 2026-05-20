@@ -92,6 +92,28 @@ echo "Analysis complete"
         )
 
         # ────────────────────────────────────────────────────────────────────
+        # Metadata
+        # ────────────────────────────────────────────────────────────────────
+
+        metadata = {
+            "step_id":          step.step_id,
+            "stage":            step.stage.value,
+            "engine":           step.engine,
+            "step_type":        step.step_type.value,
+            "analysis_type":    analysis_type,
+            "blocking":         step.blocking,
+            "expected_outputs": [
+                "plots/",
+                "tables/",
+                "outputs/",
+            ],
+        }
+
+        (step_dir / "metadata.json").write_text(
+            json.dumps(metadata, indent=4)
+        )
+
+        # ────────────────────────────────────────────────────────────────────
         # Output folders
         # ────────────────────────────────────────────────────────────────────
 

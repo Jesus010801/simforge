@@ -1,0 +1,13 @@
+{
+    "step_id": "analysis_hydrogen_bonds",
+    "stage": "analysis",
+    "engine": "analysis_pipeline",
+    "step_type": "automatic",
+    "analysis_type": "hydrogen_bonds",
+    "blocking": false,
+    "expected_outputs": [
+        "plots/",
+        "tables/",
+        "outputs/"
+    ]
+}
