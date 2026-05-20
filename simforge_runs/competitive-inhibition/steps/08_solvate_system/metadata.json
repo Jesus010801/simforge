@@ -1,0 +1,9 @@
+{
+    "step_id": "solvate_system",
+    "stage": "assembly",
+    "engine": "gromacs:solvate",
+    "step_type": "automatic",
+    "expected_outputs": [
+        "solvated.gro"
+    ]
+}

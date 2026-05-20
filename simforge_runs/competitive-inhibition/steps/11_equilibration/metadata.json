@@ -1,0 +1,9 @@
+{
+    "step_id": "equilibration",
+    "stage": "equilibration",
+    "engine": "gromacs",
+    "equilibration_type": [
+        "NVT",
+        "NPT"
+    ]
+}

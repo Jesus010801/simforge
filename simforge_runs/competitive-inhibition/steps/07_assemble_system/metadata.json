@@ -1,0 +1,10 @@
+{
+    "step_id": "assemble_system",
+    "stage": "assembly",
+    "engine": "system_builder",
+    "step_type": "automatic",
+    "expected_outputs": [
+        "complex.gro",
+        "topol.top"
+    ]
+}

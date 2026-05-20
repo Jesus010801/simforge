@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
+from builders.step_builders.preparation_builder import (
+    PreparationBuilder,
+)
+
+from builders.step_builders.parametrization_builder import (
+    ParametrizationBuilder,
+)
+
+from builders.step_builders.assembly_builder import (
+    AssemblyBuilder,
+)
+
 from builders.step_builders.minimization_builder import (
     MinimizationBuilder,
 )
@@ -18,7 +30,13 @@ from builders.step_builders.analysis_builder import (
     AnalysisBuilder,
 )
 
+from builders.step_builders.validation_builder import (
+    ValidationBuilder,
+)
 
+from builders.step_builders.enhanced_sampling_builder import (
+    EnhancedSamplingBuilder,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -26,11 +44,13 @@ from builders.step_builders.analysis_builder import (
 # ═══════════════════════════════════════════════════════════════════════════════
 
 STEP_BUILDERS = {
-    "minimization": MinimizationBuilder(),
-
-    "equilibration": EquilibrationBuilder(),
-
-    "production": ProductionBuilder(),
-
-    "analysis": AnalysisBuilder(),
+    "preparation":       PreparationBuilder(),
+    "parametrization":   ParametrizationBuilder(),
+    "validation":        ValidationBuilder(),
+    "assembly":          AssemblyBuilder(),
+    "minimization":      MinimizationBuilder(),
+    "equilibration":     EquilibrationBuilder(),
+    "enhanced_sampling": EnhancedSamplingBuilder(),
+    "production":        ProductionBuilder(),
+    "analysis":          AnalysisBuilder(),
 }

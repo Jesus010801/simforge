@@ -1,0 +1,10 @@
+{
+    "system_type": "competitive-inhibition",
+    "workflow_steps": 16,
+    "blocking_issues": 6,
+    "special_protocols": [
+        "enhanced_sampling",
+        "REST2",
+        "manual_parametrization_review"
+    ]
+}

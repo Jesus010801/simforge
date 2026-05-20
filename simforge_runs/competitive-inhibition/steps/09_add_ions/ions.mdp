@@ -1,0 +1,8 @@
+; ions.mdp — mínimo para genion
+integrator  = steep
+nsteps      = 0
+pbc         = xyz
+cutoff-scheme = Verlet
+coulombtype = PME
+rcoulomb    = 1.0
+rvdw        = 1.0

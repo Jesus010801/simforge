@@ -1,0 +1,12 @@
+{
+    "step_id": "parametrize_substrate_1",
+    "stage": "parametrization",
+    "engine": "cgenff",
+    "target": "substrate_1",
+    "blocking": true,
+    "step_type": "automatic",
+    "expected_outputs": [
+        "substrate_1.str",
+        "substrate_1.itp"
+    ]
+}
