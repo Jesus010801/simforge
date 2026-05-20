@@ -1,0 +1,10 @@
+{
+    "step_id": "prepare_ligand_1",
+    "stage": "preparation",
+    "engine": "ligand_preparation",
+    "target": "ligand_1",
+    "step_type": "automatic",
+    "expected_outputs": [
+        "ligand_1.sdf"
+    ]
+}

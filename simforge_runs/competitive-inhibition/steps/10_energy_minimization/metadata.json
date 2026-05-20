@@ -1,0 +1,6 @@
+{
+    "step_id": "energy_minimization",
+    "stage": "minimization",
+    "engine": "gromacs",
+    "generated_by": "MinimizationBuilder"
+}

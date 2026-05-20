@@ -1,0 +1,36 @@
+graph TD
+    prepare_protein_1["Preparar proteína protein_1"]
+    prepare_substrate_1["Preparar ligando substrate_1"]
+    prepare_ligand_1["Preparar ligando ligand_1"]
+    parametrize_substrate_1["Parametrizar substrate_1"]
+    parametrize_ligand_1["Parametrizar ligand_1"]
+    review_parametrization_substrate_1["Revisión manual de parametrización: substrate_1"]
+    assemble_system["Construcción del sistema completo"]
+    solvate_system["Solvatación"]
+    add_ions["Adición de iones"]
+    energy_minimization["Minimización energética"]
+    equilibration["Equilibración"]
+    rest2_sampling["REST2 enhanced sampling"]
+    production_md["Dinámica molecular de producción"]
+    analysis_rmsd["Análisis rmsd"]
+    analysis_hydrogen_bonds["Análisis hydrogen_bonds"]
+    analysis_distance_analysis["Análisis distance_analysis"]
+    prepare_substrate_1 --> parametrize_substrate_1
+    prepare_ligand_1 --> parametrize_ligand_1
+    parametrize_substrate_1 --> review_parametrization_substrate_1
+    prepare_protein_1 --> assemble_system
+    prepare_substrate_1 --> assemble_system
+    prepare_ligand_1 --> assemble_system
+    parametrize_substrate_1 --> assemble_system
+    parametrize_ligand_1 --> assemble_system
+    review_parametrization_substrate_1 --> assemble_system
+    assemble_system --> solvate_system
+    solvate_system --> add_ions
+    add_ions --> energy_minimization
+    energy_minimization --> equilibration
+    equilibration --> rest2_sampling
+    equilibration --> production_md
+    rest2_sampling --> production_md
+    production_md --> analysis_rmsd
+    production_md --> analysis_hydrogen_bonds
+    production_md --> analysis_distance_analysis

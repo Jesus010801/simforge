@@ -1,0 +1,13 @@
+01. Parametrizar substrate_1
+02. Parametrizar ligand_1
+03. Manual ligand parametrization review required
+04. Construcción del sistema completo
+05. Solvatación
+06. Adición de iones
+07. Minimización energética
+08. Equilibración
+09. REST2 enhanced sampling
+10. Dinámica molecular de producción
+11. Análisis rmsd
+12. Análisis hydrogen_bonds
+13. Análisis distance_analysis

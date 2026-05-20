@@ -1,0 +1,13 @@
+{
+    "step_id": "production_md",
+    "stage": "production",
+    "engine": "gromacs",
+    "simulation_type": "production_md",
+    "expected_outputs": [
+        "md.xtc",
+        "md.edr",
+        "md.log",
+        "md.gro",
+        "md.cpt"
+    ]
+}

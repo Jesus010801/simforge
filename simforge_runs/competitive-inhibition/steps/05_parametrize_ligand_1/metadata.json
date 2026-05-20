@@ -1,0 +1,12 @@
+{
+    "step_id": "parametrize_ligand_1",
+    "stage": "parametrization",
+    "engine": "cgenff",
+    "target": "ligand_1",
+    "blocking": false,
+    "step_type": "automatic",
+    "expected_outputs": [
+        "ligand_1.str",
+        "ligand_1.itp"
+    ]
+}

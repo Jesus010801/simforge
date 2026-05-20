@@ -1,0 +1,9 @@
+{
+    "step_id": "add_ions",
+    "stage": "assembly",
+    "engine": "gromacs:genion",
+    "step_type": "automatic",
+    "expected_outputs": [
+        "aaions.gro"
+    ]
+}

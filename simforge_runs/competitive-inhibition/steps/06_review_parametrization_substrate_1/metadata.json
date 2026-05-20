@@ -1,0 +1,13 @@
+{
+    "step_id": "review_parametrization_substrate_1",
+    "stage": "validation",
+    "engine": "manual_review",
+    "target": "substrate_1",
+    "blocking": true,
+    "step_type": "manual",
+    "notes": [
+        "Revisar penalizaciones ParamChem",
+        "Verificar cargas",
+        "Validar constantes de fuerza"
+    ]
+}
