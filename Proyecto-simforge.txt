@@ -1,0 +1,49 @@
+SimForge es una plataforma modular para percepción molecular, validación estructural y reasoning contextual en simulaciones de dinámica molecular (MD), enfocada inicialmente en GROMACS.
+
+La arquitectura sigue:
+
+Parser → SystemState → Perception → Descriptors → Reasoning → Recommendations/Risks/Warnings
+
+Objetivo:
+Construir un sistema experto capaz de interpretar contexto químico, geométrico y biológico para asistir workflows científicos reales en MD.
+
+Principios arquitectónicos:
+- Python modular
+- Pydantic para modelos estructurados
+- separación estricta de responsabilidades
+- reasoning explícito y transparente
+- heurísticas interpretables
+- NO cajas negras
+- NO lógica hardcoded específica
+- NO dependencias pesadas innecesarias
+- RDKit será opcional en el futuro, no obligatorio
+
+Reglas importantes:
+- perception produce facts
+- descriptors resumen comportamiento emergente
+- reasoning interpreta contexto
+- validators solo verifican integridad/calidad
+
+Evitar:
+- mezclar reasoning con perception
+- IO dentro de módulos de análisis
+- prints/debugging persistente
+- dependencias circulares
+- lógica monolítica
+
+El código debe:
+- ser extensible
+- mantener tipado claro
+- usar entidades semánticas
+- usar confidence scores cuando aplique
+- priorizar claridad arquitectónica sobre hacks rápidos
+
+El proyecto actualmente incluye:
+- topology perception
+- aromaticity inference
+- flexibility analysis
+- protein/ligand validators
+- molecular graph reasoning
+- contextual MD recommendations
+
+Las nuevas implementaciones deben integrarse limpiamente con esta filosofía.
