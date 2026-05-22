@@ -11,13 +11,29 @@ La distinción es importante:
 
 El executor escribe en ExecutionState conforme avanza.
 El adaptive reasoning lee desde ExecutionState para decidir si continuar.
+
+Campos añadidos en StepExecutionRecord:
+
+    gromacs_diagnostic : Optional[dict]
+        Serialización de GROMACSStepDiagnostic producida por GROMACSExecutor
+        después de cada step. Se guarda como dict para que execution_state.json
+        sea completamente serializable sin importar GROMACSStepDiagnostic aquí
+        (evita dependencia circular executors → executors).
+        El RemediationExecutor lo reconstruye cuando necesita:
+            GROMACSStepDiagnostic(**record.gromacs_diagnostic)
+
+    remediations : list[RemediationRecord]
+        Historial completo de ciclos diagnose→plan→apply→retry para este step.
+        Reemplaza el dict global _REMEDIATION_HISTORY que existía en
+        remediation_executor.py. El estado es ahora completamente local
+        al record y se persiste con él en execution_state.json.
 """
 
 from __future__ import annotations
 
 from enum import Enum
 from datetime import datetime
-from pathlib import Path
+from typing import Any, Optional
 from pydantic import BaseModel, Field
 
 
@@ -38,29 +54,82 @@ class StepStatus(str, Enum):
 class StepExecutionRecord(BaseModel):
     """
     Registro completo de la ejecución de un step individual.
+
+    Es la unidad de estado que el executor actualiza en tiempo real
+    y que el reasoner lee para decidir si remediar.
+
+    Invariante de serialización:
+        Todos los campos deben ser serializables a JSON sin pérdida.
+        gromacs_diagnostic se almacena como dict (no como modelo tipado)
+        para evitar dependencias circulares en el módulo de estado.
+        remediations se serializa inline como lista de dicts Pydantic.
     """
 
     step_id:     str
-    step_dir:    str                    # path absoluto al directorio del step
+    step_dir:    str                     # path absoluto al directorio del step
     status:      StepStatus = StepStatus.PENDING
 
-    # Timing
-    started_at:  datetime | None = None
-    finished_at: datetime | None = None
-    elapsed_s:   float | None    = None
+    # ── Timing ────────────────────────────────────────────────────────────────
+    started_at:  Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    elapsed_s:   Optional[float]    = None
 
-    # Output
-    stdout:      str  = ""
-    stderr:      str  = ""
-    exit_code:   int | None = None
+    # ── Output de ejecución ───────────────────────────────────────────────────
+    stdout:      str            = ""
+    stderr:      str            = ""
+    exit_code:   Optional[int]  = None
 
-    # Diagnóstico
-    error_message:  str | None = None
-    retry_count:    int        = 0
+    # ── Diagnóstico de ejecución ──────────────────────────────────────────────
+    error_message:   Optional[str] = None
+    retry_count:     int           = 0
 
-    # Archivos generados confirmados
-    outputs_found:  list[str] = []     # archivos que existen post-ejecución
-    outputs_missing: list[str] = []    # archivos esperados que no aparecieron
+    # ── Archivos generados ────────────────────────────────────────────────────
+    outputs_found:   list[str] = []   # archivos que existen post-ejecución
+    outputs_missing: list[str] = []   # archivos esperados que no aparecieron
+
+    # ── Percepción rica de GROMACS ────────────────────────────────────────────
+    # Serialización de GROMACSStepDiagnostic producida por GROMACSExecutor.
+    # Se almacena como dict para mantener execution_state.py libre de imports
+    # del executor GROMACS (evita dependencia circular).
+    #
+    # Escritura (en GROMACSExecutor._run_step):
+    #     record.gromacs_diagnostic = diag.model_dump()
+    #
+    # Lectura (en RemediationExecutor.diagnose_and_plan):
+    #     if record.gromacs_diagnostic:
+    #         rich_diag = GROMACSStepDiagnostic(**record.gromacs_diagnostic)
+    gromacs_diagnostic: Optional[dict[str, Any]] = None
+
+    # ── Historial de remediación ──────────────────────────────────────────────
+    # Registro de cada ciclo diagnose→plan→apply→retry para este step.
+    # Reemplaza el dict global _REMEDIATION_HISTORY de remediation_executor.py.
+    #
+    # Invariante: se añade un RemediationRecord por cada intento,
+    # independientemente de si tuvo éxito o no.
+    # El campo se serializa como lista de dicts para JSON completo.
+    remediations: list[dict[str, Any]] = Field(default_factory=list)
+
+    # ── Helpers de remediación ────────────────────────────────────────────────
+
+    def n_remediations(self) -> int:
+        """Número de ciclos de remediación intentados."""
+        return len(self.remediations)
+
+    def last_remediation(self) -> Optional[dict[str, Any]]:
+        """Último RemediationRecord serializado, o None si no hay ninguno."""
+        return self.remediations[-1] if self.remediations else None
+
+    def add_remediation(self, record: Any) -> None:
+        """
+        Añade un RemediationRecord al historial.
+
+        Acepta tanto el modelo Pydantic como el dict serializado
+        para no forzar el import de remediation_models aquí.
+        """
+        if hasattr(record, "model_dump"):
+            self.remediations.append(record.model_dump())
+        else:
+            self.remediations.append(record)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -76,26 +145,26 @@ class WorkspaceExecutionState(BaseModel):
     """
 
     workspace_path:  str
-    system_type:     str | None = None
+    system_type:     Optional[str] = None
 
-    # Estado global
-    started_at:      datetime | None = None
-    finished_at:     datetime | None = None
-    is_complete:     bool            = False
-    was_interrupted: bool            = False
+    # ── Estado global ─────────────────────────────────────────────────────────
+    started_at:      Optional[datetime] = None
+    finished_at:     Optional[datetime] = None
+    is_complete:     bool               = False
+    was_interrupted: bool               = False
 
-    # Steps
+    # ── Steps ─────────────────────────────────────────────────────────────────
     steps:           list[StepExecutionRecord] = []
 
-    # Modo de ejecución
-    dry_run:         bool = True       # True = no ejecuta comandos reales
+    # ── Modo de ejecución ─────────────────────────────────────────────────────
+    dry_run:         bool = True   # True = no ejecuta comandos reales
 
-    # Log global
+    # ── Log global ────────────────────────────────────────────────────────────
     log_lines:       list[str] = Field(default_factory=list)
 
-    # ── Helpers ──────────────────────────────────────────────────────────────
+    # ── Helpers de consulta ───────────────────────────────────────────────────
 
-    def get_step(self, step_id: str) -> StepExecutionRecord | None:
+    def get_step(self, step_id: str) -> Optional[StepExecutionRecord]:
         for s in self.steps:
             if s.step_id == step_id:
                 return s
@@ -110,6 +179,10 @@ class WorkspaceExecutionState(BaseModel):
     def n_pending(self) -> int:
         return sum(1 for s in self.steps if s.status == StepStatus.PENDING)
 
+    def n_remediated(self) -> int:
+        """Steps que tuvieron al menos un ciclo de remediación."""
+        return sum(1 for s in self.steps if s.remediations)
+
     def has_failures(self) -> bool:
         return self.n_failed() > 0
 
@@ -118,3 +191,7 @@ class WorkspaceExecutionState(BaseModel):
             s.status in (StepStatus.DONE, StepStatus.SKIPPED)
             for s in self.steps
         )
+
+    def steps_with_gromacs_diagnostic(self) -> list[StepExecutionRecord]:
+        """Steps que tienen diagnóstico rico de GROMACS disponible."""
+        return [s for s in self.steps if s.gromacs_diagnostic is not None]

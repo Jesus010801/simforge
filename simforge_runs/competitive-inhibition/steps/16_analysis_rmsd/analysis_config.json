@@ -1,0 +1,10 @@
+{
+    "analysis_type": "rmsd",
+    "input_trajectory": "md.xtc",
+    "input_topology": "md.tpr",
+    "expected_outputs": [
+        "plots/",
+        "tables/",
+        "outputs/"
+    ]
+}
