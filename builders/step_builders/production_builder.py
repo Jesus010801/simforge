@@ -22,42 +22,56 @@ class ProductionBuilder:
 
     def build(
         self,
-        step: SimulationStep,
-        step_dir: Path,
+        step:         SimulationStep,
+        step_dir:     Path,
+        step_dir_map: dict = {},
     ) -> None:
+
+        p                   = step.params
+        dt                  = p.get("dt",                   0.002)
+        nsteps              = p.get("nsteps",               5_000_000)
+        temperature         = p.get("temperature",          300.0)
+        pressure            = p.get("pressure",             1.0)
+        tc_grps             = p.get("tc_grps",              "Protein Non-Protein")
+        tau_t               = p.get("tau_t",                " ".join(["0.1"] * len(tc_grps.split())))
+        ref_t               = p.get("ref_t",                " ".join([str(temperature)] * len(tc_grps.split())))
+        constraints         = p.get("constraints",          "h-bonds")
+        nstxout_compressed  = p.get("nstxout_compressed",   5_000)
+        nstenergy           = p.get("nstenergy",             1_000)
+        nstlog              = p.get("nstlog",                1_000)
 
         # ────────────────────────────────────────────────────────────────────
         # md.mdp
         # ────────────────────────────────────────────────────────────────────
 
-        mdp_text = """
+        mdp_text = f"""
 title                   = Production MD
 
 integrator              = md
-dt                      = 0.002
-nsteps                  = 5000000
+dt                      = {dt}
+nsteps                  = {nsteps}
 
 tcoupl                  = V-rescale
-tc-grps                 = Protein Non-Protein
-tau_t                   = 0.1 0.1
-ref_t                   = 300 300
+tc-grps                 = {tc_grps}
+tau_t                   = {tau_t}
+ref_t                   = {ref_t}
 
 pcoupl                  = Parrinello-Rahman
 pcoupltype              = isotropic
 tau_p                   = 2.0
-ref_p                   = 1.0
+ref_p                   = {pressure}
 compressibility         = 4.5e-5
 
-constraints             = h-bonds
+constraints             = {constraints}
 
 cutoff-scheme           = Verlet
 coulombtype             = PME
 rcoulomb                = 1.0
 rvdw                    = 1.0
 
-nstxout-compressed      = 5000
-nstenergy               = 1000
-nstlog                  = 1000
+nstxout-compressed      = {nstxout_compressed}
+nstenergy               = {nstenergy}
+nstlog                  = {nstlog}
 
 pbc                     = xyz
 """
@@ -101,19 +115,19 @@ gmx mdrun \
         # ────────────────────────────────────────────────────────────────────
 
         metadata = {
-            "step_id": step.step_id,
-            "stage": step.stage.value,
-            "engine": step.engine,
-            "simulation_type": (
-                "production_md"
-            ),
-            "expected_outputs": [
-                "md.xtc",
-                "md.edr",
-                "md.log",
-                "md.gro",
-                "md.cpt",
-            ],
+            "step_id":          step.step_id,
+            "stage":            step.stage.value,
+            "engine":           step.engine,
+            "step_type":        step.step_type.value,
+            "blocking":         step.blocking,
+            "generated_by":     "ProductionBuilder",
+            "simulation_type":  "production_md",
+            "expected_outputs": ["md.xtc", "md.edr", "md.log", "md.gro", "md.cpt"],
+            "params": {
+                "dt": dt, "nsteps": nsteps, "temperature": temperature,
+                "pressure": pressure, "tc_grps": tc_grps, "constraints": constraints,
+                "nstxout_compressed": nstxout_compressed,
+            },
         }
 
         metadata_path = (

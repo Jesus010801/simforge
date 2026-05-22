@@ -137,13 +137,17 @@ class BaseExecutor(ABC):
     def _initialize_state(self) -> WorkspaceExecutionState:
         """
         Construye el WorkspaceExecutionState desde el workspace en disco.
-        Lee el orden de steps desde workflow/workflow.txt y los directorios
-        en steps/.
-        """
-        steps_dir = self.workspace_path / "steps"
-        state_file = self.workspace_path / "execution_state.json"
 
-        # Reanudar si existe estado previo (solo en modo real, no en dry-run)
+        Orden de preferencia:
+            1. execution_state.json   → reanudar ejecución previa (solo non-dry-run)
+            2. execution_manifest.json → manifest generado por WorkspaceBuilder (fuente de verdad del DAG)
+            3. filesystem scan         → fallback para workspaces sin manifest (backward compat)
+        """
+        steps_dir  = self.workspace_path / "steps"
+        state_file = self.workspace_path / "execution_state.json"
+        manifest_file = self.workspace_path / "metadata" / "execution_manifest.json"
+
+        # ── 1. Reanudar si existe estado previo (solo modo real) ──────────────
         if state_file.exists() and not self.dry_run:
             raw = json.loads(state_file.read_text())
             return WorkspaceExecutionState(**raw)
@@ -152,23 +156,54 @@ class BaseExecutor(ABC):
         if state_file.exists():
             state_file.unlink()
 
-        # Leer metadata del workspace
+        # ── 2. Manifest-driven execution ──────────────────────────────────────
+        if manifest_file.exists():
+            manifest   = json.loads(manifest_file.read_text())
+            system_type = manifest.get("system_type")
+            records: list[StepExecutionRecord] = []
+
+            for entry in manifest["steps"]:
+                step_dir = steps_dir / entry["dir_name"]
+                if not step_dir.exists():
+                    raise RuntimeError(
+                        f"[Executor] step_dir no encontrado para '{entry['step_id']}': {step_dir}\n"
+                        "El workspace puede estar corrupto. Reconstruye con WorkspaceBuilder."
+                    )
+                records.append(
+                    StepExecutionRecord(
+                        step_id    = entry["step_id"],
+                        step_dir   = str(step_dir.resolve()),
+                        depends_on = entry.get("depends_on", []),
+                    )
+                )
+
+            self._log(
+                f"Manifest cargado → {len(records)} steps "
+                f"desde {manifest_file.relative_to(self.workspace_path)}"
+            )
+            return WorkspaceExecutionState(
+                workspace_path = str(self.workspace_path.resolve()),
+                system_type    = system_type,
+                dry_run        = self.dry_run,
+                steps          = records,
+            )
+
+        # ── 3. Fallback: filesystem scan (backward compat) ────────────────────
+        self._log("[WARN] execution_manifest.json no encontrado — usando filesystem scan")
+
         meta_file = self.workspace_path / "metadata" / "summary.json"
         system_type = None
         if meta_file.exists():
             meta = json.loads(meta_file.read_text())
             system_type = meta.get("system_type")
 
-        # Detectar steps en orden (por prefijo numérico)
         records = []
         if steps_dir.exists():
-            step_dirs = sorted(steps_dir.iterdir())
-            for step_dir in step_dirs:
+            for step_dir in sorted(steps_dir.iterdir()):
                 if not step_dir.is_dir():
                     continue
-                # Nombre del directorio: "01_energy_minimization"
-                parts    = step_dir.name.split("_", 1)
-                step_id  = parts[1] if len(parts) == 2 else step_dir.name
+                parts   = step_dir.name.split("_", 1)
+                step_id = parts[1] if len(parts) == 2 else step_dir.name
                 records.append(
                     StepExecutionRecord(
                         step_id  = step_id,
@@ -187,10 +222,19 @@ class BaseExecutor(ABC):
 
     def _is_blocked(self, record: StepExecutionRecord) -> bool:
         """
-        Un step está bloqueado si algún step anterior falló.
-        Implementación conservadora: cualquier fallo bloquea los siguientes.
-        Futuro: leer depends_on desde metadata.json del step.
+        Un step está bloqueado si alguno de sus predecesores directos falló.
+
+        Si record.depends_on está poblado (manifest-driven): usa dependencias reales del DAG.
+        Si está vacío (filesystem scan / workspace antiguo): fallback conservador secuencial.
         """
+        if record.depends_on:
+            step_status = {r.step_id: r.status for r in self.state.steps}
+            return any(
+                step_status.get(dep) == StepStatus.FAILED
+                for dep in record.depends_on
+            )
+
+        # Fallback conservador: cualquier fallo previo bloquea los siguientes
         for other in self.state.steps:
             if other.step_id == record.step_id:
                 break

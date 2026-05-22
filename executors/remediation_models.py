@@ -9,7 +9,7 @@ Separación de responsabilidades:
     RemediationRecord   → historial de un ciclo execute→diagnose→remediate→retry
 
 Estos modelos son el contrato entre:
-    adaptive_reasoner.py  → produce DiagnosisResult + RemediationPlan
+    signal_detector.py    → produce DiagnosisResult + RemediationPlan
     remediation_executor.py → consume RemediationPlan y escribe RemediationRecord
 
 Invariante de diseño:

@@ -3,7 +3,15 @@
     "stage": "assembly",
     "engine": "gromacs:solvate",
     "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "AssemblyBuilder",
     "expected_outputs": [
         "solvated.gro"
-    ]
+    ],
+    "params": {
+        "box_type": "dodecahedron",
+        "box_distance": 1.2,
+        "water_model": "tip3p",
+        "water_gro": "spc216.gro"
+    }
 }

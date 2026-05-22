@@ -21,29 +21,41 @@ class EquilibrationBuilder:
 
     def build(
         self,
-        step: SimulationStep,
-        step_dir: Path,
+        step:         SimulationStep,
+        step_dir:     Path,
+        step_dir_map: dict = {},
     ) -> None:
+
+        p           = step.params
+        dt          = p.get("dt",          0.002)
+        nvt_nsteps  = p.get("nvt_nsteps",  50_000)
+        npt_nsteps  = p.get("npt_nsteps",  50_000)
+        temperature = p.get("temperature", 300.0)
+        pressure    = p.get("pressure",    1.0)
+        tc_grps     = p.get("tc_grps",     "Protein Non-Protein")
+        tau_t       = p.get("tau_t",       " ".join(["0.1"] * len(tc_grps.split())))
+        ref_t       = p.get("ref_t",       " ".join([str(temperature)] * len(tc_grps.split())))
+        constraints = p.get("constraints", "h-bonds")
 
         # ────────────────────────────────────────────────────────────────────
         # NVT MDP
         # ────────────────────────────────────────────────────────────────────
 
-        nvt_mdp = """
+        nvt_mdp = f"""
 title                   = NVT equilibration
 
 integrator              = md
-dt                      = 0.002
-nsteps                  = 50000
+dt                      = {dt}
+nsteps                  = {nvt_nsteps}
 
 tcoupl                  = V-rescale
-tc-grps                 = Protein Non-Protein
-tau_t                   = 0.1 0.1
-ref_t                   = 300 300
+tc-grps                 = {tc_grps}
+tau_t                   = {tau_t}
+ref_t                   = {ref_t}
 
 pcoupl                  = no
 
-constraints             = h-bonds
+constraints             = {constraints}
 
 cutoff-scheme           = Verlet
 coulombtype             = PME
@@ -65,25 +77,25 @@ pbc                     = xyz
         # NPT MDP
         # ────────────────────────────────────────────────────────────────────
 
-        npt_mdp = """
+        npt_mdp = f"""
 title                   = NPT equilibration
 
 integrator              = md
-dt                      = 0.002
-nsteps                  = 50000
+dt                      = {dt}
+nsteps                  = {npt_nsteps}
 
 tcoupl                  = V-rescale
-tc-grps                 = Protein Non-Protein
-tau_t                   = 0.1 0.1
-ref_t                   = 300 300
+tc-grps                 = {tc_grps}
+tau_t                   = {tau_t}
+ref_t                   = {ref_t}
 
 pcoupl                  = Parrinello-Rahman
 pcoupltype              = isotropic
 tau_p                   = 2.0
-ref_p                   = 1.0
+ref_p                   = {pressure}
 compressibility         = 4.5e-5
 
-constraints             = h-bonds
+constraints             = {constraints}
 
 cutoff-scheme           = Verlet
 coulombtype             = PME
@@ -155,13 +167,18 @@ gmx mdrun \
         # ────────────────────────────────────────────────────────────────────
 
         metadata = {
-            "step_id": step.step_id,
-            "stage": step.stage.value,
-            "engine": step.engine,
-            "equilibration_type": [
-                "NVT",
-                "NPT",
-            ],
+            "step_id":           step.step_id,
+            "stage":             step.stage.value,
+            "engine":            step.engine,
+            "step_type":         step.step_type.value,
+            "blocking":          step.blocking,
+            "generated_by":      "EquilibrationBuilder",
+            "equilibration_type": ["NVT", "NPT"],
+            "params": {
+                "dt": dt, "nvt_nsteps": nvt_nsteps, "npt_nsteps": npt_nsteps,
+                "temperature": temperature, "pressure": pressure,
+                "tc_grps": tc_grps, "constraints": constraints,
+            },
         }
 
         metadata_path = (

@@ -22,8 +22,9 @@ class PreparationBuilder:
 
     def build(
         self,
-        step: SimulationStep,
-        step_dir: Path,
+        step:         SimulationStep,
+        step_dir:     Path,
+        step_dir_map: dict = {},
     ) -> None:
 
         targets = step.target_components

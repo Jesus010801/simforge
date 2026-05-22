@@ -2,5 +2,13 @@
     "step_id": "energy_minimization",
     "stage": "minimization",
     "engine": "gromacs",
-    "generated_by": "MinimizationBuilder"
+    "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "MinimizationBuilder",
+    "params": {
+        "integrator": "steep",
+        "emtol": 100.0,
+        "emstep": 0.01,
+        "nsteps": 50000
+    }
 }

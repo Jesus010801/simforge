@@ -350,9 +350,10 @@ class IonsConfig(BaseModel):
 
 
 class EnvironmentModel(BaseModel):
-    membrane: MembraneConfig = MembraneConfig()
-    solvent:  SolventConfig  = SolventConfig()
-    ions:     IonsConfig     = IonsConfig()
+    membrane:      MembraneConfig = MembraneConfig()
+    solvent:       SolventConfig  = SolventConfig()
+    ions:          IonsConfig     = IonsConfig()
+    temperature_K: float          = 300.0
 
 
 class ForcefieldsModel(BaseModel):

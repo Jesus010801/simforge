@@ -18,14 +18,22 @@ from workflows.workflow_graph import (
     WorkflowGraph,
 )
 
-from pipelines.md_pipeline import (
-    MDPipeline,
-)
+from pipelines.base_pipeline import BasePipeline
+from pipelines.md_pipeline import MDPipeline
+from pipelines.inhibition_pipeline import InhibitionPipeline
 
-from pipelines.inhibition_pipeline import (
-    InhibitionPipeline,
-)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Pipeline registry
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_PIPELINE_REGISTRY: dict[str, type[BasePipeline]] = {
+    "competitive-inhibition": InhibitionPipeline,
+    # future: "allosteric-modulation":  AlloModPipeline,
+    # future: "protein-membrane-ligand": MembranePipeline,
+    # future: "protein-membrane":        MembranePipeline,
+    # future: "protein-ligand":          MDPipeline,  (already default)
+}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -121,23 +129,6 @@ class SimulationCompiler:
             summary=summary,
         )
     
-    def _select_pipeline(
-        self,
-        state: SystemState,
-    ):
-
-    # ────────────────────────────────────────────────────────────────────
-    # Inhibition systems
-    # ────────────────────────────────────────────────────────────────────
-
-        if state.inferred_system_type == (
-        "competitive-inhibition"
-        ):
-
-         return InhibitionPipeline()
-
-    # ────────────────────────────────────────────────────────────────────
-    # Default MD
-    # ────────────────────────────────────────────────────────────────────
-
-        return MDPipeline()
+    def _select_pipeline(self, state: SystemState) -> BasePipeline:
+        cls = _PIPELINE_REGISTRY.get(state.inferred_system_type, MDPipeline)
+        return cls()

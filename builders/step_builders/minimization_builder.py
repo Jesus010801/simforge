@@ -22,19 +22,26 @@ class MinimizationBuilder:
 
     def build(
         self,
-        step: SimulationStep,
-        step_dir: Path,
+        step:         SimulationStep,
+        step_dir:     Path,
+        step_dir_map: dict = {},
     ) -> None:
 
         # ────────────────────────────────────────────────────────────────────
         # em.mdp
         # ────────────────────────────────────────────────────────────────────
 
-        mdp_text = """
-integrator  = steep
-emtol       = 1000.0
-emstep      = 0.01
-nsteps      = 50000
+        p = step.params
+        integrator = p.get("integrator", "steep")
+        emtol      = p.get("emtol",      1000.0)
+        emstep     = p.get("emstep",     0.01)
+        nsteps     = p.get("nsteps",     50_000)
+
+        mdp_text = f"""
+integrator  = {integrator}
+emtol       = {emtol}
+emstep      = {emstep}
+nsteps      = {nsteps}
 
 cutoff-scheme = Verlet
 
@@ -81,12 +88,13 @@ gmx mdrun \
         # ────────────────────────────────────────────────────────────────────
 
         metadata = {
-            "step_id": step.step_id,
-            "stage": step.stage.value,
-            "engine": step.engine,
-            "generated_by": (
-                "MinimizationBuilder"
-            ),
+            "step_id":      step.step_id,
+            "stage":        step.stage.value,
+            "engine":       step.engine,
+            "step_type":    step.step_type.value,
+            "blocking":     step.blocking,
+            "generated_by": "MinimizationBuilder",
+            "params":       {"integrator": integrator, "emtol": emtol, "emstep": emstep, "nsteps": nsteps},
         }
 
         metadata_path = (

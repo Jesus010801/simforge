@@ -75,35 +75,25 @@ class WorkspaceBuilder:
         steps_dir.mkdir(parents=True)
 
         # ────────────────────────────────────────────────────────────────────
-        # Step folders
+        # Step folders — pass 1: create dirs + build step_dir_map
         # ────────────────────────────────────────────────────────────────────
 
-        for i, step in enumerate(
-            result.execution_order,
-            start=1,
-        ):
+        step_dir_map: dict[str, Path] = {}
 
-            step_dir = (
-                steps_dir
-                / f"{i:02d}_{step.step_id}"
-            )
+        for i, step in enumerate(result.execution_order, start=1):
+            step_dir = steps_dir / f"{i:02d}_{step.step_id}"
+            step_dir.mkdir(exist_ok=True)
+            step_dir_map[step.step_id] = step_dir.resolve()
 
-            step_dir.mkdir(
-                exist_ok=True
-            )
-            # ────────────────────────────────────────────────────────────────
-            # Step materialization
-            # ────────────────────────────────────────────────────────────────
-            builder = STEP_BUILDERS.get(
-                step.stage.value
-            )
+        # ────────────────────────────────────────────────────────────────────
+        # Step materialization — pass 2: builders receive full map
+        # ────────────────────────────────────────────────────────────────────
 
+        for i, step in enumerate(result.execution_order, start=1):
+            step_dir = steps_dir / f"{i:02d}_{step.step_id}"
+            builder = STEP_BUILDERS.get(step.stage.value)
             if builder is not None:
-
-                builder.build(
-                    step,
-                    step_dir,
-                )
+                builder.build(step, step_dir, step_dir_map)
 
         # ────────────────────────────────────────────────────────────────────
         # Mermaid workflow
@@ -175,5 +165,30 @@ class WorkspaceBuilder:
                 indent=4,
             )
         )
+
+        # ────────────────────────────────────────────────────────────────────
+        # Execution manifest — fuente de verdad para el executor
+        # ────────────────────────────────────────────────────────────────────
+
+        manifest_entries = []
+        for i, step in enumerate(result.execution_order, start=1):
+            manifest_entries.append({
+                "step_id":   step.step_id,
+                "dir_name":  f"{i:02d}_{step.step_id}",
+                "stage":     step.stage.value,
+                "step_type": step.step_type.value,
+                "blocking":  step.blocking,
+                "depends_on": step.depends_on,
+            })
+
+        manifest_data = {
+            "compiled_at": __import__("datetime").datetime.now().isoformat(timespec="seconds"),
+            "system_type": result.state.inferred_system_type,
+            "n_steps":     len(manifest_entries),
+            "steps":       manifest_entries,
+        }
+
+        manifest_path = metadata_dir / "execution_manifest.json"
+        manifest_path.write_text(json.dumps(manifest_data, indent=4))
 
         return root

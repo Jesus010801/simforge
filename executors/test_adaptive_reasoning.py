@@ -32,7 +32,7 @@ from executors.gromacs_executor import (
     OutputFileStatus,
 )
 from executors.adaptive_reasoning import run_adaptive_reasoning
-from executors.adaptive_models import (
+from executors.execution_reasoning_models import (
     ReasoningVerdict,
     StepAnalysisVerdict,
 )
