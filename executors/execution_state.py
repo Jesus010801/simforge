@@ -67,6 +67,7 @@ class StepExecutionRecord(BaseModel):
 
     step_id:     str
     step_dir:    str                     # path absoluto al directorio del step
+    depends_on:  list[str] = []          # step_ids que deben completar antes
     status:      StepStatus = StepStatus.PENDING
 
     # ── Timing ────────────────────────────────────────────────────────────────

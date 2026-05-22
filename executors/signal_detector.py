@@ -1,4 +1,4 @@
-# executors/adaptive_reasoner.py
+# executors/signal_detector.py
 """
 AdaptiveReasoner — motor de diagnóstico y remediación de SimForge.
 

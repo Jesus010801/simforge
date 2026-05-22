@@ -1,4 +1,4 @@
-# executors/adaptive_models.py
+# executors/execution_reasoning_models.py
 """
 Modelos de output del adaptive reasoning engine.
 
@@ -12,7 +12,7 @@ intervención humana, y si el pipeline puede continuar.
     │
     ├── verdict              ReasoningVerdict   — continuar / revisar / abortar
     ├── step_analyses        list[StepAnalysis] — análisis por step GROMACS
-    ├── remediation_plan     RemediationPlan    — qué hacer para corregir
+    ├── remediation_plan     ProposedRemediationPlan    — qué hacer para corregir
     └── notes / warnings / errors               — resumen textual
 
 Principio arquitectónico:
@@ -157,11 +157,11 @@ class RemediationStep(BaseModel):
     notes:              list[str] = []
 
 
-class RemediationPlan(BaseModel):
+class ProposedRemediationPlan(BaseModel):
     """
     Plan completo de remediación post-ejecución.
 
-    Generado por adaptive_reasoning.py cuando hay problemas corregibles.
+    Proposed by adaptive_reasoning.py cuando hay problemas corregibles.
     Contiene pasos ordenados por prioridad.
     """
 
@@ -210,7 +210,7 @@ class AdaptiveReasoningResult(BaseModel):
     step_analyses:      list[StepAnalysis]  = []
 
     # Plan de remediación (vacío si verdict == CONTINUE o ABORT)
-    remediation_plan:   RemediationPlan     = RemediationPlan()
+    remediation_plan:   ProposedRemediationPlan = ProposedRemediationPlan()
 
     # Resumen textual
     summary:            str   = ""

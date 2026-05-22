@@ -66,12 +66,12 @@ from executors.gromacs_executor import (
     MDMetrics,
 )
 
-from executors.adaptive_models import (
+from executors.execution_reasoning_models import (
     AdaptiveReasoningResult,
     ReasoningVerdict,
     StepAnalysis,
     StepAnalysisVerdict,
-    RemediationPlan,
+    ProposedRemediationPlan,
     RemediationStep,
     RemediationTarget,
 )
@@ -581,10 +581,10 @@ def _analyze_generic_gromacs(
 def _build_remediation_plan(
     steps:      list[RemediationStep],
     exec_state: WorkspaceExecutionState,
-) -> RemediationPlan:
+) -> ProposedRemediationPlan:
 
     if not steps:
-        return RemediationPlan()
+        return ProposedRemediationPlan()
 
     n_auto   = sum(1 for s in steps if s.automatic)
     n_manual = len(steps) - n_auto
@@ -605,7 +605,7 @@ def _build_remediation_plan(
     elif steps:
         rerun_from = steps[0].step_id
 
-    return RemediationPlan(
+    return ProposedRemediationPlan(
         steps              = steps,
         n_automatic        = n_auto,
         n_manual           = n_manual,

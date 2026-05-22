@@ -79,7 +79,7 @@ from executors.remediation_models import (
     RemediationStatus,
     ActionType,
 )
-from executors.adaptive_reasoner import AdaptiveReasoner
+from executors.signal_detector import AdaptiveReasoner
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

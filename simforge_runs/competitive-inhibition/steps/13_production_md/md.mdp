@@ -2,12 +2,12 @@ title                   = Production MD
 
 integrator              = md
 dt                      = 0.002
-nsteps                  = 5000000
+nsteps                  = 25000000
 
 tcoupl                  = V-rescale
 tc-grps                 = Protein Non-Protein
 tau_t                   = 0.1 0.1
-ref_t                   = 300 300
+ref_t                   = 300.0 300.0
 
 pcoupl                  = Parrinello-Rahman
 pcoupltype              = isotropic

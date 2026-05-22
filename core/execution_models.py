@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any, Optional
 from pydantic import BaseModel
 
 from core.models import Severity
@@ -83,6 +84,14 @@ class SimulationStep(BaseModel):
 
     notes: list[str] = []
 
+    # IR payload: parámetros engine-specific generados por decision_engine.
+    # Los builders leen desde aquí en lugar de hardcodear valores.
+    params: dict[str, Any] = {}
+
+    # Condición semántica que causó la inclusión de este step.
+    # Metadata de auditoría — no afecta ejecución.
+    condition: Optional[str] = None
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Problemas bloqueantes
@@ -116,11 +125,33 @@ class CheckItem(BaseModel):
 # Plan global de simulación
 # ═══════════════════════════════════════════════════════════════════════════════
 
+class WorkflowPolicy(BaseModel):
+    """
+    Decisiones científicas a nivel del pipeline completo.
+
+    Generada por decision_engine desde SystemState.
+    Fuente de verdad para duración, temperatura, presión y
+    estrategia de sampling — ningún builder hardcodea estos valores.
+    """
+
+    production_time_ns:    float = 10.0
+    equilibration_time_ns: float = 0.1
+    minimization_steps:    int   = 50_000
+    temperature_K:         float = 300.0
+    pressure_bar:          float = 1.0
+    timestep_ps:           float = 0.002
+    enhanced_sampling:     bool  = False
+    sampling_method:       str   = "standard"   # "standard" | "REST2" | "metadynamics"
+
+
 class SimulationPlan(BaseModel):
 
     status: PlanStatus
 
     inferred_system_type: str | None = None
+
+    # Política de workflow: decisiones científicas globales del pipeline.
+    workflow_policy: WorkflowPolicy = WorkflowPolicy()
 
     blocking_issues: list[BlockingIssue] = []
 

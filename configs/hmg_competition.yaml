@@ -34,6 +34,8 @@ environment:
   ions:
     concentration: 0.15
 
+  temperature_K: 300
+
 
 forcefields:
 

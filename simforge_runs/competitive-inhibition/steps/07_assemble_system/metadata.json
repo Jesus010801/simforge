@@ -3,8 +3,26 @@
     "stage": "assembly",
     "engine": "system_builder",
     "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "AssemblyBuilder",
     "expected_outputs": [
         "complex.gro",
         "topol.top"
-    ]
+    ],
+    "params": {
+        "inputs": [
+            {
+                "var": "PROTEIN_1",
+                "path": "../02_prepare_protein_1/protein_1_processed.gro"
+            },
+            {
+                "var": "SUBSTRATE_1",
+                "path": "../05_parametrize_substrate_1/substrate_1.gro"
+            },
+            {
+                "var": "LIGAND_1",
+                "path": "../04_parametrize_ligand_1/ligand_1.gro"
+            }
+        ]
+    }
 }
