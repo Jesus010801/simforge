@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import shutil
 
 from core.compiler_models import (
     CompilationResult,
@@ -69,10 +70,9 @@ class WorkspaceBuilder:
             exist_ok=True,
         )
 
-        steps_dir.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        if steps_dir.exists():
+            shutil.rmtree(steps_dir)
+        steps_dir.mkdir(parents=True)
 
         # ────────────────────────────────────────────────────────────────────
         # Step folders
