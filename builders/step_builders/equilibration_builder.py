@@ -5,9 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from core.execution_models import (
-    SimulationStep,
-)
+from core.execution_models import SimulationStep
+from builders.step_builders._utils import rel as _rel
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -36,6 +35,18 @@ class EquilibrationBuilder:
         tau_t       = p.get("tau_t",       " ".join(["0.1"] * len(tc_grps.split())))
         ref_t       = p.get("ref_t",       " ".join([str(temperature)] * len(tc_grps.split())))
         constraints = p.get("constraints", "h-bonds")
+
+        # ── Inter-step paths ─────────────────────────────────────────────────
+        # em.gro: output de energy_minimization (direct dep)
+        em_dir = next(
+            (step_dir_map[d] for d in step.depends_on if "minimization" in d and d in step_dir_map),
+            None,
+        )
+        em_ref = _rel(step_dir, em_dir) if em_dir else "../energy_minimization"
+
+        # topol.top: vive en assemble_system (no es dep directo, pero siempre presente)
+        assemble_dir = step_dir_map.get("assemble_system")
+        topol_ref    = _rel(step_dir, assemble_dir) if assemble_dir else "../assemble_system"
 
         # ────────────────────────────────────────────────────────────────────
         # NVT MDP
@@ -117,17 +128,23 @@ pbc                     = xyz
         # Run scripts
         # ────────────────────────────────────────────────────────────────────
 
-        nvt_script = """
-gmx grompp \
-    -f nvt.mdp \
-    -c em.gro \
-    -r em.gro \
-    -p topol.top \
+        nvt_script = f"""#!/bin/bash
+# ─── NVT equilibration ───────────────────────────────────────────────────────
+# Paths resueltos desde DAG
+
+EM_DIR="{em_ref}"
+TOPOL_DIR="{topol_ref}"
+
+gmx grompp \\
+    -f nvt.mdp \\
+    -c "$EM_DIR/em.gro" \\
+    -r "$EM_DIR/em.gro" \\
+    -p "$TOPOL_DIR/topol.top" \\
     -o nvt.tpr
 
-gmx mdrun \
-    -v \
-    -deffnm nvt \
+gmx mdrun \\
+    -v \\
+    -deffnm nvt \\
     -nb gpu
 """
 
@@ -139,18 +156,23 @@ gmx mdrun \
             nvt_script.strip()
         )
 
-        npt_script = """
-gmx grompp \
-    -f npt.mdp \
-    -c nvt.gro \
-    -r nvt.gro \
-    -t nvt.cpt \
-    -p topol.top \
+        npt_script = f"""#!/bin/bash
+# ─── NPT equilibration ───────────────────────────────────────────────────────
+# nvt.gro y nvt.cpt son outputs locales del step NVT anterior
+
+TOPOL_DIR="{topol_ref}"
+
+gmx grompp \\
+    -f npt.mdp \\
+    -c nvt.gro \\
+    -r nvt.gro \\
+    -t nvt.cpt \\
+    -p "$TOPOL_DIR/topol.top" \\
     -o npt.tpr
 
-gmx mdrun \
-    -v \
-    -deffnm npt \
+gmx mdrun \\
+    -v \\
+    -deffnm npt \\
     -nb gpu
 """
 
