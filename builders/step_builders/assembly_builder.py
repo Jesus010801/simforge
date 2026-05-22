@@ -2,16 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import json
 
 from core.execution_models import SimulationStep
-
-
-def _rel(from_dir: Path, to_dir: Path) -> str:
-    """Relative path from from_dir to to_dir for use in shell scripts."""
-    return os.path.relpath(to_dir, from_dir)
+from builders.step_builders._utils import rel as _rel
 
 
 def _component_gro(step_id: str) -> str | None:

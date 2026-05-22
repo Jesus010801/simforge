@@ -544,9 +544,21 @@ ALTA PRIORIDAD:
 (ninguna)
 
 MEDIA PRIORIDAD:
-→ Resume + manifest: al reanudar desde execution_state.json, los records no tienen
-  depends_on si el estado fue escrito antes del manifest. Enriquecer con manifest
-  al reanudar para correctness en _is_blocked().
+(ninguna)
+
+Completado — Resume + manifest enrichment [2026-05-22]
+
+executors/base_executor.py — _initialize_state(), path 1 (resume)
+→ después de deserializar execution_state.json, si el manifest existe:
+  construye deps_map = {step_id: depends_on} desde manifest
+  enriquece cada record con depends_on=[] usando el manifest como fuente
+→ log "[RESUME] depends_on enriquecido en N records" cuando aplica
+→ sin efecto si records ya tienen depends_on (idempotente)
+
+Caso resuelto: workspace ejecutado con versión anterior del executor (sin manifest-driven PR)
+reanudado con versión nueva → _is_blocked() usa dependencias reales del DAG, no fallback secuencial.
+
+Validado: borrado manual de depends_on en 3 records con deps reales → todos recuperados desde manifest.
 
 BAJA PRIORIDAD (esperar segundo engine):
 → Abstracción de engine interface (SimulationEngine ABC)
@@ -802,12 +814,77 @@ BAJA PRIORIDAD:
 
 ---
 
+Completado — Rutas inter-step en run scripts [2026-05-22]
+
+Problema resuelto:
+Los scripts de equilibration y production referenciaban em.gro, npt.gro, topol.top
+sin path — rotos si el usuario los ejecutaba desde el directorio del step.
+
+Cambios aplicados:
+
+builders/step_builders/_utils.py (nuevo)
+→ rel(from_dir, to_dir): helper compartido para rutas relativas entre steps
+→ reemplaza las copias locales en assembly_builder.py
+
+builders/step_builders/assembly_builder.py
+→ ahora importa _rel desde _utils (eliminada copia local)
+
+builders/step_builders/equilibration_builder.py
+→ resuelve EM_DIR desde step.depends_on (energy_minimization)
+→ resuelve TOPOL_DIR desde step_dir_map["assemble_system"]
+→ run_nvt.sh: -c "$EM_DIR/em.gro" -p "$TOPOL_DIR/topol.top"
+→ run_npt.sh: -p "$TOPOL_DIR/topol.top" (nvt.gro es local → OK)
+
+builders/step_builders/production_builder.py
+→ resuelve EQ_DIR desde step.depends_on (equilibration)
+→ resuelve TOPOL_DIR desde step_dir_map["assemble_system"]
+→ run_md.sh: -c "$EQ_DIR/npt.gro" -t "$EQ_DIR/npt.cpt" -p "$TOPOL_DIR/topol.top"
+
+Validado:
+→ run_nvt.sh: EM_DIR="../10_energy_minimization", TOPOL_DIR="../07_assemble_system" ✓
+→ run_npt.sh: TOPOL_DIR="../07_assemble_system", nvt.gro local ✓
+→ run_md.sh: EQ_DIR="../11_equilibration", TOPOL_DIR="../07_assemble_system" ✓
+→ dry-run: 14 done, 0 failed ✓
+
+Propiedad: si el DAG reordena steps, los números en los paths se recalculan automáticamente.
+
+---
+
+Completado — CLI [2026-05-22]
+
+cli.py — punto de entrada con Typer + Rich
+
+simforge compile <yaml> [--output-dir <dir>] [--no-build]
+→ compila YAML → SimulationPlan + DAG
+→ muestra panel con system_type, steps, policy, blocking issues
+→ tabla con execution_order completo
+→ materializa workspace y muestra path
+→ sugiere next command
+
+simforge run <workspace> [--dry-run/--real] [--executor shell|gromacs]
+→ dry-run por defecto (--real requiere confirmación interactiva)
+→ ejecuta executor completo con output de logs en tiempo real
+→ resumen: done/failed/skipped al terminar
+
+simforge status <workspace> [-v]
+→ lee execution_state.json
+→ enriquece stage desde manifest (no almacenado en state)
+→ tabla con iconos (✓ ✗ – ⊘ ▶) por step
+→ barra de progreso visual [█████░░░░░] N/M steps (X%)
+→ verbose: timing + nota de error por step
+
+Validado:
+→ compile: panel + tabla + workspace materializados ✓
+→ run --dry-run: 14 done, 2 skipped, 0 failed ✓
+→ status: tabla con stage, iconos, barra de progreso ✓
+→ status --verbose: timing por step ✓
+
+---
+
 Próximo milestone lógico
 
-Rename de capas de reasoning (deuda técnica ALTA PRIORIDAD)
-
-adaptive_reasoner.py → signal_detector.py (trabaja sobre texto crudo)
-adaptive_models.py → execution_reasoning_models.py
+Analysis builders — implementar comandos GROMACS reales
+(gmx rms, gmx hbond, gmx distance) en analysis_builder.py
 
 Parallel wave execution — futuro lejano
 

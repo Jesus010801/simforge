@@ -149,8 +149,31 @@ class BaseExecutor(ABC):
 
         # ── 1. Reanudar si existe estado previo (solo modo real) ──────────────
         if state_file.exists() and not self.dry_run:
-            raw = json.loads(state_file.read_text())
-            return WorkspaceExecutionState(**raw)
+            raw   = json.loads(state_file.read_text())
+            state = WorkspaceExecutionState(**raw)
+
+            # Enriquecer depends_on desde manifest si los records no lo tienen.
+            # Ocurre cuando el estado fue escrito por una versión anterior del
+            # executor (antes del manifest-driven PR) o cuando la ejecución fue
+            # interrumpida antes de que se escribiera depends_on.
+            if manifest_file.exists():
+                manifest_raw = json.loads(manifest_file.read_text())
+                deps_map = {
+                    e["step_id"]: e.get("depends_on", [])
+                    for e in manifest_raw.get("steps", [])
+                }
+                enriched = 0
+                for record in state.steps:
+                    if not record.depends_on and record.step_id in deps_map:
+                        record.depends_on = deps_map[record.step_id]
+                        enriched += 1
+                if enriched:
+                    self._log(
+                        f"[RESUME] depends_on enriquecido desde manifest "
+                        f"en {enriched} records"
+                    )
+
+            return state
 
         # Limpiar estado anterior si existe
         if state_file.exists():

@@ -5,9 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from core.execution_models import (
-    SimulationStep,
-)
+from core.execution_models import SimulationStep
+from builders.step_builders._utils import rel as _rel
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -39,6 +38,18 @@ class ProductionBuilder:
         nstxout_compressed  = p.get("nstxout_compressed",   5_000)
         nstenergy           = p.get("nstenergy",             1_000)
         nstlog              = p.get("nstlog",                1_000)
+
+        # ── Inter-step paths ─────────────────────────────────────────────────
+        # npt.gro / npt.cpt: output de equilibration (direct dep)
+        eq_dir = next(
+            (step_dir_map[d] for d in step.depends_on if "equilibration" in d and d in step_dir_map),
+            None,
+        )
+        eq_ref = _rel(step_dir, eq_dir) if eq_dir else "../equilibration"
+
+        # topol.top: vive en assemble_system (no es dep directo, pero siempre presente)
+        assemble_dir = step_dir_map.get("assemble_system")
+        topol_ref    = _rel(step_dir, assemble_dir) if assemble_dir else "../assemble_system"
 
         # ────────────────────────────────────────────────────────────────────
         # md.mdp
@@ -88,17 +99,23 @@ pbc                     = xyz
         # Run script
         # ────────────────────────────────────────────────────────────────────
 
-        run_script = """
-gmx grompp \
-    -f md.mdp \
-    -c npt.gro \
-    -t npt.cpt \
-    -p topol.top \
+        run_script = f"""#!/bin/bash
+# ─── Production MD ───────────────────────────────────────────────────────────
+# Paths resueltos desde DAG
+
+EQ_DIR="{eq_ref}"
+TOPOL_DIR="{topol_ref}"
+
+gmx grompp \\
+    -f md.mdp \\
+    -c "$EQ_DIR/npt.gro" \\
+    -t "$EQ_DIR/npt.cpt" \\
+    -p "$TOPOL_DIR/topol.top" \\
     -o md.tpr
 
-gmx mdrun \
-    -v \
-    -deffnm md \
+gmx mdrun \\
+    -v \\
+    -deffnm md \\
     -nb gpu
 """
 
