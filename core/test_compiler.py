@@ -1,64 +1,46 @@
-from rich import print
-from rich.console import Console
-
-from core.compiler import (
-    SimulationCompiler,
-)
-
-console = Console()
+# core/test_compiler.py
+from __future__ import annotations
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Compile workflow
-# ═══════════════════════════════════════════════════════════════════════════════
+# ── CompilationResult structure ───────────────────────────────────────────────
 
-compiler = SimulationCompiler()
-
-result = compiler.compile(
-    "configs/hmg_competition.yaml"
-)
+def test_compilation_result_has_execution_order(compilation_result):
+    assert len(compilation_result.execution_order) > 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Summary
-# ═══════════════════════════════════════════════════════════════════════════════
-
-console.rule("[bold green]SimForge Compiler[/bold green]")
-
-print()
-
-for item in result.summary:
-
-    print(f"  • {item}")
+def test_execution_order_starts_with_preparation(compilation_result):
+    first = compilation_result.execution_order[0]
+    assert first.stage.value == "preparation"
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# User workflow
-# ═══════════════════════════════════════════════════════════════════════════════
-
-console.rule("[bold cyan]User Workflow[/bold cyan]")
-
-for i, step in enumerate(result.user_view, start=1):
-
-    print(
-        f"\n  {i:02d}. {step}"
-    )
+def test_execution_order_ends_with_analysis(compilation_result):
+    last = compilation_result.execution_order[-1]
+    assert last.stage.value == "analysis"
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Mermaid
-# ═══════════════════════════════════════════════════════════════════════════════
+def test_mermaid_graph_is_non_empty(compilation_result):
+    assert compilation_result.mermaid_graph
+    assert "graph" in compilation_result.mermaid_graph
 
-console.rule("[bold magenta]Mermaid Graph[/bold magenta]")
 
-print()
+def test_user_view_is_non_empty(compilation_result):
+    assert len(compilation_result.user_view) > 0
 
-print(
-    result.mermaid_graph
-)
 
-print()
+def test_compilation_result_has_plan(compilation_result):
+    assert compilation_result.plan is not None
 
-console.rule(
-    "[bold green]Compilation Complete[/bold green]"
-)
+
+def test_compilation_result_has_state(compilation_result):
+    assert compilation_result.state is not None
+
+
+def test_execution_order_has_no_duplicate_step_ids(compilation_result):
+    ids = [s.step_id for s in compilation_result.execution_order]
+    assert len(ids) == len(set(ids))
+
+
+def test_execution_order_count_matches_plan(compilation_result):
+    plan_count = len(compilation_result.plan.steps)
+    order_count = len(compilation_result.execution_order)
+    assert plan_count == order_count

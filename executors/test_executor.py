@@ -1,87 +1,73 @@
 # executors/test_executor.py
-from rich import print
-from rich.console import Console
+from __future__ import annotations
 
-from core.compiler import SimulationCompiler
-from builders.workspace_builder import WorkspaceBuilder
-from executors.shell_executor import ShellExecutor
 from executors.execution_state import StepStatus
 
-console = Console()
+
+# ── Dry-run completion ────────────────────────────────────────────────────────
+
+def test_dry_run_completes(execution_state):
+    assert execution_state.is_complete
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 1. Compilar
-# ═══════════════════════════════════════════════════════════════════════════════
-
-compiler = SimulationCompiler()
-result   = compiler.compile("configs/hmg_competition.yaml")
+def test_dry_run_has_no_failed_steps(execution_state):
+    assert execution_state.n_failed() == 0
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 2. Construir workspace
-# ═══════════════════════════════════════════════════════════════════════════════
-
-builder   = WorkspaceBuilder()
-workspace = builder.build(result)
+def test_dry_run_done_count(execution_state):
+    assert execution_state.n_done() == 14
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# 3. Ejecutar (dry-run)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-console.rule("[bold green]SimForge Executor — Dry Run[/bold green]")
-
-executor = ShellExecutor(
-    workspace_path = workspace,
-    dry_run        = True,
-)
-
-state = executor.run()
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 4. Reporte final
-# ═══════════════════════════════════════════════════════════════════════════════
-
-console.rule("[bold cyan]Execution Report[/bold cyan]")
-
-status_colors = {
-    StepStatus.DONE:    "green",
-    StepStatus.FAILED:  "red",
-    StepStatus.SKIPPED: "yellow",
-    StepStatus.BLOCKED: "red",
-    StepStatus.PENDING: "dim",
-    StepStatus.RUNNING: "blue",
-}
-
-print()
-
-for record in state.steps:
-
-    color = status_colors.get(record.status, "white")
-    elapsed = f"({record.elapsed_s:.1f}s)" if record.elapsed_s else ""
-
-    print(
-        f"  [{color}]{record.status.value:8}[/{color}]  "
-        f"{record.step_id}  [dim]{elapsed}[/dim]"
+def test_dry_run_skipped_count(execution_state):
+    # review_parametrization_substrate_1 and rest2_sampling are manual/external
+    skipped = sum(
+        1 for s in execution_state.steps
+        if s.status in (StepStatus.SKIPPED, StepStatus.BLOCKED)
     )
+    assert skipped == 2
 
-    if record.error_message:
-        print(f"           [red]{record.error_message}[/red]")
 
-    if record.outputs_missing:
-        print(f"           [yellow]missing: {record.outputs_missing}[/yellow]")
+# ── Step record correctness ───────────────────────────────────────────────────
 
-print()
+def test_all_steps_have_step_id(execution_state):
+    for record in execution_state.steps:
+        assert record.step_id
 
-console.rule("[bold white]Summary[/bold white]")
 
-print(f"\n  Done    : [green]{state.n_done()}[/green]")
-print(f"  Failed  : [red]{state.n_failed()}[/red]")
-print(f"  Pending : [dim]{state.n_pending()}[/dim]")
-print(f"  Complete: {'[green]yes[/green]' if state.is_complete else '[red]no[/red]'}")
-print(f"\n  State saved → {workspace}/execution_state.json")
-print()
+def test_done_steps_have_elapsed_time(execution_state):
+    for record in execution_state.steps:
+        if record.status == StepStatus.DONE:
+            assert record.elapsed_s is not None
+            assert record.elapsed_s >= 0
 
-console.rule("[bold green]Executor Test Complete[/bold green]")
+
+def test_steps_have_depends_on_populated(execution_state):
+    # manifest-driven execution must populate depends_on for non-root steps
+    non_root = [
+        r for r in execution_state.steps
+        if r.step_id not in (
+            "prepare_protein_1", "prepare_ligand_1", "prepare_substrate_1"
+        )
+    ]
+    with_deps = [r for r in non_root if r.depends_on]
+    assert len(with_deps) > 0
+
+
+def test_analysis_steps_depend_on_production(execution_state):
+    analysis_records = [
+        r for r in execution_state.steps
+        if r.step_id.startswith("analysis_")
+    ]
+    assert len(analysis_records) > 0
+    for record in analysis_records:
+        assert any("production" in d for d in record.depends_on)
+
+
+# ── No blocked steps beyond expected skips ───────────────────────────────────
+
+def test_no_unexpected_blocked_steps(execution_state):
+    blocked = [
+        r for r in execution_state.steps
+        if r.status == StepStatus.BLOCKED
+    ]
+    assert blocked == [], f"Unexpected blocked steps: {[r.step_id for r in blocked]}"
