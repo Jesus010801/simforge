@@ -881,22 +881,64 @@ Validado:
 
 ---
 
-Próximo milestone lógico
+Completado — Analysis builders con comandos GROMACS reales [2026-05-22]
 
-Analysis builders — implementar comandos GROMACS reales
-(gmx rms, gmx hbond, gmx distance) en analysis_builder.py
+builders/step_builders/analysis_builder.py — reescrito completo
 
-Parallel wave execution — futuro lejano
+Dispatch por analysis_type desde step.params:
+→ rmsd:               gmx rms  — Backbone (4) reference, Protein (1) RMSD
+→ rmsf:               gmx rmsf — per-residuo, Backbone + C-alpha
+→ hydrogen_bonds:     gmx hbond — Protein-Protein (1 1) + Protein-SOL (1 13)
+→ distance:           gmx distance + make_ndx.sh scaffold de guía
+→ energy:             gmx energy — Potential, Kinetic, Total, Temp, Pressure
+→ radius_of_gyration: gmx gyrate — Protein (1)
+→ genérico:           template vacío con paths de referencia
 
-Precondición cumplida: _is_blocked() ya usa depends_on reales.
-Los tres steps de análisis ya tienen depends_on=['production_md'] — listos para paralelo.
+Propiedades arquitectónicas:
+→ Grupos: GROMACS built-in exclusivamente (sin make_ndx para análisis estándar)
+→ PROD_DIR resuelto desde step_dir_map["production_md"] — relativo y DAG-correcto
+→ metadata.json incluye params + gromacs_groups + outputs esperados
+→ Fallback a _build_generic para tipos no implementados (sin crash)
 
-Precondición cumplida: _is_blocked() ya usa depends_on reales.
-Los tres steps de análisis ya tienen depends_on=['production_md'] — están listos
-para ejecutarse en paralelo si el executor lo soporta.
+builders/step_builders/_utils.py (nuevo)
+→ rel(from_dir, to_dir): helper compartido (importado desde todos los builders)
 
-Pasos concretos cuando se decida implementar:
-1. BaseExecutor.run() agrupa steps por wave (to_parallel_waves() ya existe en WorkflowGraph)
+Validado:
+→ analysis_rmsd/run_analysis.sh:        echo "4 4" | gmx rms ... PROD_DIR="../13_production_md" ✓
+→ analysis_hydrogen_bonds/run_analysis.sh: echo "1 1" | gmx hbond ... ✓
+→ analysis_distance_analysis/run_analysis.sh: gmx distance + make_ndx.sh ✓
+→ dry-run: 14 done, 2 skipped (manual), 0 failed ✓
+→ simforge status: tabla completa con stage, iconos, barra de progreso ✓
+
+---
+
+Estado arquitectónico final [2026-05-22]
+
+La cadena declarativa está completa end-to-end:
+
+YAML
+→ SystemState (parser)
+→ WorkflowPolicy + step.params (decision_engine — única fuente de verdad científica)
+→ SimulationPlan IR
+→ WorkflowGraph DAG
+→ step_dir_map (WorkspaceBuilder pass 1)
+→ builders como templates puros con rutas DAG-dinámicas (WorkspaceBuilder pass 2)
+→ execution_manifest.json (fuente de verdad operativa del executor)
+→ BaseExecutor con manifest-driven ordering + DAG-aware _is_blocked()
+→ artefactos físicos reproducibles: MDP, run scripts, analysis scripts
+
+CLI operativo: simforge compile | run | status
+
+---
+
+Deuda técnica abierta (actualizada [2026-05-22])
+
+BAJA PRIORIDAD:
+→ Abstracción de engine interface (SimulationEngine ABC) — esperar segundo engine
+→ GROMACS coupling en remediation_executor — encapsular cuando haya segundo engine
+→ Parallel wave execution: ThreadPoolExecutor sobre to_parallel_waves()
+  (Precondición cumplida: _is_blocked() ya usa depends_on reales.
+   Los tres análisis tienen depends_on=['production_md'] — listos para paralelo.)
 2. Ejecutar cada wave con ThreadPoolExecutor o similar
 3. _is_blocked() ya es correcto — no requiere cambios
 4. Validar con dry-run que los tres análisis corren concurrentemente
