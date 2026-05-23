@@ -6,5 +6,10 @@
     "step_type": "automatic",
     "expected_outputs": [
         "substrate_1.sdf"
-    ]
+    ],
+    "required_inputs": [
+        "../../inputs/substrate_1.pdb"
+    ],
+    "template_hash": "e4853f55a9ebc113",
+    "generated_at": "2026-05-23T09:01:16"
 }

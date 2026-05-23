@@ -321,11 +321,13 @@ class RemediationExecutor:
         workspace_path: str | Path,
         dry_run:        bool = True,
         max_global_retries: int = 3,
+        backend=None,   # ExecutionBackend | None — if provided, used in retry() instead of ShellExecutor
     ):
         self.workspace_path      = Path(workspace_path)
         self.dry_run             = dry_run
         self.max_global_retries  = max_global_retries
         self.reasoner            = AdaptiveReasoner()
+        self._backend            = backend
         self._log_lines: list[str] = []
 
     # ─── API pública ──────────────────────────────────────────────────────────
@@ -491,20 +493,64 @@ class RemediationExecutor:
             self._log(f"  [DRY]   retry simulado exitoso para {record.step_id}")
             return True
 
-        # ── Retry real vía ShellExecutor ─────────────────────────────────────
-        # Creamos un executor temporal con el workspace_path y
-        # lo usamos solo para ejecutar este step puntual.
-        executor = ShellExecutor(
-            workspace_path = self.workspace_path,
-            dry_run        = False,
-        )
-        executor.state = state
+        # ── Retry real: backend injection or ShellExecutor fallback ───────────
+        if self._backend is not None:
+            # Use injected ExecutionBackend (e.g. LocalSubprocessBackend)
+            import asyncio
+            from runtime.events import EventBus, BoundPublisher
+            step_dir = Path(record.step_dir)
+            # Find script to run
+            script = None
+            for name in ["run.sh", "run_md.sh", "run_nvt.sh", "run_npt.sh",
+                         "run_analysis.sh", "commands.sh"]:
+                cand = step_dir / name
+                if cand.exists():
+                    script = cand
+                    break
+            if script is None:
+                record.status        = StepStatus.FAILED
+                record.error_message = "No script found for backend retry"
+            else:
+                # Build a minimal publisher — backend needs one
+                bus = getattr(self, "_bus", None)
+                if bus is None:
+                    bus = EventBus()
+                pub = BoundPublisher(bus, str(self.workspace_path.name), record.step_id)
+                try:
+                    result = asyncio.run(
+                        self._backend.submit(
+                            cmd=["bash", str(script)],
+                            cwd=step_dir,
+                            publisher=pub,
+                        )
+                    )
+                    record.stdout    = "\n".join(result.stdout_lines[-500:])
+                    record.stderr    = "\n".join(result.stderr_lines[-200:])
+                    record.exit_code = result.returncode
+                    if result.returncode != 0:
+                        record.status        = StepStatus.FAILED
+                        record.error_message = (
+                            f"Exit code {result.returncode}. "
+                            f"Last stderr: {record.stderr[-400:]}"
+                        )
+                    else:
+                        record.status = StepStatus.DONE
+                except Exception as e:
+                    record.status        = StepStatus.FAILED
+                    record.error_message = str(e)
+        else:
+            # Fallback: ShellExecutor (backward compat)
+            executor = ShellExecutor(
+                workspace_path = self.workspace_path,
+                dry_run        = False,
+            )
+            executor.state = state
 
-        try:
-            executor._run_step(record)
-        except Exception as e:
-            record.status        = StepStatus.FAILED
-            record.error_message = str(e)
+            try:
+                executor._run_step(record)
+            except Exception as e:
+                record.status        = StepStatus.FAILED
+                record.error_message = str(e)
 
         record.finished_at = datetime.now()
         record.elapsed_s   = (record.finished_at - record.started_at).total_seconds()

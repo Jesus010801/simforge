@@ -43,12 +43,13 @@ from pydantic import BaseModel, Field
 
 class StepStatus(str, Enum):
 
-    PENDING   = "pending"    # no ha corrido
-    RUNNING   = "running"    # corriendo ahora
-    DONE      = "done"       # terminó exitosamente
-    FAILED    = "failed"     # terminó con error
-    SKIPPED   = "skipped"    # saltado por decisión del executor
-    BLOCKED   = "blocked"    # no puede correr por dependencia fallida
+    PENDING     = "pending"      # no ha corrido
+    RUNNING     = "running"      # corriendo ahora
+    DONE        = "done"         # terminó exitosamente
+    FAILED      = "failed"       # terminó con error
+    SKIPPED     = "skipped"      # saltado por decisión del executor
+    BLOCKED     = "blocked"      # no puede correr por dependencia fallida
+    RECOVERABLE = "recoverable"  # interrumpido con checkpoint disponible
 
 
 class StepExecutionRecord(BaseModel):

@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 
 from core.execution_models import SimulationStep
-from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_block
+from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_block, mdrun_resume_block as _mdrun_resume_block
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -57,12 +57,14 @@ class ProductionBuilder:
         )
         eq_ref = _rel(step_dir, eq_dir) if eq_dir else "../equilibration"
 
-        # topol.top — membrane: generate_topology; protein: assemble_system
+        # topol.top chain (final topology after ion addition):
+        #   add_ions > generate_topology (membrane, no ion step) > assemble_system
         topol_dir = (
-            step_dir_map.get("generate_topology")
+            step_dir_map.get("add_ions")
+            or step_dir_map.get("generate_topology")
             or step_dir_map.get("assemble_system")
         )
-        topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../assemble_system"
+        topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../add_ions"
 
         # ────────────────────────────────────────────────────────────────────
         # md.mdp
@@ -135,7 +137,7 @@ gmx grompp \\
     -o md.tpr \\
     -maxwarn 1
 
-{_mdrun_block("md", hardware)}"""
+{_mdrun_block("md", hardware, stage="md")}"""
 
         run_path = (
             step_dir / "run_md.sh"
@@ -144,6 +146,19 @@ gmx grompp \\
         run_path.write_text(
             run_script.strip()
         )
+
+        # ────────────────────────────────────────────────────────────────────
+        # Resume script (checkpoint recovery — no grompp, uses existing md.tpr)
+        # ────────────────────────────────────────────────────────────────────
+
+        resume_script = f"""#!/bin/bash
+# ─── Production MD (resume from checkpoint) ──────────────────────────────────
+# Resumes from md.cpt — md.tpr must already exist in this directory.
+# Do NOT call grompp; the .tpr is reused as-is.
+
+{_mdrun_resume_block("md", hardware, stage="md")}"""
+
+        (step_dir / "run_md_resume.sh").write_text(resume_script.strip())
 
         # ────────────────────────────────────────────────────────────────────
         # Metadata
@@ -158,6 +173,7 @@ gmx grompp \\
             "generated_by":     "ProductionBuilder",
             "simulation_type":  "production_md",
             "expected_outputs": ["md.xtc", "md.edr", "md.log", "md.gro", "md.cpt"],
+            "required_inputs":  [f"{eq_ref}/npt.gro", f"{eq_ref}/npt.cpt"],
             "params": {
                 "dt": dt, "nsteps": nsteps, "temperature": temperature,
                 "pressure": pressure, "tc_grps": tc_grps, "constraints": constraints,

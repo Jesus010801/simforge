@@ -233,6 +233,7 @@ def _build_preparation_steps(
                     stage=StepStage.PREPARATION,
                     engine="ligand_preparation",
                     target_components=[comp.id],
+                    params={"source_file": comp.file} if comp.file else {},
                 )
             )
 
@@ -695,31 +696,54 @@ def _build_workflow_policy(state: SystemState) -> WorkflowPolicy:
     """
     Produce WorkflowPolicy desde SystemState.
 
-    Centraliza todas las decisiones científicas globales del pipeline:
-    duración, temperatura, presión, timestep, estrategia de sampling.
-    Ningún builder hardcodea estos valores — los leen desde step.params.
+    Reads state.workflow_hints (structured, set by semantic layer) and
+    state.simulation_objectives to produce concrete simulation parameters.
+
+    Priority: explicit YAML overrides > workflow_hints > objective defaults.
+    No builder or pipeline class should hardcode these values.
     """
     policy = WorkflowPolicy()
+    hints  = state.workflow_hints
 
     policy.temperature_K = state.environment.temperature_K
 
-    # Estrategia de sampling
-    if state.global_reasoning.needs_special_sampling:
+    # ── Membrane system ───────────────────────────────────────────────────────
+    if hints.semiisotropic_coupling:
+        policy.semiisotropic_coupling = True
+    if hints.membrane_required:
+        policy.membrane_required = True
+
+    # Conservative timestep: OPLS-AA lipids are unstable at dt=0.002 ps.
+    if hints.conservative_timestep:
+        policy.timestep_ps = 0.001
+
+    # Extended equilibration for membrane bilayer relaxation or IDRs.
+    if hints.membrane_equilibration or hints.extended_equilibration:
+        policy.extended_equilibration = True
+        policy.equilibration_time_ns  = max(policy.equilibration_time_ns, 0.5)
+
+    # Extended / long production.
+    if hints.extended_production or hints.long_production:
+        policy.extended_production = True
+        if state.environment.duration_ns is None:
+            policy.production_time_ns = max(policy.production_time_ns, 50.0)
+
+    # ── Sampling strategy ─────────────────────────────────────────────────────
+    if hints.enhanced_sampling or state.global_reasoning.needs_special_sampling:
         policy.enhanced_sampling     = True
         policy.sampling_method       = "REST2"
-        policy.equilibration_time_ns = 0.5   # equilibración extendida antes de REST2
+        policy.equilibration_time_ns = max(policy.equilibration_time_ns, 0.5)
 
-    # Duración de producción: override explícito del usuario tiene prioridad,
-    # si no, las workflow policies científicas gobiernan.
+    # ── Production duration: explicit user override always wins ───────────────
     if state.environment.duration_ns is not None:
         policy.production_time_ns = state.environment.duration_ns
-    else:
+    elif not (hints.extended_production or hints.long_production):
+        # Objective-based defaults (only if no hint-driven override)
         objectives = set(state.simulation_objectives)
         if "competitive_binding" in objectives:
             policy.production_time_ns = 50.0
         elif "active_site_stability" in objectives:
             policy.production_time_ns = 20.0
-        # else: default 10ns
 
     return policy
 
@@ -793,7 +817,7 @@ def _build_equilibration_params(
     tc_grps, tau_t, ref_t = _tc_grps(state, policy.temperature_K)
     nsteps = _nsteps_from_ns(policy.equilibration_time_ns, policy.timestep_ps)
 
-    return {
+    params: dict = {
         "dt":          policy.timestep_ps,
         "nvt_nsteps":  nsteps,
         "npt_nsteps":  nsteps,
@@ -806,6 +830,23 @@ def _build_equilibration_params(
         "hardware":    policy.hardware,
     }
 
+    if policy.semiisotropic_coupling:
+        # Membrane equilibration: Berendsen NPT + semiisotropic + extended cutoffs.
+        # Berendsen is preferred over Parrinello-Rahman during equilibration because
+        # it is more stable when the bilayer is not yet relaxed.
+        params.update({
+            "pcoupltype": "semiisotropic",
+            "pcoupl_npt": "Berendsen",
+            "ref_p_xy":   policy.pressure_bar,
+            "ref_p_z":    policy.pressure_bar,
+            "tau_p":      5.0,
+            "rcoulomb":   1.2,
+            "rvdw":       1.2,
+            "disp_corr":  "EnerPres",
+        })
+
+    return params
+
 
 def _build_production_params(
     step:   SimulationStep,
@@ -815,7 +856,7 @@ def _build_production_params(
     tc_grps, tau_t, ref_t = _tc_grps(state, policy.temperature_K)
     nsteps = _nsteps_from_ns(policy.production_time_ns, policy.timestep_ps)
 
-    return {
+    params: dict = {
         "dt":                 policy.timestep_ps,
         "nsteps":             nsteps,
         "temperature":        policy.temperature_K,
@@ -829,6 +870,23 @@ def _build_production_params(
         "nstlog":             1000,
         "hardware":           policy.hardware,
     }
+
+    if policy.semiisotropic_coupling:
+        # Membrane production: Nose-Hoover + Parrinello-Rahman semiisotropic.
+        # Switch from Berendsen (used in equilibration) to Parrinello-Rahman
+        # for correct NpT ensemble in the production phase.
+        params.update({
+            "tcoupl":     "Nose-Hoover",
+            "pcoupltype": "semiisotropic",
+            "ref_p_xy":   policy.pressure_bar,
+            "ref_p_z":    policy.pressure_bar,
+            "tau_p":      2.0,
+            "rcoulomb":   1.2,
+            "rvdw":       1.2,
+            "disp_corr":  "EnerPres",
+        })
+
+    return params
 
 
 def _build_analysis_params(

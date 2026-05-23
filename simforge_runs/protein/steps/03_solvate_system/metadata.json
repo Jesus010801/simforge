@@ -12,6 +12,9 @@
         "box_type": "triclinic",
         "box_distance": 1.2,
         "water_model": "spce",
-        "water_gro": "spc216.gro"
-    }
+        "water_gro": "spc216.gro",
+        "box_alignment": ""
+    },
+    "template_hash": "dbf13a665736fdb6",
+    "generated_at": "2026-05-23T00:42:47"
 }

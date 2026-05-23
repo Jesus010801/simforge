@@ -249,6 +249,7 @@ def compile_variants(
                 workspace = WorkspaceBuilder().build(
                     result,
                     output_dir=str(root_dir),
+                    workspace_name=spec.variant_id,
                 )
                 manifest.workspaces[spec.variant_id] = str(workspace)
 

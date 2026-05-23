@@ -52,6 +52,7 @@ class ErrorCategory(str, Enum):
     CORRUPT_CHECKPOINT  = "corrupt_checkpoint"  # .cpt corrupto
 
     # Ejecución general
+    INTERACTIVE_BLOCK   = "interactive_block"   # proceso bloqueado esperando input TTY
     TIMEOUT             = "timeout"             # step excedió límite de tiempo
     NONZERO_EXIT        = "nonzero_exit"        # exit code ≠ 0 sin categoría específica
     MISSING_OUTPUT      = "missing_output"      # outputs esperados no generados

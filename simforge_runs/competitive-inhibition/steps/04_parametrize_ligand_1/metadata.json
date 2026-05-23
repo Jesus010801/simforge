@@ -8,5 +8,7 @@
     "expected_outputs": [
         "ligand_1.str",
         "ligand_1.itp"
-    ]
+    ],
+    "template_hash": "92d563d7231f69c4",
+    "generated_at": "2026-05-23T09:01:16"
 }

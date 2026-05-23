@@ -8,5 +8,7 @@
         "protein_1_processed.gro",
         "topol.top",
         "posre.itp"
-    ]
+    ],
+    "template_hash": "c11e2308b456e46e",
+    "generated_at": "2026-05-23T00:42:47"
 }

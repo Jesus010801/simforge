@@ -32,6 +32,7 @@ class StreamResult:
         "stdout",
         "stderr",
         "timed_out",
+        "hang_killed",
         "elapsed_s",
         "likely_interactive",
     )
@@ -41,6 +42,7 @@ class StreamResult:
         self.stdout:             str           = ""
         self.stderr:             str           = ""
         self.timed_out:          bool          = False
+        self.hang_killed:        bool          = False  # killed by hang_timeout_s
         self.elapsed_s:          float         = 0.0
         # True if process appeared to hang waiting for TTY input
         self.likely_interactive: bool          = False
@@ -58,6 +60,7 @@ def run_streaming(
     on_heartbeat:         Optional[Callable[[float], None]] = None,
     timeout_s:            float = 86400.0,
     heartbeat_interval_s: float = 30.0,
+    hang_timeout_s:       float = 600.0,
 ) -> StreamResult:
     """
     Run *cmd* in *cwd*, streaming output line-by-line.
@@ -70,6 +73,7 @@ def run_streaming(
         on_heartbeat:         Called with seconds-since-last-output when silent.
         timeout_s:            Hard kill timeout in seconds (default 24 h).
         heartbeat_interval_s: Seconds of silence before heartbeat fires.
+        hang_timeout_s:       Kill if no output for this many seconds (0 = disabled).
 
     Returns:
         StreamResult with returncode, captured stdout/stderr, timing info.
@@ -84,6 +88,7 @@ def run_streaming(
         proc = subprocess.Popen(
             cmd,
             cwd=str(cwd),
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -138,6 +143,13 @@ def run_streaming(
                     on_heartbeat(elapsed_silent)
                 except Exception:
                     pass
+
+            # Semantic hang detection: kill if silent beyond hang_timeout_s
+            if hang_timeout_s > 0 and elapsed_silent >= hang_timeout_s:
+                proc.kill()
+                result.hang_killed        = True
+                result.likely_interactive = True
+                break
 
             # Heuristic: if silent for > 2× heartbeat, process may need TTY
             if elapsed_silent >= heartbeat_interval_s * 2:

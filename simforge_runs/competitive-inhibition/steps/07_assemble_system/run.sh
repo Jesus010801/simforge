@@ -6,6 +6,11 @@ PROTEIN_1="../02_prepare_protein_1/protein_1_processed.gro"
 SUBSTRATE_1="../05_parametrize_substrate_1/substrate_1.gro"
 LIGAND_1="../04_parametrize_ligand_1/ligand_1.gro"
 
+# Handoff topology from protein prep
+PROTEIN_PREP_DIR="../02_prepare_protein_1"
+cp "$PROTEIN_PREP_DIR/topol.top" topol.top
+cp "$PROTEIN_PREP_DIR/posre.itp" posre.itp
+
 # Combinar estructuras
 cat $PROTEIN_1 $SUBSTRATE_1 $LIGAND_1 > complex_raw.gro
 

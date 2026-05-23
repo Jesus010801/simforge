@@ -2,5 +2,14 @@
     "step_id": "solvate_membrane",
     "stage": "assembly",
     "engine": "gromacs:solvate",
-    "step_type": "automatic"
+    "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "AssemblyBuilder",
+    "expected_outputs": [
+        "solvated.gro",
+        "topol.top"
+    ],
+    "params": {
+        "water_gro": "spc216.gro"
+    }
 }

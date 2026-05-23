@@ -15,8 +15,13 @@ from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_blo
 
 class MinimizationBuilder:
     """
-    Genera archivos necesarios para
-    minimización energética en GROMACS.
+    Genera archivos para minimización energética en GROMACS.
+
+    Soporta sistemas proteína-en-agua y sistemas de membrana:
+        - define: "-DPOSRES -DSTRONG_POSRES" para EM con restraints de membrana
+        - rcoulomb/rvdw: 1.2 nm para membrana (vs 1.0 nm estándar)
+        - disp_corr: "EnerPres" para sistemas de membrana
+        - topol_ref: prefiere generate_topology > assemble_system
     """
 
     def build(
@@ -26,60 +31,54 @@ class MinimizationBuilder:
         step_dir_map: dict = {},
     ) -> None:
 
-        # ────────────────────────────────────────────────────────────────────
-        # em.mdp
-        # ────────────────────────────────────────────────────────────────────
-
-        p = step.params
+        p          = step.params
         integrator = p.get("integrator", "steep")
         emtol      = p.get("emtol",      1000.0)
         emstep     = p.get("emstep",     0.01)
         nsteps     = p.get("nsteps",     50_000)
         hardware   = p.get("hardware",   "auto")
+        define     = p.get("define",     "")
+        rcoulomb   = p.get("rcoulomb",   1.0)
+        rvdw       = p.get("rvdw",       1.0)
+        disp_corr  = p.get("disp_corr",  "")
 
-        mdp_text = f"""
-integrator  = {integrator}
-emtol       = {emtol}
-emstep      = {emstep}
-nsteps      = {nsteps}
+        define_block = f"define                  = {define}\n\n" if define else ""
+        disp_block   = f"\nDispCorr                = {disp_corr}" if disp_corr else ""
 
-cutoff-scheme = Verlet
-
-nstlist     = 10
-coulombtype = PME
-rcoulomb    = 1.0
-rvdw        = 1.0
-
-pbc         = xyz
-"""
-
-        mdp_path = step_dir / "em.mdp"
-
-        mdp_path.write_text(
-            mdp_text.strip()
+        mdp_text = (
+            f"{define_block}"
+            f"integrator              = {integrator}\n"
+            f"emtol                   = {emtol}\n"
+            f"emstep                  = {emstep}\n"
+            f"nsteps                  = {nsteps}\n\n"
+            f"cutoff-scheme           = Verlet\n\n"
+            f"nstlist                 = 10\n"
+            f"coulombtype             = PME\n"
+            f"rcoulomb                = {rcoulomb}\n"
+            f"rvdw                    = {rvdw}\n\n"
+            f"pbc                     = xyz{disp_block}\n"
         )
 
-        # ────────────────────────────────────────────────────────────────────
-        # Inter-step paths (resolved from DAG)
-        # ────────────────────────────────────────────────────────────────────
+        (step_dir / "em.mdp").write_text(mdp_text)
 
+        # ── Inter-step paths ─────────────────────────────────────────────────
         ions_dir = next(
             (step_dir_map[d] for d in step.depends_on if "ions" in d and d in step_dir_map),
             None,
         )
         ions_ref = _rel(step_dir, ions_dir) if ions_dir else "../add_ions"
 
-        assemble_dir = step_dir_map.get("assemble_system")
-        topol_ref    = _rel(step_dir, assemble_dir) if assemble_dir else "../assemble_system"
-
-        # ────────────────────────────────────────────────────────────────────
-        # run.sh
-        # ────────────────────────────────────────────────────────────────────
+        # topol.top chain (final topology after ion addition):
+        #   add_ions > generate_topology (membrane, no ion step) > assemble_system
+        topol_dir = (
+            step_dir_map.get("add_ions")
+            or step_dir_map.get("generate_topology")
+            or step_dir_map.get("assemble_system")
+        )
+        topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../add_ions"
 
         run_script = f"""#!/bin/bash
 # ─── Energy minimization ─────────────────────────────────────────────────────
-# Paths resueltos desde DAG
-
 IONS_DIR="{ions_ref}"
 TOPOL_DIR="{topol_ref}"
 
@@ -90,19 +89,10 @@ gmx grompp \\
     -o em.tpr \\
     -maxwarn 1
 
-{_mdrun_block("em", hardware)}"""
+{_mdrun_block("em", hardware, stage="minimization")}"""
 
-        run_path = step_dir / "run.sh"
-
-        run_path.write_text(
-            run_script.strip()
-        )
-
-        # ────────────────────────────────────────────────────────────────────
-        # metadata.json
-        # ────────────────────────────────────────────────────────────────────
-
-        metadata = {
+        (step_dir / "run.sh").write_text(run_script.strip())
+        (step_dir / "metadata.json").write_text(json.dumps({
             "step_id":          step.step_id,
             "stage":            step.stage.value,
             "engine":           step.engine,
@@ -110,16 +100,10 @@ gmx grompp \\
             "blocking":         step.blocking,
             "generated_by":     "MinimizationBuilder",
             "expected_outputs": ["em.gro", "em.edr", "em.log"],
-            "params":           {"integrator": integrator, "emtol": emtol, "emstep": emstep, "nsteps": nsteps},
-        }
-
-        metadata_path = (
-            step_dir / "metadata.json"
-        )
-
-        metadata_path.write_text(
-            json.dumps(
-                metadata,
-                indent=4,
-            )
-        )
+            "required_inputs":  [f"{ions_ref}/aaions.gro", f"{topol_ref}/topol.top"],
+            "params": {
+                "integrator": integrator, "emtol": emtol,
+                "emstep": emstep, "nsteps": nsteps,
+                "define": define, "rcoulomb": rcoulomb, "rvdw": rvdw,
+            },
+        }, indent=4))

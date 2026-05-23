@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
-import shutil
 
 from core.execution_models import SimulationStep
+from builders.step_builders._utils import rel as _rel
 
 # GROMACS uses "oplsaa" (no dash) as the -ff argument; the ontology uses "opls-aa"
 _FF_GROMACS_NAME: dict[str, str] = {
@@ -34,20 +34,24 @@ class PreparationBuilder:
         step_dir_map: dict = {},
     ) -> None:
 
-        targets = step.target_components
-        engine  = step.engine
+        workspace_root = step_dir_map.get("__workspace_root__")
+        inputs_dir     = (Path(workspace_root) / "inputs") if workspace_root else None
+        inputs_ref     = _rel(step_dir, inputs_dir) if inputs_dir else "../../inputs"
+
+        engine = step.engine
 
         if engine == "gromacs:pdb2gmx":
-            self._build_protein_prep(step, step_dir)
+            self._build_protein_prep(step, step_dir, inputs_ref)
         else:
-            self._build_ligand_prep(step, step_dir)
+            self._build_ligand_prep(step, step_dir, inputs_ref)
 
     # ── Proteína ──────────────────────────────────────────────────────────────
 
     def _build_protein_prep(
         self,
-        step:     SimulationStep,
-        step_dir: Path,
+        step:       SimulationStep,
+        step_dir:   Path,
+        inputs_ref: str,
     ) -> None:
 
         target      = step.target_components[0] if step.target_components else "protein"
@@ -55,21 +59,20 @@ class PreparationBuilder:
         forcefield  = step.params.get("forcefield", "charmm36")
         water_model = step.params.get("water_model", "tip3p")
 
-        # Translate ontology FF name → GROMACS -ff argument
         ff_gmx = _FF_GROMACS_NAME.get(forcefield, forcefield)
 
-        # Copy source PDB into the step directory at compile time
-        if source_file:
-            src = Path(source_file)
-            dst = step_dir / f"{target}.pdb"
-            if src.exists() and src.resolve() != dst.resolve():
-                shutil.copy2(src, dst)
+        # Derive the staged filename (component_id + original extension)
+        src_ext  = Path(source_file).suffix if source_file else ".pdb"
+        pdb_name = f"{target}{src_ext}"
 
         script = f"""#!/bin/bash
 # ─── Preparación de proteína: {target} ───────────────────────────────────────
+# El PDB de entrada vive en workspace/inputs/ — workspace auto-contenido.
+
+INPUTS_DIR="{inputs_ref}"
 
 gmx pdb2gmx \\
-    -f {target}.pdb \\
+    -f "$INPUTS_DIR/{pdb_name}" \\
     -o {target}_processed.gro \\
     -p topol.top \\
     -ff {ff_gmx} \\
@@ -89,14 +92,16 @@ gmx pdb2gmx \\
                 "topol.top",
                 "posre.itp",
             ],
+            "required_inputs":  [f"{inputs_ref}/{pdb_name}"],
         }, indent=4))
 
     # ── Ligando ───────────────────────────────────────────────────────────────
 
     def _build_ligand_prep(
         self,
-        step:     SimulationStep,
-        step_dir: Path,
+        step:       SimulationStep,
+        step_dir:   Path,
+        inputs_ref: str,
     ) -> None:
 
         target = (
@@ -104,17 +109,22 @@ gmx pdb2gmx \\
             if step.target_components
             else "ligand"
         )
+        source_file = step.params.get("source_file")
+        src_ext     = Path(source_file).suffix if source_file else ".pdb"
+        pdb_name    = f"{target}{src_ext}"
 
         commands = f"""#!/bin/bash
 # ─── Preparación de ligando: {target} ────────────────────────────────────────
-# Engine: ligand_preparation
-# Ejecutar manualmente
+# El PDB de entrada vive en workspace/inputs/ — workspace auto-contenido.
+# Ejecutar manualmente.
 
-# Opción A: si tienes SDF limpio
-#   obabel {target}.pdb -O {target}.sdf --gen3d
+INPUTS_DIR="{inputs_ref}"
 
-# Opción B: si ya tienes SDF
-#   cp {target}.sdf .
+# Opción A: convertir desde inputs (recomendado)
+#   obabel "$INPUTS_DIR/{pdb_name}" -O {target}.sdf --gen3d
+
+# Opción B: si ya tienes SDF listo
+#   cp /path/to/{target}.sdf .
 
 # Verificar estructura en Avogadro o PyMOL antes de parametrizar
 echo "Verificar {target}.sdf antes de continuar a parametrización"
@@ -139,11 +149,14 @@ Verificar visualmente en Avogadro o PyMOL.
 
         (step_dir / "commands.sh").write_text(commands)
         (step_dir / "README.md").write_text(readme)
-        (step_dir / "metadata.json").write_text(json.dumps({
+        meta: dict = {
             "step_id":          step.step_id,
             "stage":            step.stage.value,
             "engine":           step.engine,
             "target":           target,
             "step_type":        step.step_type.value,
             "expected_outputs": [f"{target}.sdf"],
-        }, indent=4))
+        }
+        if source_file:
+            meta["required_inputs"] = [f"{inputs_ref}/{pdb_name}"]
+        (step_dir / "metadata.json").write_text(json.dumps(meta, indent=4))

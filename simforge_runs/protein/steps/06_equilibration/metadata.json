@@ -13,6 +13,9 @@
         "npt.gro",
         "npt.cpt"
     ],
+    "required_inputs": [
+        "../05_energy_minimization/em.gro"
+    ],
     "params": {
         "dt": 0.002,
         "nvt_nsteps": 50000,
@@ -21,5 +24,7 @@
         "pcoupltype": "isotropic",
         "pcoupl_npt": "Parrinello-Rahman",
         "tc_grps": "Protein Non-Protein"
-    }
+    },
+    "template_hash": "0cc5c941c49cfee6",
+    "generated_at": "2026-05-23T00:42:47"
 }

@@ -283,6 +283,23 @@ _SIGNAL_PATTERNS: list[_Signal] = [
         explanation = "Checkpoint corrupto — probablemente por interrupción previa.",
     ),
 
+    # ── Proceso bloqueado esperando input interactivo (TTY) ───────────────────
+    _Signal(
+        category    = ErrorCategory.INTERACTIVE_BLOCK,
+        severity    = ErrorSeverity.FATAL,
+        patterns    = [
+            r"Select group for determining the orientation",
+            r"Select a group:",
+            r"Enter selection:",
+            r"Choice\s*[\?:]",
+            r"^Group\s+\d+\s+\(",
+        ],
+        confidence  = 0.98,
+        explanation = "GROMACS intentó leer del terminal (TTY) para una selección interactiva. "
+                      "El proceso fue terminado porque stdin no tiene terminal. "
+                      "Causa más común: -princ en gmx editconf sin pipe de grupo.",
+    ),
+
     # ── Timeout ───────────────────────────────────────────────────────────────
     _Signal(
         category    = ErrorCategory.TIMEOUT,
@@ -639,6 +656,48 @@ def _plan_checkpoint(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
     )
 
 
+def _plan_interactive_block(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """Proceso bloqueado esperando TTY → parchear script para eliminar la flag interactiva."""
+    actions: list[RemediationAction] = []
+
+    for script in sorted(step_dir.glob("*.sh")):
+        try:
+            content = script.read_text()
+        except Exception:
+            continue
+        if "-princ" in content:
+            actions.append(RemediationAction(
+                action_type = ActionType.PATCH_SCRIPT,
+                description = f"Eliminar -princ de {script.name} (bloquea esperando TTY)",
+                target_file = script.name,
+                patch_key   = "-princ",
+                patch_value = "",
+                patch_old   = "-princ",
+                rationale   = "gmx editconf -princ solicita selección interactiva de grupo. "
+                              "Sin terminal disponible el proceso queda bloqueado indefinidamente.",
+                confidence  = 0.97,
+            ))
+
+    actions.append(RemediationAction(
+        action_type = ActionType.RESET_STEP,
+        description = "Limpiar outputs parciales antes de retry",
+        confidence  = 1.0,
+        rationale   = "El step fue terminado a la fuerza; limpiar estado antes de retry.",
+    ))
+
+    return RemediationPlan(
+        step_id          = diag.step_id,
+        diagnosis        = diag,
+        actions          = actions,
+        is_applicable    = bool(actions),
+        requires_human   = not bool(actions),
+        max_retries      = 1,
+        strategy         = "Eliminar flag interactiva del script + retry",
+        expected_outcome = "Sin -princ el editconf corre sin prompt. "
+                           "La caja puede ser ligeramente mayor para péptidos elongados.",
+    )
+
+
 def _plan_generic_retry(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
     """Fallback: reset + retry sin modificar nada."""
     return RemediationPlan(
@@ -671,6 +730,7 @@ _PLANNERS: dict[ErrorCategory, Callable] = {
     ErrorCategory.MISSING_PARAMETER:   _plan_missing_parameter,
     ErrorCategory.ATOM_TYPE_MISMATCH:  _plan_missing_parameter,
     ErrorCategory.CORRUPT_CHECKPOINT:  _plan_checkpoint,
+    ErrorCategory.INTERACTIVE_BLOCK:   _plan_interactive_block,
     ErrorCategory.CHARGE_IMBALANCE:    _plan_generic_retry,
     ErrorCategory.MISSING_INPUT_FILE:  _plan_generic_retry,
     ErrorCategory.TIMEOUT:             _plan_generic_retry,

@@ -30,6 +30,7 @@ from executors.execution_state import (
     StepExecutionRecord,
     StepStatus,
 )
+from core.workspace_fingerprint import check_workspace_freshness
 
 _console = Console(highlight=False)
 
@@ -82,7 +83,28 @@ class BaseExecutor(ABC):
         self._log(f"Executor iniciado — dry_run={self.dry_run}")
         self._log(f"Workspace: {self.workspace_path}")
 
+        # Staleness check — refuse to execute stale workspaces in real mode
+        if not self.dry_run:
+            manifest_path = self.workspace_path / "metadata" / "execution_manifest.json"
+            is_fresh, freshness_msg = check_workspace_freshness(manifest_path)
+            if not is_fresh and "Legacy" not in freshness_msg:
+                _console.print(
+                    f"\n  [red bold]✗ Stale workspace detected.[/red bold]\n"
+                    f"  {freshness_msg}\n"
+                )
+                self._log(f"[STALE] {freshness_msg}")
+                raise RuntimeError(
+                    f"Workspace is stale and cannot be executed safely.\n{freshness_msg}"
+                )
+            if "Legacy" in freshness_msg:
+                _console.print(
+                    "  [yellow]⚠[/yellow]  [dim]Legacy workspace — no fingerprint. "
+                    "Recompile recommended.[/dim]"
+                )
+
         self.state.started_at = datetime.now()
+
+        self._pre_run_hook()
 
         n_total = len(self.state.steps)
 
@@ -95,6 +117,41 @@ class BaseExecutor(ABC):
                     _console.print(
                         f"  [dim]⊘  [{idx}/{n_total}] {record.step_id}  (blocked)[/dim]"
                     )
+                    continue
+
+                # Skip steps whose cached artifacts are confirmed intact.
+                # _should_skip() is populated by _pre_run_hook() in RuntimeExecutor.
+                if self._should_skip(record):
+                    record.status = StepStatus.DONE
+                    self._save_state()
+                    continue
+
+                # Preflight: verificar archivos requeridos antes de ejecutar (solo modo real)
+                step_dir_pre = Path(record.step_dir)
+                meta_pre     = self._read_metadata(step_dir_pre)
+                missing_pre  = self._validate_preflight(step_dir_pre, meta_pre) if not self.dry_run else []
+                if missing_pre:
+                    record.status        = StepStatus.FAILED
+                    record.error_message = (
+                        f"Preflight falló: archivos requeridos no encontrados: "
+                        f"{missing_pre}"
+                    )
+                    _console.print(
+                        f"  [red]✗[/red]  [bold]{record.step_id}[/bold]  "
+                        f"[dim](preflight failed)[/dim]"
+                    )
+                    for f in missing_pre:
+                        _console.print(f"     [red]missing:[/red] {f}")
+                    self._log(
+                        f"[PREFLIGHT] {record.step_id} — faltantes: {missing_pre}"
+                    )
+                    self._save_state()
+                    if meta_pre.get("blocking", False):
+                        _console.print(
+                            f"\n  [red bold]✗ Blocking step failed:[/red bold] "
+                            f"{record.step_id} — aborting pipeline.\n"
+                        )
+                        break
                     continue
 
                 # Banner de inicio visible
@@ -169,6 +226,7 @@ class BaseExecutor(ABC):
             self.state.finished_at = datetime.now()
             self.state.is_complete = self.state.all_done()
             self._save_state()
+            self._post_run_hook()
 
         return self.state
 
@@ -182,6 +240,24 @@ class BaseExecutor(ABC):
         record.exit_code, record.outputs_found, record.outputs_missing.
         """
         raise NotImplementedError
+
+    # ── Extension hooks — subclasses override these ───────────────────────────
+
+    def _pre_run_hook(self) -> None:
+        """Called once after state is initialized, before the step loop starts."""
+
+    def _should_skip(self, record: StepExecutionRecord) -> bool:
+        """
+        Return True to skip *record* entirely (silently mark DONE, no _run_step).
+        Called after _is_blocked(), so dependency failures are already handled.
+        Override in subclasses that implement caching (e.g. RuntimeExecutor).
+        """
+        return False
+
+    def _post_run_hook(self) -> None:
+        """Called once in the finally block of run(), after state is saved.
+        Override in subclasses for post-run tasks (e.g. scientific summary).
+        """
 
     # ── Inicialización ────────────────────────────────────────────────────────
 
@@ -294,9 +370,14 @@ class BaseExecutor(ABC):
 
     # ── Dependencias ──────────────────────────────────────────────────────────
 
+    # Statuses that mean a dep did not complete successfully → block downstream
+    _BLOCKING_STATUSES = frozenset({StepStatus.FAILED, StepStatus.BLOCKED})
+
     def _is_blocked(self, record: StepExecutionRecord) -> bool:
         """
-        Un step está bloqueado si alguno de sus predecesores directos falló.
+        Un step está bloqueado si alguno de sus predecesores directos no completó.
+
+        Propaga transitivamente: FAILED → BLOCKED → BLOCKED (transitive chain).
 
         Si record.depends_on está poblado (manifest-driven): usa dependencias reales del DAG.
         Si está vacío (filesystem scan / workspace antiguo): fallback conservador secuencial.
@@ -304,15 +385,15 @@ class BaseExecutor(ABC):
         if record.depends_on:
             step_status = {r.step_id: r.status for r in self.state.steps}
             return any(
-                step_status.get(dep) == StepStatus.FAILED
+                step_status.get(dep) in self._BLOCKING_STATUSES
                 for dep in record.depends_on
             )
 
-        # Fallback conservador: cualquier fallo previo bloquea los siguientes
+        # Fallback conservador: cualquier fallo o bloqueo previo bloquea los siguientes
         for other in self.state.steps:
             if other.step_id == record.step_id:
                 break
-            if other.status == StepStatus.FAILED:
+            if other.status in self._BLOCKING_STATUSES:
                 return True
         return False
 
@@ -340,6 +421,21 @@ class BaseExecutor(ABC):
         if meta_file.exists():
             return json.loads(meta_file.read_text())
         return {}
+
+    def _validate_preflight(self, step_dir: Path, meta: dict) -> list[str]:
+        """
+        Verifica que los archivos requeridos existen antes de ejecutar el step.
+
+        'required_inputs' en metadata.json son paths relativos al step_dir.
+        Retorna lista de paths faltantes (vacía = OK).
+        """
+        required = meta.get("required_inputs", [])
+        missing  = []
+        for rel_path in required:
+            p = (step_dir / rel_path).resolve()
+            if not p.exists():
+                missing.append(rel_path)
+        return missing
 
     def _check_expected_outputs(
         self,

@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 
 from core.execution_models import SimulationStep
-from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_block
+from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_block, mdrun_resume_block as _mdrun_resume_block
 
 
 class EquilibrationBuilder:
@@ -74,12 +74,14 @@ class EquilibrationBuilder:
         )
         em_ref = _rel(step_dir, em_dir) if em_dir else "../energy_minimization"
 
-        # topol.top — membrane: generate_topology; protein: assemble_system
+        # topol.top chain (final topology after ion addition):
+        #   add_ions > generate_topology (membrane, no ion step) > assemble_system
         topol_dir = (
-            step_dir_map.get("generate_topology")
+            step_dir_map.get("add_ions")
+            or step_dir_map.get("generate_topology")
             or step_dir_map.get("assemble_system")
         )
-        topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../assemble_system"
+        topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../add_ions"
 
         # ── NVT MDP ──────────────────────────────────────────────────────────
 
@@ -141,7 +143,7 @@ class EquilibrationBuilder:
             f"    -p \"$TOPOL_DIR/topol.top\" \\\n"
             f"    -o nvt.tpr \\\n"
             f"    -maxwarn 1\n\n"
-            f"{_mdrun_block('nvt', hardware)}"
+            f"{_mdrun_block('nvt', hardware, stage='md')}"
         )
 
         (step_dir / "run_npt.sh").write_text(
@@ -156,13 +158,29 @@ class EquilibrationBuilder:
             f"    -p \"$TOPOL_DIR/topol.top\" \\\n"
             f"    -o npt.tpr \\\n"
             f"    -maxwarn 1\n\n"
-            f"{_mdrun_block('npt', hardware)}"
+            f"{_mdrun_block('npt', hardware, stage='md')}"
         )
 
         (step_dir / "run.sh").write_text(
             "#!/bin/bash\nset -e\n"
             "bash \"$(dirname \"$0\")/run_nvt.sh\"\n"
             "bash \"$(dirname \"$0\")/run_npt.sh\"\n"
+        )
+
+        # ── Resume scripts (checkpoint recovery) ──────────────────────────────
+
+        (step_dir / "run_nvt_resume.sh").write_text(
+            f"#!/bin/bash\n"
+            f"# ─── NVT equilibration (resume from checkpoint) ─────────────────────────────\n"
+            f"# Resumes from nvt.cpt — nvt.tpr must already exist in this directory.\n\n"
+            f"{_mdrun_resume_block('nvt', hardware, stage='md')}"
+        )
+
+        (step_dir / "run_npt_resume.sh").write_text(
+            f"#!/bin/bash\n"
+            f"# ─── NPT equilibration (resume from checkpoint) ─────────────────────────────\n"
+            f"# Resumes from npt.cpt — npt.tpr must already exist in this directory.\n\n"
+            f"{_mdrun_resume_block('npt', hardware, stage='md')}"
         )
 
         # ── Metadata ──────────────────────────────────────────────────────────
@@ -176,6 +194,7 @@ class EquilibrationBuilder:
             "generated_by":       "EquilibrationBuilder",
             "equilibration_type": ["NVT", "NPT"],
             "expected_outputs":   ["npt.gro", "npt.cpt"],
+            "required_inputs":    [f"{em_ref}/em.gro"],
             "params": {
                 "dt": dt, "nvt_nsteps": nvt_nsteps, "npt_nsteps": npt_nsteps,
                 "temperature": temperature, "pcoupltype": pcoupltype,

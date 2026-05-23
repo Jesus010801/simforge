@@ -11,6 +11,10 @@ ref_t                   = 300.0 300.0
 
 pcoupl                  = no
 
+gen_vel                 = yes
+gen_temp                = 300.0
+gen_seed                = -1
+
 constraints             = h-bonds
 
 cutoff-scheme           = Verlet
