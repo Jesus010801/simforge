@@ -145,6 +145,11 @@ class WorkflowPolicy(BaseModel):
     enhanced_sampling:     bool  = False
     sampling_method:       str   = "standard"   # "standard" | "REST2" | "metadynamics"
     hardware:              str   = "auto"        # "auto" | "gpu" | "cpu"
+    # ── Derived from WorkflowHints ─────────────────────────────────────────────
+    semiisotropic_coupling: bool = False   # semiisotropic NPT (membrane systems)
+    membrane_required:      bool = False   # system embeds a bilayer
+    extended_equilibration: bool = False   # longer NVT/NPT phase
+    extended_production:    bool = False   # longer production run
 
 
 class SimulationPlan(BaseModel):

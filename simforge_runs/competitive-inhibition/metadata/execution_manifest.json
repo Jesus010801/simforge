@@ -1,5 +1,10 @@
 {
-    "compiled_at": "2026-05-22T15:28:52",
+    "compile_id": "3810851e-308e-49b0-be9d-cc01cdfa2605",
+    "compiled_at": "2026-05-23T09:01:16",
+    "simforge_version": "0.1.0",
+    "yaml_source": "",
+    "builder_signature": "b0c89767de1580fcc06e9516",
+    "build_signature": "b0c89767de1580fcc06e9516",
     "system_type": "competitive-inhibition",
     "n_steps": 16,
     "steps": [

@@ -11,8 +11,7 @@ gmx editconf \
     -o box.gro \
     -c \
     -d 1.2 \
-    -bt triclinic \
-    -princ
+    -bt triclinic
 
 # Agregar agua
 gmx solvate \

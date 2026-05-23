@@ -1,8 +1,6 @@
 #!/bin/bash
 # ─── NPT equilibration ───────────────────────────────────────────────────────
-# nvt.gro y nvt.cpt son outputs locales del step NVT anterior
-
-TOPOL_DIR="../07_assemble_system"
+TOPOL_DIR="../09_add_ions"
 
 gmx grompp \
     -f npt.mdp \
@@ -10,9 +8,11 @@ gmx grompp \
     -r nvt.gro \
     -t nvt.cpt \
     -p "$TOPOL_DIR/topol.top" \
-    -o npt.tpr
+    -o npt.tpr \
+    -maxwarn 1
 
-gmx mdrun \
-    -v \
-    -deffnm npt \
-    -nb gpu
+if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null 2>&1; then
+    gmx mdrun -v -deffnm npt -gpu_id 0 -pme gpu -bonded gpu -nb gpu -update cpu -ntmpi 1 -ntomp $(nproc) -nstlist 150 -pin on -tunepme no -pmefft gpu -dlb auto
+else
+    gmx mdrun -v -deffnm npt -nb cpu -pme cpu -ntmpi 1 -ntomp $(nproc) -pin on
+fi

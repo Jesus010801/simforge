@@ -6,12 +6,16 @@
     "blocking": false,
     "generated_by": "AssemblyBuilder",
     "expected_outputs": [
-        "solvated.gro"
+        "solvated.gro",
+        "topol.top"
     ],
     "params": {
-        "box_type": "dodecahedron",
+        "box_type": "triclinic",
         "box_distance": 1.2,
         "water_model": "tip3p",
-        "water_gro": "spc216.gro"
-    }
+        "water_gro": "spc216.gro",
+        "box_alignment": ""
+    },
+    "template_hash": "6c49a13d5d617459",
+    "generated_at": "2026-05-23T09:01:16"
 }

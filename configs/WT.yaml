@@ -24,8 +24,5 @@ analysis:
   - type: rmsd
   - type: rmsf
   - type: energy
-  - type: hydrogen_bonds
-  - type: radius_of_gyration
-  - type: distance_analysis
 
 hardware: cpu

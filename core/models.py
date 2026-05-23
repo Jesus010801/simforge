@@ -49,6 +49,7 @@ from core.ontology import (
     OUTPUT_FORMATS,
     SIMULATION_GOALS,
 )
+from core.workflow_hints import WorkflowHints
 
 from enum import Enum
 
@@ -464,12 +465,20 @@ class SystemState(BaseModel):
     environment:           EnvironmentModel  = EnvironmentModel()
     forcefields:           ForcefieldsModel
     simulation_objectives: list[str]         = []
+    # Named scientific preset — expands to objectives + workflow hints.
+    # Examples: membrane_protein, soluble_protein, protein_ligand_binding, idr_sampling
+    simulation_profile:    Optional[str]     = None
     restraints:            list[RestraintModel] = []
     analysis:              list[AnalysisModel]  = []
     output:                OutputModel       = OutputModel()
 
     # ── Reasoning global (escrito por inference.py) ───────────────────────────
     global_reasoning: GlobalReasoning = Field(default_factory=GlobalReasoning)
+
+    # ── Workflow hints (escrito por semantic_inference, leído por decision engine)
+    # Fuente única de verdad para "qué tipo de simulación es ésta".
+    # Eliminates knowledge duplication between SIMULATION_PRESETS and pipeline classes.
+    workflow_hints: WorkflowHints = Field(default_factory=WorkflowHints)
 
     # ── Compatibilidad hacia atrás con código existente ───────────────────────
     # Estos campos se mantienen para no romper inference.py ni test_parser.py.
@@ -483,10 +492,22 @@ class SystemState(BaseModel):
     @field_validator("simulation_objectives")
     @classmethod
     def validate_objectives(cls, v):
+        # Soft validation: normalize inline using semantic aliases.
+        # Unknown objectives are passed through — run_semantic_normalization()
+        # will surface warnings with suggestions after the model is built.
+        from core.semantic_objectives import normalize_objective
+        normalized: list[str] = []
         for obj in v:
-            if obj not in SIMULATION_GOALS:
-                raise ValueError(f"Objetivo '{obj}' no reconocido. Válidos: {SIMULATION_GOALS}")
-        return v
+            canonicals, _ = normalize_objective(obj)
+            if canonicals:
+                for c in canonicals:
+                    if c not in normalized:
+                        normalized.append(c)
+            else:
+                # Unknown — retain as-is so the inference stage can warn
+                if obj not in normalized:
+                    normalized.append(obj)
+        return normalized
 
     # ── Helpers de consulta ───────────────────────────────────────────────────
 

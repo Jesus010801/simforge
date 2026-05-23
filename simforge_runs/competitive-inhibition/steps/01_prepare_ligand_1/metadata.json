@@ -6,5 +6,10 @@
     "step_type": "automatic",
     "expected_outputs": [
         "ligand_1.sdf"
-    ]
+    ],
+    "required_inputs": [
+        "../../inputs/ligand_1.pdb"
+    ],
+    "template_hash": "d274d8ed157690fc",
+    "generated_at": "2026-05-23T09:01:16"
 }

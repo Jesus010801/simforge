@@ -2,7 +2,7 @@
 ;	File 'topol.top' was generated
 ;	By user: jesusxd (1000)
 ;	On host: jesusina
-;	At date: Fri May 22 21:10:01 2026
+;	At date: Sat May 23 00:42:53 2026
 ;
 ;	This is a standalone topology file
 ;
@@ -10387,6 +10387,4 @@ Protein in water
 [ molecules ]
 ; Compound        #mols
 Protein_chain_A     1
-SOL         13016
-NA               42
-CL               38
+SOL             67172

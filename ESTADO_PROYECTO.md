@@ -1,7 +1,7 @@
 # Estado del Proyecto — SimForge
 
 ## Fecha
-[20/05/2026]
+[23/05/2026]
 
 ---
 
@@ -986,7 +986,84 @@ Validado: 9 tests, 0 failed.
 
 ---
 
-Próximo milestone — Interfaz de generación de YAML (simforge init)
+Completado — simforge init (YAML wizard) [2026-05-22]
+
+cli.py — nueva subcomanda `simforge init`
+
+Wizard interactivo CLI con Typer prompts:
+→ Nombre del proyecto
+→ Tipo de sistema: protein-in-water | protein-ligand | protein-membrane
+→ Archivos PDB (proteína + ligandos opcionales, con rol)
+→ Forcefield: opls-aa | charmm36 | amber99sb
+→ Water model: spce | tip3p | tip4p
+→ Temperatura: 300K | 309.65K | custom
+→ Duración: 1 | 10 | 50 | 100 ns | custom
+→ Análisis: multi-select (rmsd, rmsf, energy, hbonds, gyration, distance)
+→ Hardware: auto | gpu | cpu
+→ Genera configs/<nombre>.yaml listo para simforge compile
+
+Helpers internos: _ask(), _ask_multi(), _ask_float(), _ask_str()
+Objetivos auto-inferidos por system_type (competitive_binding, stability, etc.)
+
+---
+
+Completado — Packaging moderno PEP517/518 [2026-05-22]
+
+Problema: pyproject.toml usaba setuptools.backends.legacy:build (no existe).
+Fix: migrado a setuptools.build_meta.
+
+Cambios:
+pyproject.toml — build-backend correcto + include explícito (evita escanear venv/)
+simforge/__init__.py — paquete instalable, __version__ = "0.1.0"
+simforge/__main__.py — habilita python -m simforge
+simforge/cli.py — entry point del paquete (importa cli.py raíz como `app`)
+core/__init__.py, builders/__init__.py, validators/__init__.py — faltaban
+requirements.txt — dependencias runtime + dev
+.gitignore — expandido con Python estándar + artefactos GROMACS
+
+Entry point: simforge = "simforge.cli:app"
+Instalación: pip install -e .
+Disponible desde cualquier directorio: simforge compile | run | dry-run | status | validate | inspect | init
+
+---
+
+Completado — CLI profesional: compile mejorado + validate + inspect + dry-run [2026-05-22]
+
+cli.py — reescritura completa del comando compile + 3 nuevos comandos
+
+compile — pipeline visual por etapas:
+  [1/6] Parsing YAML          → timing + n_components + system_type
+  [2/6] Scientific planning   → answers applied o skipped
+  [3/6] Building plan         → n_steps planned
+  [4/6] Computing DAG         → n_nodes, n_warnings, n_blocking
+  [5/6] Materializing         → workspace path
+  [6/6] Writing reports       → compile_report.md + execution_manifest.json
+  → Panel System Summary: tipo, temperatura, duración, steps, componentes, runtime estimate
+  → Panel Scientific Warnings colorizados (⚠ yellow, ✗ red, ◆ cyan)
+  → Panel Workflow DAG: Rich Tree con colores por stage, ramas paralelas visibles
+  → Panel ✓ Done: paths, tiempo total, next command
+  → Errores: Panel rojo con causa + suggested fix (sin tracebacks)
+
+validate — parse + compile sin escribir nada:
+  → ✓/✗ por etapa, warnings científicos, blocking issues
+  → Exit 1 si hay blocking issues (apto para CI)
+
+inspect — muestra IR completo sin escribir archivos:
+  → System Summary, Component Descriptors (heavy atoms, flexibility, charge, H-bond D/A)
+  → Workflow DAG tree, Step Parameters IR snapshot (emtol, nsteps, temperature, box_type, hardware)
+
+dry-run — alias de run con dry_run=True forzado
+run — refactorizado, lógica compartida en _execute_workspace()
+
+Helpers nuevos: _stage_ok(), _collect_scientific_warnings(), _build_dag_tree(),
+_show_system_summary(), _show_scientific_warnings(), _write_compile_report()
+
+_write_compile_report() genera workspace/metadata/compile_report.md:
+  → tabla de workflow, parámetros científicos, warnings, metadata de reproducibilidad
+
+---
+
+Próximo milestone — simforge init (YAML wizard)
 
 Estado actual: el usuario escribe el YAML manualmente.
 Siguiente paso: `simforge init` — wizard interactivo CLI que genera el YAML.
@@ -1021,3 +1098,348 @@ BAJA PRIORIDAD:
    Los tres análisis tienen depends_on=['production_md'] — listos para paralelo.)
 → production_builder.py: MDP usa valores hardcodeados pese a leer rcoulomb/rvdw/pcoupltype
   desde params — completar la conexión cuando se implemente soporte membrana en producción
+
+---
+
+Completado — Pipeline membrana end-to-end [2026-05-22]
+
+Milestone: SimForge compila y materializa un workspace de 12 pasos para sistemas
+proteína-membrana (DPPC + OPLS-AA). Todos los artefactos físicos son correctos.
+
+## Arquitectura nueva
+
+### Capas de conocimiento y adaptadores
+
+core/membrane_knowledge.py
+→ Fuente de verdad para constantes físicas: APL targets, lipid residue names,
+  atom names, bilayer geometry, equilibration defaults
+→ API pública: apl_target(), lipid_residue_name(), lipid_atom_names(),
+  inflation_factor(), bilayer_for_box()
+→ MEMBRANE_EQUILIBRATION_DEFAULTS: NVT 100ps, NPT Berendsen 1ns, prod dt=0.001
+→ SHRINK_LOOP_EMTOL=1000.0, STRONG_POSRES_FC=(100000,100000,100000)
+
+docs/architecture/membrane_runtime_design.md
+→ Documento arquitectónico: 11 secciones, decisiones científicas por step,
+  señales de fallo, módulos nuevos, MDP de referencia
+
+adapters/base.py — contrato unificado para herramientas externas
+→ AdapterError, ToolNotAvailableError, PreconditionError
+→ AvailabilityResult, PreconditionViolation, AdapterResult (Pydantic)
+→ ExternalToolAdapter ABC: check_availability, validate_preconditions, run,
+  _which, _make_result
+
+adapters/inflategro_adapter.py (implementación completa)
+→ Wrappea inflategro-Jorge.pl vía subprocess
+→ Metadata garantizada: apl_nm2, apl_ang2, scale_applied, lipid_name, n_lines_gro
+
+adapters/water_deletor_adapter.py (reimplementación Python pura)
+→ Reimplementa water_deletor.pl sin dependencia de Perl
+→ Algoritmo: calcula fronteras Z de headgroup, elimina SOL con OW en interior
+→ Metadata: waters_removed, atoms_in, atoms_out, z_top_nm, z_bot_nm
+→ check_availability() siempre True (sin deps externas)
+
+adapters/movememb_adapter.py (reimplementación Python pura)
+→ Reimplementa MoveMemb.f sin gfortran
+→ compute_z_shift(): alinea midplane de bicapa con Z-centro de proteína
+→ run(): aplica shift, combina GROs, renumera átomos, escribe sistema combinado
+→ Metadata: z_shift_nm, protein/bilayer Z extents, atoms_total
+
+### Validators
+
+validators/membrane_validators.py — 4 validadores, solo percepción (sin remediación)
+→ validate_apl_convergence(area_dat, target, tolerance) → APLConvergenceResult
+→ validate_no_overlap(gro, lipid_name, cutoff=0.2nm) → OverlapResult
+→ validate_tm_orientation(gro, tm_ranges, threshold=30°) → OrientationResult
+   (eje end-to-end CA, no power iteration — robusto con hélices alineadas con X/Y)
+→ validate_no_water_in_bilayer(gro, headgroup_atom, tail_atom) → WaterConsistencyResult
+
+### Builders extendidos
+
+builders/step_builders/embedding_builder.py (nuevo)
+→ Meta-step shrink loop: inflate(4.0) → minimize → deflate(0.95) loop
+→ Genera: minim_shrink.mdp, run.sh auto-contenido, shrink_telemetry.json
+→ APL parseado en Python desde area_2.dat (sin Fortran AperR)
+→ converged.gro: output canónico; exit 1 si no converge
+→ StepStage.MEMBRANE_EMBEDDING añadido a execution_models.py
+
+builders/step_builders/minimization_builder.py — extendido para membrana
+→ lee define ("-DPOSRES -DSTRONG_POSRES") desde step.params
+→ lee rcoulomb, rvdw, disp_corr desde step.params (membrana: 1.2nm, EnerPres)
+→ topol_ref: prefiere generate_topology > assemble_system
+
+builders/step_builders/equilibration_builder.py — extendido para membrana
+→ pcoupltype semiisotropic: ref_p = xy  z, compressibility = 4.5e-5  4.5e-5
+→ pcoupl_npt, ref_p_xy, ref_p_z, tau_p, rcoulomb, rvdw, disp_corr desde params
+→ Bugs corregidos: gen_vel=yes en NVT, continuation=yes en NPT
+→ topol_ref: prefiere generate_topology > assemble_system
+
+builders/step_builders/production_builder.py — extendido para membrana
+→ tcoupl (Nose-Hoover), pcoupltype semiisotropic, tau_p, ref_p_xy, ref_p_z
+→ rcoulomb, rvdw, disp_corr desde params
+→ topol_ref: prefiere generate_topology > assemble_system
+
+builders/step_builders/assembly_builder.py — extendido para membrana
+→ solvate_membrane: copia topol.top localmente, corre gmx solvate desde converged.gro
+→ clean_water: genera run_clean_water.py (Python puro), actualiza conteo SOL en topol.top
+→ add_ions: resuelve input_gro desde clean_water > solvate step;
+  topol.top desde clean_water > solvate_membrane > assemble_system
+→ _FF_GROMACS_NAME: añadida entrada "opls-aa-membrane" → "oplsaa_membrane"
+
+### Pipeline y compiler
+
+pipelines/membrane_pipeline.py — MembraneWorkflowOPLSAA
+→ pipeline_type = "protein-membrane"
+→ 12 steps: 3 MANUAL + 9 AUTO/EXTERNAL + análisis
+→ Steps 1-3: orient_protein, match_box_to_bilayer, embed_in_bilayer (MANUAL)
+→ Steps 4-5: generate_topology (pdb2gmx oplsaa_membrane), membrane_embedding (shrink loop)
+→ Steps 6-8: solvate_membrane, clean_water (EXTERNAL), add_ions
+→ Steps 9-11: energy_minimization, equilibration, production_md
+→ Parámetros físicos de membrane_knowledge.py exclusivamente
+
+core/compiler.py — _PIPELINE_REGISTRY actualizado
+→ "protein-membrane": MembraneWorkflowOPLSAA
+
+### Benchmark
+
+benchmarks/membrane_dppc_oplsaa/test_pipeline.py — 26 tests
+→ Pipeline selection, step count, stages, steps manuales
+→ 11 tests de parámetros MDP críticos: gen_vel, continuation, Berendsen,
+  semiisotropic, dt=0.001, Nose-Hoover, Parrinello-Rahman, DispCorr
+→ Broken case: YAML sin membrana no activa MembraneWorkflowOPLSAA
+→ Smoke tests de adapters (always available)
+→ Tests funcionales WaterDeletor y MoveMembAdapter con GROs construidos en memoria
+
+## Validación end-to-end
+
+python3 cli.py compile configs/membrane_test.yaml
+→ 12 steps, workspace generado en simforge_runs/protein-membrane/
+→ NVT: gen_vel=yes, tc-grps=system, rcoulomb=1.2, DispCorr=EnerPres ✓
+→ NPT: continuation=yes, Berendsen, semiisotropic, ref_p=0.5 0.5 ✓
+→ Producción: dt=0.001, Nose-Hoover, Parrinello-Rahman, semiisotropic, ref_p=1.0 1.0 ✓
+→ EM: define=-DPOSRES -DSTRONG_POSRES, rcoulomb=1.2, DispCorr=EnerPres ✓
+→ solvate_membrane/run.sh: copia topol.top, gmx solvate desde converged.gro ✓
+→ clean_water/run_clean_water.py: Python puro, actualiza SOL en topol.top ✓
+→ add_ions/run.sh: INPUT_DIR=../07_clean_water, TOPOL_DIR=../07_clean_water ✓
+→ 94 tests, 0 failed ✓
+
+## Cadena de topología (membrana)
+
+generate_topology/topol.top (original)
+  → copia en solvate_membrane/topol.top (SOL count añadido por gmx solvate)
+  → modifica clean_water/topol.top (SOL count corregido por WaterDeletorAdapter)
+  → modifica add_ions/run.sh (ion count añadido por gmx genion)
+  → usa energy_minimization (TOPOL_DIR=../08_add_ions)
+
+---
+
+Deuda técnica abierta (actualizada [2026-05-22])
+
+BAJA PRIORIDAD:
+→ Abstracción de engine interface (SimulationEngine ABC) — esperar segundo engine
+→ GROMACS coupling en remediation_executor — encapsular cuando haya segundo engine
+→ Parallel wave execution: ThreadPoolExecutor sobre to_parallel_waves()
+→ InflateGRO shrink loop: ejercitar contra GROMACS real con DPPC bilayer
+→ WaterDeletorAdapter: probar con GRO real de sistema membrana solvado
+→ MoveMembAdapter: probar con par proteína/bicapa reales
+→ EmbeddingBuilder: path a inflategro-Jorge.pl configurable (actualmente hardcodeado)
+→ scientific_planner.py: preguntas específicas para sistemas de membrana
+  (selección de lípido, verificación de orientación, protocolo)
+
+---
+
+Completado — Runtime observable y resiliente [2026-05-23]
+
+Milestone: el runtime ya puede ejecutar pipelines GROMACS completos (lysozyme en agua,
+hasta production_md) de forma autónoma, con cache inteligente y UX de recovery.
+
+## runtime/ package — 8 módulos nuevos
+
+runtime/events.py
+→ ExecutionEvent, EventType (21 tipos), EventSeverity, EventBus, BoundPublisher
+→ Pub/sub estructurado para todos los eventos de ejecución
+
+runtime/journal.py
+→ JournalWriter: log append-only JSONL en metadata/execution_journal.jsonl
+→ Skips HEARTBEAT + STDOUT para no inflar el journal con ruido
+
+runtime/stream.py — AsyncProcessRunner (reescrito completo)
+→ asyncio.create_subprocess_exec con limit=10MB (evita LimitOverrunError en logs GROMACS)
+→ _iter_lines(): atrapa asyncio.LimitOverrunError, lee bytes y continúa (never crash)
+→ Heartbeat como cancellable task (NO en gather — evita deadlock con proc.wait())
+→ Execution correctness (returncode) completamente desacoplada de observability (stdout)
+→ drain_results = await asyncio.gather(..., return_exceptions=True) → streaming falla = WARNING, no crash
+
+runtime/metrics.py
+→ SystemMetricsCollector: psutil + nvidia-smi, background async task
+→ SystemSnapshot, GROMACSPerformance (ns/day parseado de stdout)
+
+runtime/artifacts.py
+→ ArtifactRef (SHA-256, semantic_role, step_id), ArtifactRegistry → metadata/artifact_registry.json
+
+runtime/cache.py
+→ StepCacheManager: fingerprint = SHA-256(params + input checksums)
+→ metadata/step_cache.json, is_cached(), record(), invalidate()
+
+runtime/executor.py — RuntimeExecutor(BaseExecutor)
+→ ResumePlan: reusable | resume_point | pending | invalidated
+→ _pre_run_hook(): _plan_resume() antes del loop → muestra summary de resume plan
+→ _should_skip(): verifica _cached_steps + emite CACHE_HIT event
+→ Cache integrity: cache hit SOLO si fingerprint matches AND todos los expected_outputs existen físicamente
+→ Auto-invalidación de entries stale (fingerprint OK pero artifacts desaparecidos)
+
+## Fixes críticos
+
+### Cache integrity (crítico)
+Problema: "⚡ cache hit" aunque add_ions/aaions.gro no existía en disco.
+Fix: después de is_cached(), verificar todos los expected_outputs; si falta alguno → invalidate() + rerun.
+
+### Streaming resilience (crítico)
+Problema: production_md crash tras ~6 min con "Separator is not found, chunk exceed limit"
+Causa: asyncio readline() con buffer 64KB vs logs GROMACS de >64KB por línea.
+Fix: limit=10MB + LimitOverrunError caught en _iter_lines() + heartbeat desacoplado.
+
+### DAG blocking (crítico)
+Problema: _is_blocked() solo chequeaba == FAILED, no BLOCKED → bloqueo transitivo roto.
+Fix: check in {FAILED, BLOCKED} en frozenset.
+
+## Resume / recovery UX
+
+Antes de ejecutar: _pre_run_hook() clasifica todos los steps:
+  ✓ reusable   — fingerprint match + artifacts presentes → silently skipped
+  ↻ resume_point — primer step que debe correr
+  ○ pending    — steps downstream del resume point
+
+CLI muestra panel estructurado en lugar de ⚡ por step.
+
+---
+
+Completado — Persistent project/workspace semantics [2026-05-23]
+
+Milestone: cada compile crea un run timestamped inmutable. Los runs anteriores NUNCA se borran.
+
+## Estructura de directorios
+
+{output_dir}/{project_name}/
+  project.json                      ← registro de todos los runs
+  runs/
+    2026-05-23_14-30-00/            ← un directorio por compile
+      metadata/
+        execution_manifest.json
+        run_info.json               ← provenance del run
+        compile_report.md
+        planning_session.json
+      steps/
+      inputs/
+
+## Módulos nuevos/modificados
+
+core/project_manager.py (nuevo)
+→ ProjectManager.project_dir(), create_run_dir(), update_project_registry(), get_run_history()
+→ run_dir = {output_dir}/{project_name}/runs/{YYYY-MM-DD_HH-MM-SS}/
+
+builders/workspace_builder.py
+→ añadido workspace_path parameter (override de output_dir+workspace_name)
+→ ELIMINADO shutil.rmtree(steps_dir) → reemplazado con exist_ok=True
+→ backward compat: output_dir+workspace_name siguen funcionando
+
+cli.py compile
+→ crea project_dir y run_dir antes de build
+→ pasa workspace_path=run_dir a WorkspaceBuilder
+→ escribe metadata/run_info.json + actualiza project.json
+→ panel final muestra "Project →" y "Run →" separados con run count
+
+---
+
+Completado — Semantic objective system [2026-05-23]
+
+Milestone: SimForge ya NO falla con "Objetivo no reconocido". En cambio normaliza,
+infiere, sugiere y aplica presets científicos.
+
+## Módulos nuevos
+
+core/semantic_objectives.py
+→ CANONICAL_OBJECTIVES: 11 objetivos autorizados con descripciones
+→ _ALIASES: 45+ strings informales → lista de canonicals
+  (espacios, guiones, acrónimos, sinónimos, multi-canonical todos funcionan)
+→ SIMULATION_PRESETS: 8 perfiles named con objectives + workflow hints:
+  membrane_protein, soluble_protein, protein_ligand_binding, idr_sampling,
+  competitive_inhibition, membrane_lipid_dynamics, allosteric_modulation, ion_channel
+→ normalize_objective(text) → (canonicals, note) — alias → fuzzy → [] (sin excepción)
+→ suggest_objectives(text) → top 3 canonical para mensajes de error/autocomplete
+
+core/semantic_inference.py
+→ detect_membrane_protein_signals(state) → lista de señales detectadas
+  (biological_context=transmembrane/membrane_associated, membrane.enabled, lipid roles, mem objectives)
+→ run_semantic_normalization(state) → stage 1.5 del pipeline:
+  1. Aplica simulation_profile preset (si especificado)
+  2. Normaliza simulation_objectives (aliases → canonical)
+  3. Auto-inyecta membrane_perturbation + stability si señales de membrana detectadas
+  4. Registra notas en global_reasoning + emite Warning con suggestions para unknowns
+
+## Archivos modificados
+
+core/models.py
+→ SystemState.simulation_profile: Optional[str] = None (nuevo campo YAML)
+→ validate_objectives: normaliza inline con aliases (sin ValueError) — unknowns pasan a semantic stage
+
+core/ontology.py
+→ SIMULATION_GOALS derivado de CANONICAL_OBJECTIVES (single source of truth, backward compat)
+
+core/parser.py
+→ stage 1.5: run_semantic_normalization() insertado entre YAML load e inferencia biológica
+
+cli.py
+→ _show_parse_error(): detecta errores de objetivo y añade suggestions + preset hint
+→ _show_semantic_normalization_notes(): panel "Semantic Normalization" después de parse
+
+## Ejemplos de normalización
+
+'membrane_protein_dynamics'  → ['membrane_perturbation', 'stability']
+'protein stability'          → ['stability']
+'binding affinity'           → ['binding']
+'idr'                        → ['conformational_sampling']
+'pore_formation'             → ['membrane_perturbation', 'permeability']
+'completely_unknown'         → []  suggestions: ['competitive_binding', 'conformational_sampling', 'stability']
+
+## Tests
+
+core/test_semantic_inference.py — 38 tests
+→ TestNormalizeObjective, TestSuggestObjectives, TestPresets
+→ TestMembraneSignalDetection, TestSemanticNormalizationStage
+→ TestSystemStateObjectiveValidator, TestSimulationGoalsCompat
+
+---
+
+Estado de tests [2026-05-23]
+
+300 tests totales, 0 fallos:
+→ core/test_semantic_inference.py    — 38 tests (semantic objectives + inference)
+→ core/test_geometry_advisor.py      — 21 tests (GeometryAdvisor: aspect ratio, advisories)
+→ runtime/test_runtime.py            — 29 tests (cache integrity, stream robustness, events)
+→ builders/step_builders/test_mdrun_stage_compat.py — 29 tests (GPU flags por stage)
+→ benchmarks/membrane_dppc_oplsaa/test_pipeline.py — 26 tests (pipeline membrana)
+→ executors/test_dag_blocking.py     — 10 tests (bloqueo transitivo)
+→ builders/, core/, executors/ otros — 147 tests restantes
+
+---
+
+Deuda técnica abierta [2026-05-23]
+
+CHECKPOINT-AWARE RECOVERY (pendiente, alta prioridad científica):
+→ Nuevos estados: INTERRUPTED, RECOVERABLE, PARTIAL en StepStatus
+→ Detección de .cpt en _plan_resume() → classify como RECOVERABLE
+→ run_md_resume.sh (sin grompp, usa -cpi md.cpt -append)
+→ run_nvt_resume.sh, run_npt_resume.sh equivalentes
+→ _print_resume_plan() muestra categoría RECOVERABLE con "↻ checkpoint detected"
+→ _find_script() prioriza scripts de resume cuando step en _resumable_steps
+
+BAJA PRIORIDAD:
+→ Abstracción engine interface (SimulationEngine ABC) — esperar segundo engine
+→ GROMACS coupling en remediation_executor — encapsular cuando haya segundo engine
+→ Parallel wave execution: ThreadPoolExecutor sobre to_parallel_waves()
+→ InflateGRO shrink loop: ejercitar contra GROMACS real con DPPC bilayer
+→ EmbeddingBuilder: path a inflategro-Jorge.pl configurable (actualmente hardcodeado)
+→ scientific_planner.py: preguntas específicas para sistemas de membrana
+→ Decision engine: leer workflow hints de simulation_profile presets
+  (semiisotropic_coupling, conservative_timestep, etc. actualmente guardados en global_reasoning.notes
+   pero el decision_engine aún no los lee)

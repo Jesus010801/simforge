@@ -2,5 +2,16 @@
     "step_id": "clean_water",
     "stage": "assembly",
     "engine": "perl:water_deletor",
-    "step_type": "external"
+    "step_type": "external",
+    "blocking": false,
+    "generated_by": "AssemblyBuilder",
+    "expected_outputs": [
+        "system_clean.gro",
+        "topol.top"
+    ],
+    "params": {
+        "ref_atom": "O33",
+        "middle_atom": "C50",
+        "nwater": 3
+    }
 }

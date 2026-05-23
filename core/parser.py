@@ -75,17 +75,33 @@ def _validate_protein_component(comp: ComponentModel) -> ComponentValidation:
         # Patch the component's file path so downstream stages use the resolved path
         comp.file = str(path)
     except StructureFileError as e:
+        # Build an informative message that includes candidates if available
+        if e.candidates:
+            candidate_str = " | ".join(c.name for c in e.candidates)
+            detail = (
+                f"{comp.id} expects a structure file but got a directory. "
+                f"Found {len(e.candidates)} candidates: {candidate_str}. "
+                f"Specify one explicitly, e.g. file: {e.candidates[0]}"
+            )
+        elif e.directory:
+            detail = (
+                f"{comp.id} expects a structure file but got a directory "
+                f"({e.directory}) with no *.pdb / *.gro / *.cif files."
+            )
+        else:
+            detail = str(e)
+
         return ComponentValidation(
             validator_used   = "protein_validator",
             is_valid         = False,
-            validation_error = str(e),
+            validation_error = detail,
             warnings=[Warning(
-                message  = str(e),
+                message  = detail,
                 target   = comp.id,
                 severity = Severity.HIGH,
             )],
             risks=[Risk(
-                message  = "Archivo de estructura no resuelto — pipeline bloqueado",
+                message  = f"{comp.id}: structure file unresolved — pipeline blocked",
                 target   = comp.id,
                 severity = Severity.HIGH,
             )],
@@ -578,12 +594,16 @@ def parse_yaml(path: str | Path) -> SystemState:
 
     Etapas:
         1. Carga y valida el YAML → SystemState (solo config)
+        1.5. run_semantic_normalization() → normalize objectives, apply presets,
+             infer membrane protein context
         2. run_inference()             → inferred_system_type + risks globales
         3. run_validation()            → component.validation
         4. run_descriptors()           → component.descriptors
         5. run_component_reasoning()   → component.reasoning
         6. run_global_reasoning()      → global_reasoning (flags finales)
     """
+    from core.semantic_inference import run_semantic_normalization
+
     path = Path(path)
 
     if not path.exists():
@@ -598,6 +618,9 @@ def parse_yaml(path: str | Path) -> SystemState:
         state = SystemState(**raw)
     except Exception as e:
         raise ValueError(f"Error validando YAML:\n{e}")
+
+    # ── Etapa 1.5: Semantic normalization ─────────────────────────────────────
+    state = run_semantic_normalization(state)
 
     # ── Etapa 2: Inferencia biológica ─────────────────────────────────────────
     state = run_inference(state)

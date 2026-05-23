@@ -21,27 +21,12 @@ SYSTEM_TYPES = [
 
 ]
 
-SIMULATION_GOALS = [
-
-    "stability",
-    "binding",
-    "competitive_binding",
-
-    "membrane_insertion",
-    "membrane_perturbation",
-
-    "conformational_sampling",
-
-    "aggregation",
-
-    "permeability",
-
-    "allosteric_effect",
-
-    "active_site_dynamics",
-
-    "active_site_stability",
-]
+# Authoritative set of canonical objectives.
+# Derived from core.semantic_objectives.CANONICAL_OBJECTIVES so there is a
+# single source of truth.  Import from there for programmatic use; this list
+# is kept here only for backward-compatibility with existing imports.
+from core.semantic_objectives import CANONICAL_OBJECTIVES as _CANONICAL
+SIMULATION_GOALS: list[str] = list(_CANONICAL.keys())
 
 COMPONENT_ROLES = [
 

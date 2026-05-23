@@ -1,0 +1,27 @@
+project:
+  name: test-memb
+
+components:
+  - id: protein_1
+    role: protein
+    file: /home/jesusxd/Escritorio/slc16a11_idr_project/WT.pdb
+
+environment:
+  solvent:
+    water_model: spce
+  ions:
+    concentration: 0.154
+  temperature_K: 300.0
+  duration_ns: 1.0
+
+forcefields:
+  protein: opls-aa
+
+simulation_objectives:
+  - stability
+  - membrane_protein_dynamics
+
+analysis:
+  - type: rmsd
+  - type: rmsf
+  - type: energy

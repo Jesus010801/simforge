@@ -142,6 +142,7 @@ class ShellExecutor(BaseExecutor):
                 on_heartbeat=_on_heartbeat,
                 timeout_s=86400,
                 heartbeat_interval_s=30,
+                hang_timeout_s=600,
             )
         except Exception as exc:
             record.status        = StepStatus.FAILED
@@ -158,6 +159,20 @@ class ShellExecutor(BaseExecutor):
         if result.timed_out:
             record.status        = StepStatus.FAILED
             record.error_message = "Timeout: el step excedió 24 horas"
+            return
+
+        if result.hang_killed:
+            _console.print(
+                f"\n  [red]✗[/red]  [bold]{step_name}[/bold] fue terminado por hang: "
+                "no emitió output por 10 minutos.\n"
+                "  [dim]Causa probable: comando GROMACS esperando input interactivo "
+                "(ej: gmx editconf -princ sin pipe de selección).[/dim]\n"
+            )
+            record.status        = StepStatus.FAILED
+            record.error_message = (
+                "Proceso terminado por hang (10 min sin output). "
+                "Probablemente esperando input interactivo del terminal."
+            )
             return
 
         if result.likely_interactive:

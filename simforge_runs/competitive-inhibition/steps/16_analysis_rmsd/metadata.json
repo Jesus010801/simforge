@@ -15,5 +15,7 @@
     "outputs": [
         "tables/rmsd_backbone.xvg",
         "tables/rmsd_protein.xvg"
-    ]
+    ],
+    "template_hash": "6bd545a409905004",
+    "generated_at": "2026-05-23T09:01:16"
 }

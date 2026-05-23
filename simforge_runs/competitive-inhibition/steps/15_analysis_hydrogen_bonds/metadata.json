@@ -18,5 +18,7 @@
         "tables/hbnum_protein.xvg",
         "tables/hbdist_protein.xvg",
         "tables/hbnum_protein_sol.xvg"
-    ]
+    ],
+    "template_hash": "13cd3b44fb30b27f",
+    "generated_at": "2026-05-23T09:01:16"
 }

@@ -1,9 +1,7 @@
 #!/bin/bash
 # ─── Energy minimization ─────────────────────────────────────────────────────
-# Paths resueltos desde DAG
-
 IONS_DIR="../08_add_ions"
-TOPOL_DIR="../assemble_system"
+TOPOL_DIR="../04_generate_topology"
 
 gmx grompp \
     -f em.mdp \

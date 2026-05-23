@@ -200,6 +200,147 @@ def _show_scientific_warnings(warnings: list[tuple[str, str]]) -> None:
     app.print(Panel(table, title="Scientific Warnings", border_style="yellow", padding=(0, 1)))
 
 
+def _run_geometry_advisory(state, plan) -> "list | None":
+    """
+    Run geometry analysis on all protein/structure components in the state.
+    Returns a list of (component_id, GeometryReport) tuples, or None if nothing
+    to analyze.
+    """
+    from core.geometry_advisor import GeometryAdvisor
+
+    protein_roles = {"protein", "receptor", "enzyme", "antibody", "antigen"}
+    components = [
+        c for c in state.components
+        if c.role in protein_roles and getattr(c, "file", None)
+    ]
+    if not components:
+        return None
+
+    # Extract box_distance from solvate step params (or use standard default)
+    padding_nm = 1.2
+    box_type   = "triclinic"
+    for step in getattr(plan, "steps", []):
+        if "solvate" in step.step_id:
+            padding_nm = step.params.get("box_distance", padding_nm)
+            box_type   = step.params.get("box_type", box_type)
+            break
+
+    advisor = GeometryAdvisor()
+    results = []
+    for comp in components:
+        pdb = Path(comp.file)
+        if not pdb.exists():
+            continue
+        report = advisor.analyze(pdb, padding_nm=padding_nm, box_type=box_type)
+        results.append((comp.id, report))
+    return results or None
+
+
+def _show_geometry_advisories(results: "list") -> None:
+    """Display geometry advisory reports from _run_geometry_advisory()."""
+    from core.geometry_advisor import Advisory
+
+    _LEVEL_COLOR = {"INFO": "cyan", "WARNING": "yellow", "SUGGEST": "green"}
+    _LEVEL_ICON  = {"INFO": "◆",    "WARNING": "⚠",      "SUGGEST": "→"}
+
+    table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+    table.add_column("icon",    width=2,  no_wrap=True)
+    table.add_column("message", min_width=50)
+    table.add_column("detail",  style="dim")
+
+    has_warnings = False
+    for comp_id, report in results:
+        for adv in report.advisories:
+            color  = _LEVEL_COLOR.get(adv.level, "white")
+            icon   = _LEVEL_ICON.get(adv.level, "·")
+            table.add_row(
+                f"[{color}]{icon}[/{color}]",
+                f"[{color}]{adv.message}[/{color}]",
+                adv.detail.replace("\n", "  "),
+            )
+            if adv.level in ("WARNING", "SUGGEST"):
+                has_warnings = True
+
+    border = "yellow" if has_warnings else "cyan"
+    app.print(Panel(
+        table,
+        title=f"Geometry Advisory — {', '.join(cid for cid, _ in results)}",
+        border_style=border,
+        padding=(0, 1),
+    ))
+
+
+def _show_parse_error(exc: Exception) -> None:
+    """Display a parse error with semantic suggestions for objective errors."""
+    msg = str(exc)
+    body = f"[red]Parse error:[/red] {msg}\n\nCheck YAML syntax and component file paths."
+
+    # Detect objective-related errors and add suggestions
+    if "objective" in msg.lower() or "objetivo" in msg.lower():
+        from core.semantic_objectives import suggest_objectives, SIMULATION_PRESETS
+        import re
+        quoted = re.findall(r"'([^']+)'", msg)
+        if quoted:
+            unknown = quoted[0]
+            suggestions = suggest_objectives(unknown)
+            presets = list(SIMULATION_PRESETS.keys())[:4]
+            body += (
+                f"\n\n[yellow]Unknown objective:[/yellow] '{unknown}'\n"
+                + (f"  Closest matches: {suggestions}\n" if suggestions else "")
+                + f"  Or use a preset:  simulation_profile: "
+                + " | ".join(presets)
+            )
+
+    app.print(Panel(body, title="❌ Compile Failed", border_style="red"))
+
+
+def _show_semantic_normalization_notes(state) -> None:
+    """Show normalization notes and membrane auto-inference hints after parse."""
+    from core.semantic_inference import detect_membrane_protein_signals
+
+    # Surface objective normalization notes from global_reasoning
+    semantic_notes = [
+        n for n in (state.global_reasoning.notes or [])
+        if n.startswith("[semantic]")
+    ]
+    # Surface unknown objective warnings
+    unknown_warns = [
+        w for w in (state.warnings or [])
+        if "Unknown simulation objective" in w.message
+    ]
+
+    if not semantic_notes and not unknown_warns:
+        return
+
+    from rich.table import Table
+    table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+    table.add_column("icon", width=2, no_wrap=True)
+    table.add_column("message")
+
+    has_warn = False
+    for note in semantic_notes:
+        clean = note.removeprefix("[semantic] ")
+        table.add_row("[cyan]◆[/cyan]", f"[cyan]{clean}[/cyan]")
+
+    for w in unknown_warns:
+        from core.semantic_objectives import suggest_objectives, SIMULATION_PRESETS
+        import re
+        quoted = re.findall(r"'([^']+)'", w.message)
+        unknown = quoted[0] if quoted else "?"
+        suggestions = suggest_objectives(unknown)
+        presets = [k for k in SIMULATION_PRESETS if unknown.replace("_", "") in k.replace("_", "")]
+        msg = f"[yellow]Unknown objective:[/yellow] '{unknown}'"
+        if suggestions:
+            msg += f"\n      Closest matches: {suggestions}"
+        if presets:
+            msg += f"\n      Or use preset:   simulation_profile: {presets[0]}"
+        table.add_row("[yellow]⚠[/yellow]", msg)
+        has_warn = True
+
+    border = "yellow" if has_warn else "cyan"
+    app.print(Panel(table, title="Semantic Normalization", border_style=border, padding=(0, 1)))
+
+
 def _inspect_variants(yaml_path: Path) -> None:
     from core.variant_compiler import parse_variant_yaml
 
@@ -341,13 +482,11 @@ def compile(
         with app.status("  [dim][1/6][/dim] Parsing YAML..."):
             state = parse_yaml(str(yaml_path))
     except Exception as e:
-        app.print(Panel(
-            f"[red]Parse error:[/red] {e}\n\nCheck YAML syntax and component file paths.",
-            title="❌ Compile Failed", border_style="red",
-        ))
+        _show_parse_error(e)
         raise typer.Exit(1)
     _stage_ok(1, 6, "Parsing YAML", time.perf_counter() - t,
               note=f"{len(state.components)} component(s)  system: {state.inferred_system_type}")
+    _show_semantic_normalization_notes(state)
 
     # ── [2/6] Scientific planning ──────────────────────────────────────────────
     t = time.perf_counter()
@@ -380,13 +519,33 @@ def compile(
                    f"{len(warnings)} warning(s)  "
                    f"{len(result.plan.blocking_issues)} blocking issue(s)")
 
+    # ── Geometry advisory (between DAG and workspace build) ───────────────────
+    geo_results = _run_geometry_advisory(result.state, result.plan)
+
     # ── [5/6] Materialize workspace ───────────────────────────────────────────
     workspace = None
     if not no_build:
+        from core.project_manager import ProjectManager
+        from datetime import datetime as _dt
+
+        project_name = (
+            result.state.inferred_system_type
+            or Path(yaml_path).stem
+            or "simforge_system"
+        )
+        project_dir = ProjectManager.project_dir(output_dir, project_name)
+        run_ts      = _dt.now().strftime("%Y-%m-%d_%H-%M-%S")
+        run_dir     = ProjectManager.create_run_dir(project_dir, run_ts)
+
         t = time.perf_counter()
         try:
             with app.status("  [dim][5/6][/dim] Materializing workspace..."):
-                workspace = WorkspaceBuilder().build(result, output_dir=output_dir)
+                workspace = WorkspaceBuilder().build(
+                    result,
+                    output_dir=output_dir,
+                    yaml_source=str(Path(yaml_path).resolve()),
+                    workspace_path=run_dir,
+                )
         except Exception as e:
             app.print(Panel(
                 f"[red]Workspace error:[/red] {e}",
@@ -401,6 +560,19 @@ def compile(
         with app.status("  [dim][6/6][/dim] Writing reports..."):
             _save_planning_session(session_record, workspace / "metadata" / "planning_session.json")
             _write_compile_report(result, workspace, yaml_path, warnings)
+            # Write run provenance into the run directory itself
+            run_info = {
+                "run_id":       run_ts,
+                "run_path":     str(workspace.resolve()),
+                "compiled_at":  run_ts,
+                "yaml_source":  str(Path(yaml_path).resolve()),
+                "system_type":  result.state.inferred_system_type,
+                "n_steps":      len(result.execution_order),
+            }
+            (workspace / "metadata" / "run_info.json").write_text(
+                __import__("json").dumps(run_info, indent=4)
+            )
+            ProjectManager.update_project_registry(project_dir, run_info)
         _stage_ok(6, 6, "Writing reports", time.perf_counter() - t,
                   note="compile_report.md  execution_manifest.json")
     else:
@@ -412,6 +584,10 @@ def compile(
 
     # ── Scientific warnings ───────────────────────────────────────────────────
     _show_scientific_warnings(warnings)
+
+    # ── Geometry advisory ─────────────────────────────────────────────────────
+    if geo_results:
+        _show_geometry_advisories(geo_results)
 
     # ── DAG preview ───────────────────────────────────────────────────────────
     app.print(Panel(
@@ -429,10 +605,18 @@ def compile(
     # ── Final panel ───────────────────────────────────────────────────────────
     total = time.perf_counter() - t_start
     if workspace:
+        prior_runs = ProjectManager.get_run_history(project_dir)
+        run_history = (
+            f"  Run #{len(prior_runs)} of {len(prior_runs)} in project\n"
+            if len(prior_runs) > 1
+            else ""
+        )
         app.print(Panel(
-            f"[bold green]✓[/bold green] Workspace  → [cyan]{workspace}[/cyan]\n"
-            f"  Report     → [dim]{workspace}/metadata/compile_report.md[/dim]\n"
-            f"  Manifest   → [dim]{workspace}/metadata/execution_manifest.json[/dim]\n\n"
+            f"[bold green]✓[/bold green] Project  → [dim]{project_dir}[/dim]\n"
+            f"  Run      → [cyan]{workspace}[/cyan]\n"
+            f"{run_history}"
+            f"  Report   → [dim]{workspace}/metadata/compile_report.md[/dim]\n"
+            f"  Manifest → [dim]{workspace}/metadata/execution_manifest.json[/dim]\n\n"
             f"Compiled in [bold]{total:.2f}s[/bold]\n\n"
             f"Next:  [dim]simforge run {workspace}[/dim]",
             title="✓ Done", border_style="green", padding=(0, 2),
@@ -534,8 +718,8 @@ def _execute_workspace(
         from executors.gromacs_executor import GROMACSExecutor
         executor = GROMACSExecutor(workspace, dry_run=dry_run)
     else:
-        from executors.shell_executor import ShellExecutor
-        executor = ShellExecutor(workspace, dry_run=dry_run)
+        from runtime.executor import RuntimeExecutor
+        executor = RuntimeExecutor(workspace, dry_run=dry_run)
 
     app.print()
 
@@ -682,6 +866,19 @@ def validate(
         ))
         raise typer.Exit(1)
 
+    # Show per-component validation issues immediately (file not found, dir errors)
+    comp_issues = [
+        c for c in state.components
+        if c.validation and (not c.validation.is_valid or c.validation.validation_error)
+    ]
+    for comp in comp_issues:
+        app.print(Panel(
+            f"[red]✗[/red]  [bold]{comp.id}[/bold]\n"
+            f"  {comp.validation.validation_error}",
+            title=f"Component issue: {comp.id}",
+            border_style="red",
+        ))
+
     try:
         with app.status("  Compiling plan..."):
             result = SimulationCompiler().compile_from_state(state)
@@ -789,6 +986,123 @@ def inspect(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# clean / recompile
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@cli.command()
+def clean(
+    workspace: Path = typer.Argument(..., help="Workspace directory to clean."),
+    yes:       bool = typer.Option(False, "--yes", "-y", help="Skip confirmation."),
+):
+    """Delete stale scripts and execution state from a workspace."""
+    import shutil
+
+    if not workspace.exists():
+        app.print(f"[red]Error:[/red] Workspace not found: {workspace}")
+        raise typer.Exit(1)
+
+    steps_dir  = workspace / "steps"
+    state_file = workspace / "execution_state.json"
+
+    targets = [p for p in [steps_dir, state_file] if p.exists()]
+    if not targets:
+        app.print(f"  [dim]Nothing to clean in {workspace}[/dim]")
+        return
+
+    app.print(f"\n[bold cyan]SimForge Clean[/bold cyan]  [dim]{workspace}[/dim]\n")
+    for t in targets:
+        app.print(f"  [dim]Will delete:[/dim] {t.name}")
+
+    if not yes:
+        confirm = typer.confirm("\n  Proceed?")
+        if not confirm:
+            app.print("  Aborted.")
+            return
+
+    for t in targets:
+        if t.is_dir():
+            shutil.rmtree(t)
+        else:
+            t.unlink()
+        app.print(f"  [green]✓[/green] Deleted {t.name}")
+
+    app.print(f"\n  Workspace cleaned. Run [dim]simforge recompile <yaml>[/dim] to regenerate.\n")
+
+
+@cli.command()
+def recompile(
+    yaml_path:  Path = typer.Argument(..., help="Original YAML config."),
+    output_dir: str  = typer.Option("simforge_runs", "--output-dir", help="Root output directory."),
+    yes:        bool = typer.Option(False, "--yes", "-y", help="Skip clean confirmation."),
+):
+    """
+    Force-regenerate all workspace scripts from the current builders.
+
+    Equivalent to: simforge clean <workspace> && simforge compile <yaml>
+    """
+    import shutil
+    from core.parser import parse_yaml
+    from core.compiler import SimulationCompiler
+    from builders.workspace_builder import WorkspaceBuilder
+
+    if not yaml_path.exists():
+        app.print(f"[red]Error:[/red] YAML not found: {yaml_path}")
+        raise typer.Exit(1)
+
+    # Infer workspace path by compiling first (just to get the name)
+    try:
+        with app.status("  Parsing config..."):
+            state = parse_yaml(str(yaml_path))
+    except Exception as e:
+        app.print(f"[red]Parse error:[/red] {e}")
+        raise typer.Exit(1)
+
+    system_name   = state.inferred_system_type or "simforge_system"
+    workspace_dir = Path(output_dir) / system_name
+
+    app.print(f"\n[bold cyan]SimForge Recompile[/bold cyan]  [dim]{yaml_path}[/dim]\n")
+    app.print(f"  Workspace: [cyan]{workspace_dir}[/cyan]")
+
+    # Clean existing steps + state
+    steps_dir  = workspace_dir / "steps"
+    state_file = workspace_dir / "execution_state.json"
+    to_delete  = [p for p in [steps_dir, state_file] if p.exists()]
+
+    if to_delete and not yes:
+        for p in to_delete:
+            app.print(f"  [dim]Will delete:[/dim] {p.name}")
+        if not typer.confirm("\n  Proceed with clean?"):
+            app.print("  Aborted.")
+            return
+
+    for p in to_delete:
+        if p.is_dir():
+            shutil.rmtree(p)
+        else:
+            p.unlink()
+
+    # Full recompile
+    try:
+        with app.status("  Compiling..."):
+            result = SimulationCompiler().compile(str(yaml_path))
+        with app.status("  Building workspace..."):
+            workspace = WorkspaceBuilder().build(
+                result,
+                output_dir=output_dir,
+                yaml_source=str(yaml_path.resolve()),
+            )
+    except Exception as e:
+        app.print(f"[red]Recompile failed:[/red] {e}")
+        raise typer.Exit(1)
+
+    from core.workspace_fingerprint import compute_builder_signature
+    app.print(f"\n  [green]✓[/green] Recompiled  {len(result.execution_order)} steps")
+    app.print(f"  builder_signature: [dim]{compute_builder_signature()}[/dim]")
+    app.print(f"  Workspace: [cyan]{workspace}[/cyan]")
+    app.print(f"\nRun:  [dim]simforge run {workspace}[/dim]\n")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # status
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -816,6 +1130,12 @@ def status(
             manifest = json.loads(manifest_file.read_text())
             app.print(f"\n[cyan]{workspace}[/cyan]  [dim]compiled, not yet executed[/dim]")
             app.print(f"  {manifest['n_steps']} steps  system: {manifest.get('system_type', '?')}")
+            # Freshness check
+            from core.workspace_fingerprint import check_workspace_freshness
+            is_fresh, msg = check_workspace_freshness(manifest_file)
+            if not is_fresh and "Legacy" not in msg:
+                app.print(f"\n  [yellow]⚠[/yellow]  [bold]Stale workspace[/bold] — builders have changed since compilation.")
+                app.print(f"  [dim]Run: simforge recompile {manifest.get('yaml_source', '<yaml>')}[/dim]")
             app.print(f"\nRun:  [dim]simforge run {workspace}[/dim]\n")
         else:
             app.print(f"[red]Error:[/red] No state or manifest found in {workspace}")
@@ -1263,6 +1583,181 @@ def _save_planning_session(record, path: Path) -> None:
         )
     except Exception:
         pass   # no bloquear compile por fallo de persistencia
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# summary
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@cli.command()
+def summary(
+    workspace: Path = typer.Argument(..., help="Workspace directory to summarize."),
+    json_out:  bool = typer.Option(False, "--json", help="Output raw JSON instead of rich text."),
+):
+    """Show (or generate) the scientific summary for a workspace."""
+    from runtime.scientific_summary import generate_summary
+
+    if not workspace.exists():
+        app.print(f"[red]Error:[/red] Workspace not found: {workspace}")
+        raise typer.Exit(1)
+
+    # Try reading cached summary first; regenerate if absent
+    cached_json = workspace / "metadata" / "scientific_summary.json"
+    if cached_json.exists():
+        try:
+            import json as _json
+            data = _json.loads(cached_json.read_text())
+            if json_out:
+                import sys
+                _json.dump(data, sys.stdout, indent=2)
+                app.print()
+                return
+        except Exception:
+            pass  # fall through to regenerate
+
+    # Regenerate
+    sm = generate_summary(workspace)
+
+    if json_out:
+        import json as _json
+        import sys
+        _json.dump(sm.as_dict(), sys.stdout, indent=2)
+        app.print()
+        return
+
+    # Rich display
+    converged_str = "[green]Yes[/green]" if sm.converged else "[red]No[/red]"
+    runtime_str   = f"{sm.runtime_ns:.3f} ns" if sm.runtime_ns else "unknown"
+
+    app.print(Panel(
+        f"  Workspace  [cyan]{workspace}[/cyan]\n"
+        f"  Converged  {converged_str}\n"
+        f"  Runtime    {runtime_str}\n"
+        f"  Analyses   {len(sm.analyses)}",
+        title="Scientific Summary",
+        border_style="cyan",
+    ))
+
+    if sm.rmsd_verdict:
+        app.print(Panel(sm.rmsd_verdict,   title="RMSD Convergence",  border_style="dim"))
+    if sm.energy_verdict:
+        app.print(Panel(sm.energy_verdict, title="Energy Stability",   border_style="dim"))
+
+    if sm.warnings:
+        for w in sm.warnings:
+            app.print(f"  [yellow]⚠[/yellow]  {w}")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# analyze
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_QUALITY_STYLE = {
+    "converged":            ("[green]",  "✓", "green"),
+    "partially_converged":  ("[yellow]", "~", "yellow"),
+    "not_converged":        ("[red]",    "✗", "red"),
+    "problematic":          ("[red]",    "⚠", "red"),
+    "insufficient_data":    ("[dim]",    "?", "dim"),
+}
+
+
+@cli.command()
+def analyze(
+    path:    str           = typer.Argument(help="Path to simulation directory or XVG files"),
+    output:  Optional[str] = typer.Option(None,        "--output",  "-o", help="Output file (default: stdout)"),
+    format:  str           = typer.Option("markdown",  "--format",  "-f", help="Output format: markdown|json"),
+    context: Optional[str] = typer.Option(None,        "--context", "-c",
+        help="System context for context-aware interpretation: globular_protein | membrane_protein | "
+             "idr | protein_ligand_complex | multimeric_complex | enzyme | peptide | "
+             "membrane_system | flexible_domain_protein"),
+):
+    """Analyze an existing MD simulation and classify its scientific quality."""
+    from runtime.scientific_summary import analyze_trajectory
+    import json as _json
+
+    sim_path = Path(path)
+    if not sim_path.exists():
+        app.print(f"[red]Error:[/red] Path not found: {sim_path}")
+        raise typer.Exit(1)
+
+    ctx_label = f" [{context}]" if context else ""
+    with app.status(f"  Analyzing [cyan]{sim_path}[/cyan]{ctx_label}..."):
+        try:
+            _summary, report = analyze_trajectory(sim_path, context=context)
+        except Exception as exc:
+            app.print(f"[red]Analysis error:[/red] {exc}")
+            raise typer.Exit(1)
+
+    if context:
+        app.print(f"[dim]  Context: {context}[/dim]")
+
+    # ── JSON output ──────────────────────────────────────────────────────────
+    if format == "json":
+        out_text = _json.dumps(report.as_dict(), indent=2)
+        if output:
+            Path(output).write_text(out_text)
+            app.print(f"[dim]Written to {output}[/dim]")
+        else:
+            import sys
+            print(out_text, file=sys.stdout)
+        return
+
+    # ── Markdown / Rich output ────────────────────────────────────────────────
+    q_val = report.quality.value
+    color_tag, icon, border = _QUALITY_STYLE.get(q_val, ("[white]", "?", "white"))
+
+    badge = f"{color_tag}{icon} {q_val.replace('_', ' ').upper()}[/{color_tag[1:]}"
+    confidence_bar_filled = max(0, int(report.confidence * 20))
+    confidence_bar = "█" * confidence_bar_filled + "░" * (20 - confidence_bar_filled)
+    conf_pct = f"{report.confidence:.0%}"
+
+    header_lines = [
+        f"  Path         [cyan]{sim_path}[/cyan]",
+        f"  Quality      {badge}",
+        f"  Confidence   [{confidence_bar}] {conf_pct}",
+    ]
+    if report.metrics:
+        if "rmsd_total_ns" in report.metrics:
+            header_lines.append(f"  RMSD data    {report.metrics['rmsd_total_ns']} ns")
+        if "energy_total_ns" in report.metrics:
+            header_lines.append(f"  Energy data  {report.metrics['energy_total_ns']} ns")
+
+    app.print(Panel(
+        "\n".join(header_lines),
+        title="MD Simulation Quality",
+        border_style=border,
+        padding=(0, 2),
+    ))
+
+    # Evidence
+    if report.evidence:
+        ev_text = "\n".join(f"  [dim]•[/dim] {e}" for e in report.evidence)
+        app.print(Panel(ev_text, title="Evidence", border_style="dim", padding=(0, 1)))
+
+    # Warnings
+    if report.warnings:
+        w_text = "\n".join(f"  [yellow]⚠[/yellow] {w}" for w in report.warnings)
+        app.print(Panel(w_text, title="Warnings", border_style="yellow", padding=(0, 1)))
+
+    # Recommendations
+    if report.recommendations:
+        r_text = "\n".join(f"  [cyan]→[/cyan] {r}" for r in report.recommendations)
+        app.print(Panel(r_text, title="Recommendations", border_style="cyan", padding=(0, 1)))
+
+    # Key metrics table
+    if report.metrics:
+        from rich.table import Table as _Table
+        mt = _Table(box=box.SIMPLE, show_header=True, header_style="bold dim")
+        mt.add_column("Metric", style="white")
+        mt.add_column("Value", justify="right")
+        for k, v in report.metrics.items():
+            mt.add_row(k.replace("_", " "), str(v))
+        app.print(Panel(mt, title="Key Metrics", border_style="dim", padding=(0, 1)))
+
+    # Optionally write to file (markdown)
+    if output:
+        Path(output).write_text(report.as_markdown())
+        app.print(f"\n[dim]Report written to {output}[/dim]")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

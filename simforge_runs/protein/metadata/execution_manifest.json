@@ -1,7 +1,12 @@
 {
-    "compiled_at": "2026-05-22T21:07:46",
+    "compile_id": "c22e7426-c341-4bbf-b2ed-f7ef91749b4e",
+    "compiled_at": "2026-05-23T00:42:47",
+    "simforge_version": "0.1.0",
+    "yaml_source": "/home/jesusxd/Escritorio/simforge/configs/WT.yaml",
+    "builder_signature": "2e0d24984964f3b9bdf84598",
+    "build_signature": "afe21df7868874ed6b45613c",
     "system_type": "protein",
-    "n_steps": 13,
+    "n_steps": 10,
     "steps": [
         {
             "step_id": "prepare_protein_1",
@@ -72,38 +77,8 @@
             ]
         },
         {
-            "step_id": "analysis_distance_analysis",
-            "dir_name": "08_analysis_distance_analysis",
-            "stage": "analysis",
-            "step_type": "automatic",
-            "blocking": false,
-            "depends_on": [
-                "production_md"
-            ]
-        },
-        {
             "step_id": "analysis_energy",
-            "dir_name": "09_analysis_energy",
-            "stage": "analysis",
-            "step_type": "automatic",
-            "blocking": false,
-            "depends_on": [
-                "production_md"
-            ]
-        },
-        {
-            "step_id": "analysis_hydrogen_bonds",
-            "dir_name": "10_analysis_hydrogen_bonds",
-            "stage": "analysis",
-            "step_type": "automatic",
-            "blocking": false,
-            "depends_on": [
-                "production_md"
-            ]
-        },
-        {
-            "step_id": "analysis_radius_of_gyration",
-            "dir_name": "11_analysis_radius_of_gyration",
+            "dir_name": "08_analysis_energy",
             "stage": "analysis",
             "step_type": "automatic",
             "blocking": false,
@@ -113,7 +88,7 @@
         },
         {
             "step_id": "analysis_rmsd",
-            "dir_name": "12_analysis_rmsd",
+            "dir_name": "09_analysis_rmsd",
             "stage": "analysis",
             "step_type": "automatic",
             "blocking": false,
@@ -123,7 +98,7 @@
         },
         {
             "step_id": "analysis_rmsf",
-            "dir_name": "13_analysis_rmsf",
+            "dir_name": "10_analysis_rmsf",
             "stage": "analysis",
             "step_type": "automatic",
             "blocking": false,

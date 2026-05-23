@@ -28,10 +28,7 @@ graph TD
     end
 
     subgraph sg_analysis["📊 Analysis"]
-        analysis_distance_analysis["Análisis distance_analysis"]
         analysis_energy["Análisis energy"]
-        analysis_hydrogen_bonds["Análisis hydrogen_bonds"]
-        analysis_radius_of_gyration["Análisis radius_of_gyration"]
         analysis_rmsd["Análisis rmsd"]
         analysis_rmsf["Análisis rmsf"]
     end
@@ -42,11 +39,8 @@ graph TD
     add_ions --> energy_minimization
     energy_minimization --> equilibration
     equilibration --> production_md
-    production_md --> analysis_distance_analysis
     production_md --> analysis_energy
-    production_md --> analysis_hydrogen_bonds
-    production_md --> analysis_radius_of_gyration
     production_md --> analysis_rmsd
     production_md --> analysis_rmsf
 
-    class prepare_protein_1,assemble_system,solvate_system,add_ions,energy_minimization,equilibration,production_md,analysis_distance_analysis,analysis_energy,analysis_hydrogen_bonds,analysis_radius_of_gyration,analysis_rmsd,analysis_rmsf default
+    class prepare_protein_1,assemble_system,solvate_system,add_ions,energy_minimization,equilibration,production_md,analysis_energy,analysis_rmsd,analysis_rmsf default

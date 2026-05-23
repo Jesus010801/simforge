@@ -8,5 +8,10 @@
         "protein_1_processed.gro",
         "topol.top",
         "posre.itp"
-    ]
+    ],
+    "required_inputs": [
+        "../../inputs/protein_1.pdb"
+    ],
+    "template_hash": "30c15924c2cc43cc",
+    "generated_at": "2026-05-23T09:01:16"
 }
