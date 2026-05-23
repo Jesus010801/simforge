@@ -1,0 +1,25 @@
+{
+    "step_id": "production_md",
+    "stage": "production",
+    "engine": "gromacs",
+    "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "ProductionBuilder",
+    "simulation_type": "production_md",
+    "expected_outputs": [
+        "md.xtc",
+        "md.edr",
+        "md.log",
+        "md.gro",
+        "md.cpt"
+    ],
+    "params": {
+        "dt": 0.001,
+        "nsteps": 100000000,
+        "temperature": 309.65,
+        "pressure": 1.0,
+        "tc_grps": "system",
+        "constraints": "h-bonds",
+        "nstxout_compressed": 20000
+    }
+}

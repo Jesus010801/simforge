@@ -1,0 +1,8 @@
+# Runtime dependencies
+typer[all]>=0.9
+rich>=13
+pydantic>=2
+pyyaml>=6
+
+# Development / testing
+pytest>=7

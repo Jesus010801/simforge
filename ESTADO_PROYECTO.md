@@ -931,6 +931,86 @@ CLI operativo: simforge compile | run | status
 
 ---
 
+Fix — Protocolo de solvatación y hardware-aware mdrun [2026-05-22]
+
+Problema raíz:
+Péptido de ~80 aa generaba caja enorme (~500k moléculas de agua).
+
+Causa: editconf sin -princ — la caja se calcula sobre la orientación original del péptido,
+no sobre sus ejes principales. Para péptidos elongados esto infla la caja masivamente.
+
+Cambios aplicados:
+
+builders/step_builders/assembly_builder.py
+→ editconf incluye -princ: orienta el péptido en sus ejes principales antes de calcular la caja
+→ box_type: dodecahedron → triclinic (del protocolo de referencia Dinámica_molecular)
+
+core/decision_engine.py
+→ solvate_system: box_type="triclinic", box_distance=1.2nm
+→ add_ions: concentration default 0.154M (referencia fisiológica estándar)
+
+---
+
+Completado — Hardware-aware mdrun [2026-05-22]
+
+Problema: scripts generaban mdrun con flags GPU hardcodeados.
+Usuarios sin GPU no podían ejecutar los scripts sin edición manual.
+
+Solución: hybrid auto-detection — parámetro + detección en runtime.
+
+builders/step_builders/_utils.py — mdrun_block(deffnm, hardware)
+→ hardware="gpu":  flags GPU completos del protocolo de referencia
+    -gpu_id 0 -pme gpu -bonded gpu -nb gpu -update cpu -ntomp 10 -nstlist 150
+    -pin on -tunepme no -pmefft gpu -dlb auto
+→ hardware="cpu":  fallback CPU con nproc dinámico
+    -nb cpu -pme cpu -ntmpi 1 -ntomp $(nproc) -pin on
+→ hardware="auto": bloque bash con detección nvidia-smi en runtime (default)
+
+core/execution_models.py
+→ WorkflowPolicy.hardware: str = "auto"  — el usuario declara "gpu"|"cpu"|"auto" en el YAML
+
+core/decision_engine.py
+→ policy.hardware propagado a params de: minimization, equilibration, production
+
+builders: minimization_builder, equilibration_builder, production_builder
+→ todos importan mdrun_block desde _utils
+→ leen hardware desde step.params con default "auto"
+→ grompp incluye -maxwarn 1 en NVT, NPT y producción
+
+equilibration_builder.py — refactorizado (soporte membrana)
+→ pcoupltype: isotropic (proteína) | semiisotropic (membrana) — controlado desde params
+→ pcoupl_npt, ref_p_xy, ref_p_z, tau_p, rcoulomb, rvdw, disp_corr desde step.params
+→ builders no contienen lógica condicional: el decision_engine decide, el builder renderiza
+
+Validado: 9 tests, 0 failed.
+
+---
+
+Próximo milestone — Interfaz de generación de YAML (simforge init)
+
+Estado actual: el usuario escribe el YAML manualmente.
+Siguiente paso: `simforge init` — wizard interactivo CLI que genera el YAML.
+
+Fases propuestas:
+
+Fase 1 — wizard CLI (Typer prompts):
+→ simforge init → preguntas sobre: tipo de sistema, componentes, temperatura, duración,
+  hardware disponible, análisis deseados
+→ genera configs/<nombre>.yaml listo para simforge compile
+
+Fase 2 — templates predefinidos:
+→ simforge init --template peptide-in-water
+→ simforge init --template protein-ligand
+→ simforge init --template protein-membrane
+
+Fase 3 (futuro):
+→ UI web simple para configuración visual
+→ validación estructural integrada (verificar PDB antes de compilar)
+
+Precondición: la arquitectura del YAML y SystemState están estabilizadas.
+
+---
+
 Deuda técnica abierta (actualizada [2026-05-22])
 
 BAJA PRIORIDAD:
@@ -939,6 +1019,5 @@ BAJA PRIORIDAD:
 → Parallel wave execution: ThreadPoolExecutor sobre to_parallel_waves()
   (Precondición cumplida: _is_blocked() ya usa depends_on reales.
    Los tres análisis tienen depends_on=['production_md'] — listos para paralelo.)
-2. Ejecutar cada wave con ThreadPoolExecutor o similar
-3. _is_blocked() ya es correcto — no requiere cambios
-4. Validar con dry-run que los tres análisis corren concurrentemente
+→ production_builder.py: MDP usa valores hardcodeados pese a leer rcoulomb/rvdw/pcoupltype
+  desde params — completar la conexión cuando se implemente soporte membrana en producción

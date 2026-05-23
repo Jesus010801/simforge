@@ -38,6 +38,10 @@ from builders.step_builders.enhanced_sampling_builder import (
     EnhancedSamplingBuilder,
 )
 
+from builders.step_builders.embedding_builder import (
+    EmbeddingBuilder,
+)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Builder Registry
@@ -53,4 +57,5 @@ STEP_BUILDERS = {
     "enhanced_sampling": EnhancedSamplingBuilder(),
     "production":        ProductionBuilder(),
     "analysis":          AnalysisBuilder(),
+    "membrane_embedding": EmbeddingBuilder(),
 }

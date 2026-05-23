@@ -1,0 +1,135 @@
+{
+    "compiled_at": "2026-05-22T21:07:46",
+    "system_type": "protein",
+    "n_steps": 13,
+    "steps": [
+        {
+            "step_id": "prepare_protein_1",
+            "dir_name": "01_prepare_protein_1",
+            "stage": "preparation",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": []
+        },
+        {
+            "step_id": "assemble_system",
+            "dir_name": "02_assemble_system",
+            "stage": "assembly",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "prepare_protein_1"
+            ]
+        },
+        {
+            "step_id": "solvate_system",
+            "dir_name": "03_solvate_system",
+            "stage": "assembly",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "assemble_system"
+            ]
+        },
+        {
+            "step_id": "add_ions",
+            "dir_name": "04_add_ions",
+            "stage": "assembly",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "solvate_system"
+            ]
+        },
+        {
+            "step_id": "energy_minimization",
+            "dir_name": "05_energy_minimization",
+            "stage": "minimization",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "add_ions"
+            ]
+        },
+        {
+            "step_id": "equilibration",
+            "dir_name": "06_equilibration",
+            "stage": "equilibration",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "energy_minimization"
+            ]
+        },
+        {
+            "step_id": "production_md",
+            "dir_name": "07_production_md",
+            "stage": "production",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "equilibration"
+            ]
+        },
+        {
+            "step_id": "analysis_distance_analysis",
+            "dir_name": "08_analysis_distance_analysis",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        },
+        {
+            "step_id": "analysis_energy",
+            "dir_name": "09_analysis_energy",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        },
+        {
+            "step_id": "analysis_hydrogen_bonds",
+            "dir_name": "10_analysis_hydrogen_bonds",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        },
+        {
+            "step_id": "analysis_radius_of_gyration",
+            "dir_name": "11_analysis_radius_of_gyration",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        },
+        {
+            "step_id": "analysis_rmsd",
+            "dir_name": "12_analysis_rmsd",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        },
+        {
+            "step_id": "analysis_rmsf",
+            "dir_name": "13_analysis_rmsf",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        }
+    ]
+}

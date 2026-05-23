@@ -1,0 +1,42 @@
+project:
+  name: lysozyme_test
+  description: First Real Autonomous MD Run — protein stability validation
+
+
+components:
+
+  - id: protein_1
+    role: protein
+    file: lysozyme.pdb
+
+
+environment:
+
+  solvent:
+    water_model: spce
+
+  ions:
+    concentration: 0.15
+
+  temperature_K: 309.65
+
+  duration_ns: 0.1
+
+
+forcefields:
+
+  protein: opls-aa
+
+
+simulation_objectives:
+
+  - stability
+
+
+analysis:
+
+  - type: rmsd
+
+  - type: rmsf
+
+  - type: energy

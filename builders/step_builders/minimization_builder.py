@@ -5,9 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 import json
 
-from core.execution_models import (
-    SimulationStep,
-)
+from core.execution_models import SimulationStep
+from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_block
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -36,6 +35,7 @@ class MinimizationBuilder:
         emtol      = p.get("emtol",      1000.0)
         emstep     = p.get("emstep",     0.01)
         nsteps     = p.get("nsteps",     50_000)
+        hardware   = p.get("hardware",   "auto")
 
         mdp_text = f"""
 integrator  = {integrator}
@@ -60,22 +60,37 @@ pbc         = xyz
         )
 
         # ────────────────────────────────────────────────────────────────────
+        # Inter-step paths (resolved from DAG)
+        # ────────────────────────────────────────────────────────────────────
+
+        ions_dir = next(
+            (step_dir_map[d] for d in step.depends_on if "ions" in d and d in step_dir_map),
+            None,
+        )
+        ions_ref = _rel(step_dir, ions_dir) if ions_dir else "../add_ions"
+
+        assemble_dir = step_dir_map.get("assemble_system")
+        topol_ref    = _rel(step_dir, assemble_dir) if assemble_dir else "../assemble_system"
+
+        # ────────────────────────────────────────────────────────────────────
         # run.sh
         # ────────────────────────────────────────────────────────────────────
 
-        run_script = """
-gmx grompp \
-    -f em.mdp \
-    -c aaions.gro \
-    -p topol.top \
-    -o em.tpr \
+        run_script = f"""#!/bin/bash
+# ─── Energy minimization ─────────────────────────────────────────────────────
+# Paths resueltos desde DAG
+
+IONS_DIR="{ions_ref}"
+TOPOL_DIR="{topol_ref}"
+
+gmx grompp \\
+    -f em.mdp \\
+    -c "$IONS_DIR/aaions.gro" \\
+    -p "$TOPOL_DIR/topol.top" \\
+    -o em.tpr \\
     -maxwarn 1
 
-gmx mdrun \
-    -v \
-    -deffnm em \
-    -nb gpu
-"""
+{_mdrun_block("em", hardware)}"""
 
         run_path = step_dir / "run.sh"
 
@@ -88,13 +103,14 @@ gmx mdrun \
         # ────────────────────────────────────────────────────────────────────
 
         metadata = {
-            "step_id":      step.step_id,
-            "stage":        step.stage.value,
-            "engine":       step.engine,
-            "step_type":    step.step_type.value,
-            "blocking":     step.blocking,
-            "generated_by": "MinimizationBuilder",
-            "params":       {"integrator": integrator, "emtol": emtol, "emstep": emstep, "nsteps": nsteps},
+            "step_id":          step.step_id,
+            "stage":            step.stage.value,
+            "engine":           step.engine,
+            "step_type":        step.step_type.value,
+            "blocking":         step.blocking,
+            "generated_by":     "MinimizationBuilder",
+            "expected_outputs": ["em.gro", "em.edr", "em.log"],
+            "params":           {"integrator": integrator, "emtol": emtol, "emstep": emstep, "nsteps": nsteps},
         }
 
         metadata_path = (

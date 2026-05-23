@@ -1,0 +1,6 @@
+{
+    "step_id": "embed_in_bilayer",
+    "stage": "assembly",
+    "engine": "movememb+genrestr",
+    "step_type": "manual"
+}

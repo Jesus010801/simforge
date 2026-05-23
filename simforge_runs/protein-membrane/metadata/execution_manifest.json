@@ -1,0 +1,126 @@
+{
+    "compiled_at": "2026-05-22T18:57:31",
+    "system_type": "protein-membrane",
+    "n_steps": 12,
+    "steps": [
+        {
+            "step_id": "orient_protein",
+            "dir_name": "01_orient_protein",
+            "stage": "preparation",
+            "step_type": "manual",
+            "blocking": false,
+            "depends_on": []
+        },
+        {
+            "step_id": "match_box_to_bilayer",
+            "dir_name": "02_match_box_to_bilayer",
+            "stage": "assembly",
+            "step_type": "manual",
+            "blocking": false,
+            "depends_on": [
+                "orient_protein"
+            ]
+        },
+        {
+            "step_id": "embed_in_bilayer",
+            "dir_name": "03_embed_in_bilayer",
+            "stage": "assembly",
+            "step_type": "manual",
+            "blocking": false,
+            "depends_on": [
+                "match_box_to_bilayer"
+            ]
+        },
+        {
+            "step_id": "generate_topology",
+            "dir_name": "04_generate_topology",
+            "stage": "preparation",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "embed_in_bilayer"
+            ]
+        },
+        {
+            "step_id": "membrane_embedding",
+            "dir_name": "05_membrane_embedding",
+            "stage": "membrane_embedding",
+            "step_type": "automatic",
+            "blocking": true,
+            "depends_on": [
+                "embed_in_bilayer",
+                "generate_topology"
+            ]
+        },
+        {
+            "step_id": "solvate_membrane",
+            "dir_name": "06_solvate_membrane",
+            "stage": "assembly",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "membrane_embedding"
+            ]
+        },
+        {
+            "step_id": "clean_water",
+            "dir_name": "07_clean_water",
+            "stage": "assembly",
+            "step_type": "external",
+            "blocking": false,
+            "depends_on": [
+                "solvate_membrane"
+            ]
+        },
+        {
+            "step_id": "add_ions",
+            "dir_name": "08_add_ions",
+            "stage": "assembly",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "clean_water"
+            ]
+        },
+        {
+            "step_id": "energy_minimization",
+            "dir_name": "09_energy_minimization",
+            "stage": "minimization",
+            "step_type": "automatic",
+            "blocking": true,
+            "depends_on": [
+                "add_ions"
+            ]
+        },
+        {
+            "step_id": "equilibration",
+            "dir_name": "10_equilibration",
+            "stage": "equilibration",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "energy_minimization"
+            ]
+        },
+        {
+            "step_id": "production_md",
+            "dir_name": "11_production_md",
+            "stage": "production",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "equilibration"
+            ]
+        },
+        {
+            "step_id": "analysis_rmsd",
+            "dir_name": "12_analysis_rmsd",
+            "stage": "analysis",
+            "step_type": "automatic",
+            "blocking": false,
+            "depends_on": [
+                "production_md"
+            ]
+        }
+    ]
+}

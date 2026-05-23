@@ -1,0 +1,85 @@
+# 0. Identificar regiones transmembranales (predicción de hélices)
+# Página para análisis: https://dtu.biolib.com/DeepTMHMM
+
+# 1. Centrar y alinear la proteína en la caja (ejes X e Y)
+gmx editconf -f File.pdb -o File-1.gro -c -d 1.5 -bt triclinic -princ
+
+# 2. Rotar la proteína para alinear su región transmembrana con la membrana (eje Z)
+gmx editconf -f File-1.gro -o File-2.gro -rotate 0 270 0 -c -d 1.5 -bt triclinic -princ
+# El comando: -rotate 0 270 0 va a depender de la alineación inicial de la proteína, lo que se busca es que quede verticalmente orientada con la parte citosolica abajo y la extracelular arriba de la membrana, endirección z positiva
+# 3. Ajustar el tamaño de la caja para que coincida con la de la bicapa lipídica
+gmx editconf -f File-2.gro -o File-3.gro -box 12.83680 12.88700 12.00000 -c #El termino en z debe ser ajustado en función al tamaño de la proteína, para proteínas muy grandes aumentar
+
+# 4. Concatenar la proteína con la membrana
+cat File-3.gro dppc512_whole.gro > concat.gro
+# Luego, borrar manualmente las líneas intermedias (nombres de archivos) y ajustar el número total de átomos
+
+# 5. Compilar el programa de desplazamiento de membrana (Fortran)
+gfortran -o MoveMemb MoveMemb.f
+./MoveMemb
+
+# 6. Ingresar la cantidad de nanómetros a mover la membrana sobre el eje Z
+# Este paso sirve para evitar solapamiento con la proteína
+
+# 7. Se genera un nuevo archivo con la membrana movida: dppc512_nb.gro
+
+# 8. Concatenar nuevamente los archivos para generar el sistema completo
+cat File-3.gro dppc512_nb.gro > concat.gro
+protein and (resid 271 to 294 or resid 300 to 320 or resid 332 to 354 or resid 462 to 485)
+# 9. Generar restricciones posicionales fuertes para mantener fija la proteína
+gmx genrestr -f concat.gro -o strong_posre.itp -fc 100000 100000 100000
+
+# 10. Renumerar los residuos del sistema completo
+gmx editconf -f concat.gro -o system.gro -resnr 1
+
+# 11. Inflar los lípidos para separarlos de la proteína
+perl inflategro-Jorge.pl system.gro 4 DPP 14 system_inflated.gro 5 area.dat
+# 4 = factor de inflación; DPP = nombre del residuo lipídico; 14 = número de carbonos por cadena
+
+# 12. Renumerar de nuevo los residuos después del inflado
+gmx editconf -f system_inflated.gro -o system.gro -resnr 1
+
+# 13. Generar topología del sistema (elige fuerza de campo adecuada durante ejecución)
+gmx pdb2gmx -f system.gro -o system_inflated.gro -p topol_gnrl_systm_shrink.top -i system_shrink.itp
+
+# 14. Agregar restricciones fuertes al archivo de topología
+# Agregar lo siguiente al final del archivo .top, justo antes de #endif:
+# ; Strong position restraints for InflateGRO
+# #ifdef STRONG_POSRES
+# #include "strong_posre.itp"
+# #endif
+
+# 15. Hacer una copia del sistema inflado (antes de shrink)
+cp system_inflated.gro system_shrink_1.gro
+
+# 16. Correr script para ir contrayendo el sistema hasta eliminar huecos en la bicapa
+./ScriptCamilo-Jorge.sh
+
+# 17. Solvatar el sistema (agregar moléculas de agua)
+gmx solvate -cp system_shrink_1.gro -cs spc216.gro -o fnl_systm_sol.gro -p topol_gnrl_systm_shrink.top
+
+# 18. Eliminar aguas que se encuentren dentro de la membrana
+perl water_deletor.pl -in fnl_systm_sol.gro -out system_solvate_fixed.gro -ref O33 -middle C50 -nwater 3
+
+# 19. Editar a mano el archivo topol.top para actualizar el número real de moléculas de agua
+
+# 20. Agregar iones para neutralizar y simular condiciones fisiológicas (~0.154 M)
+gmx grompp -f ions.mdp -c system_solvate_fixed.gro -p topol_gnrl_systm_shrink.top -o ions.tpr -maxwarn 1
+gmx genion -s ions.tpr -o system_ions.gro -p topol_gnrl_systm_shrink.top -pname NA -nname CL -neutral -conc 0.154
+
+# 21. Minimización energética para relajar el sistema
+gmx grompp -f em.mdp -c system_ions.gro -p topol_gnrl_systm_shrink.top -o em.tpr
+gmx mdrun -v -deffnm em
+
+# 22. Equilibrio del sistema - simulación NVT:
+gmx grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -maxwarn 1
+gmx mdrun -v -deffnm nvt  -nb gpu
+
+# 23. Equilibrio del sistema - simulación NPT
+gmx grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -maxwarn 1 
+gmx mdrun -v -deffnm npt  -nb gpu
+
+# 24. Simulación DM de producción:
+gmx grompp -f md.mdp -c npt.gro -t npt.cpt -p topol.top -o md.tpr -maxwarn 1
+gmx mdrun -v -deffnm md  -nb gpu
+

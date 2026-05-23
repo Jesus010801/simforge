@@ -6,7 +6,7 @@ from pathlib import Path
 import json
 
 from core.execution_models import SimulationStep
-from builders.step_builders._utils import rel as _rel
+from builders.step_builders._utils import rel as _rel, mdrun_block as _mdrun_block
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -38,6 +38,16 @@ class ProductionBuilder:
         nstxout_compressed  = p.get("nstxout_compressed",   5_000)
         nstenergy           = p.get("nstenergy",             1_000)
         nstlog              = p.get("nstlog",                1_000)
+        # Extended params — membrane overrides
+        tcoupl              = p.get("tcoupl",               "V-rescale")
+        pcoupltype          = p.get("pcoupltype",           "isotropic")
+        tau_p               = p.get("tau_p",                2.0)
+        ref_p_xy            = p.get("ref_p_xy",             pressure)
+        ref_p_z             = p.get("ref_p_z",             pressure)
+        rcoulomb            = p.get("rcoulomb",              1.0)
+        rvdw                = p.get("rvdw",                  1.0)
+        disp_corr           = p.get("disp_corr",            "")
+        hardware            = p.get("hardware",              "auto")
 
         # ── Inter-step paths ─────────────────────────────────────────────────
         # npt.gro / npt.cpt: output de equilibration (direct dep)
@@ -47,45 +57,56 @@ class ProductionBuilder:
         )
         eq_ref = _rel(step_dir, eq_dir) if eq_dir else "../equilibration"
 
-        # topol.top: vive en assemble_system (no es dep directo, pero siempre presente)
-        assemble_dir = step_dir_map.get("assemble_system")
-        topol_ref    = _rel(step_dir, assemble_dir) if assemble_dir else "../assemble_system"
+        # topol.top — membrane: generate_topology; protein: assemble_system
+        topol_dir = (
+            step_dir_map.get("generate_topology")
+            or step_dir_map.get("assemble_system")
+        )
+        topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../assemble_system"
 
         # ────────────────────────────────────────────────────────────────────
         # md.mdp
         # ────────────────────────────────────────────────────────────────────
 
-        mdp_text = f"""
-title                   = Production MD
+        if pcoupltype == "semiisotropic":
+            pressure_block = (
+                f"pcoupl                  = Parrinello-Rahman\n"
+                f"pcoupltype              = semiisotropic\n"
+                f"tau_p                   = {tau_p}\n"
+                f"ref_p                   = {ref_p_xy}  {ref_p_z}\n"
+                f"compressibility         = 4.5e-5  4.5e-5"
+            )
+        else:
+            pressure_block = (
+                f"pcoupl                  = Parrinello-Rahman\n"
+                f"pcoupltype              = isotropic\n"
+                f"tau_p                   = {tau_p}\n"
+                f"ref_p                   = {pressure}\n"
+                f"compressibility         = 4.5e-5"
+            )
 
-integrator              = md
-dt                      = {dt}
-nsteps                  = {nsteps}
+        disp_block = f"\nDispCorr                = {disp_corr}" if disp_corr else ""
 
-tcoupl                  = V-rescale
-tc-grps                 = {tc_grps}
-tau_t                   = {tau_t}
-ref_t                   = {ref_t}
-
-pcoupl                  = Parrinello-Rahman
-pcoupltype              = isotropic
-tau_p                   = 2.0
-ref_p                   = {pressure}
-compressibility         = 4.5e-5
-
-constraints             = {constraints}
-
-cutoff-scheme           = Verlet
-coulombtype             = PME
-rcoulomb                = 1.0
-rvdw                    = 1.0
-
-nstxout-compressed      = {nstxout_compressed}
-nstenergy               = {nstenergy}
-nstlog                  = {nstlog}
-
-pbc                     = xyz
-"""
+        mdp_text = (
+            f"title                   = Production MD\n\n"
+            f"integrator              = md\n"
+            f"dt                      = {dt}\n"
+            f"nsteps                  = {nsteps}\n\n"
+            f"tcoupl                  = {tcoupl}\n"
+            f"tc-grps                 = {tc_grps}\n"
+            f"tau_t                   = {tau_t}\n"
+            f"ref_t                   = {ref_t}\n\n"
+            f"{pressure_block}\n\n"
+            f"constraints             = {constraints}\n\n"
+            f"cutoff-scheme           = Verlet\n"
+            f"coulombtype             = PME\n"
+            f"rcoulomb                = {rcoulomb}\n"
+            f"rvdw                    = {rvdw}\n\n"
+            f"nstxout-compressed      = {nstxout_compressed}\n"
+            f"nstenergy               = {nstenergy}\n"
+            f"nstlog                  = {nstlog}\n\n"
+            f"pbc                     = xyz{disp_block}\n"
+        )
 
         mdp_path = (
             step_dir / "md.mdp"
@@ -111,13 +132,10 @@ gmx grompp \\
     -c "$EQ_DIR/npt.gro" \\
     -t "$EQ_DIR/npt.cpt" \\
     -p "$TOPOL_DIR/topol.top" \\
-    -o md.tpr
+    -o md.tpr \\
+    -maxwarn 1
 
-gmx mdrun \\
-    -v \\
-    -deffnm md \\
-    -nb gpu
-"""
+{_mdrun_block("md", hardware)}"""
 
         run_path = (
             step_dir / "run_md.sh"

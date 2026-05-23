@@ -1,0 +1,24 @@
+project:
+  name: test_peptide
+
+components:
+  - id: protein_1
+    role: protein
+    file: configs/peptide_A.pdb
+
+environment:
+  solvent:
+    water_model: spce
+  ions:
+    concentration: 0.154
+  temperature_K: 300.0
+  duration_ns: 1.0
+
+forcefields:
+  protein: opls-aa
+
+simulation_objectives:
+  - stability
+
+analysis:
+  - type: rmsf

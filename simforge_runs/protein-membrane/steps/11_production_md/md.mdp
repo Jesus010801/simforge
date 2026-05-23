@@ -1,0 +1,30 @@
+title                   = Production MD
+
+integrator              = md
+dt                      = 0.001
+nsteps                  = 100000000
+
+tcoupl                  = Nose-Hoover
+tc-grps                 = system
+tau_t                   = 0.5
+ref_t                   = 309.65
+
+pcoupl                  = Parrinello-Rahman
+pcoupltype              = semiisotropic
+tau_p                   = 2.0
+ref_p                   = 1.0  1.0
+compressibility         = 4.5e-5  4.5e-5
+
+constraints             = h-bonds
+
+cutoff-scheme           = Verlet
+coulombtype             = PME
+rcoulomb                = 1.2
+rvdw                    = 1.2
+
+nstxout-compressed      = 20000
+nstenergy               = 20000
+nstlog                  = 20000
+
+pbc                     = xyz
+DispCorr                = EnerPres

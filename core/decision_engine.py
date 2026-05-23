@@ -211,6 +211,11 @@ def _build_preparation_steps(
                     stage=StepStage.PREPARATION,
                     engine="gromacs:pdb2gmx",
                     target_components=[comp.id],
+                    params={
+                        "source_file": comp.file,
+                        "forcefield":  state.forcefields.protein,
+                        "water_model": state.environment.solvent.water_model,
+                    },
                     notes=[
                         "Agregar hidrógenos",
                         "Asignar protonación",
@@ -704,13 +709,17 @@ def _build_workflow_policy(state: SystemState) -> WorkflowPolicy:
         policy.sampling_method       = "REST2"
         policy.equilibration_time_ns = 0.5   # equilibración extendida antes de REST2
 
-    # Duración de producción según objetivos
-    objectives = set(state.simulation_objectives)
-    if "competitive_binding" in objectives:
-        policy.production_time_ns = 50.0
-    elif "active_site_stability" in objectives:
-        policy.production_time_ns = 20.0
-    # else: default 10ns
+    # Duración de producción: override explícito del usuario tiene prioridad,
+    # si no, las workflow policies científicas gobiernan.
+    if state.environment.duration_ns is not None:
+        policy.production_time_ns = state.environment.duration_ns
+    else:
+        objectives = set(state.simulation_objectives)
+        if "competitive_binding" in objectives:
+            policy.production_time_ns = 50.0
+        elif "active_site_stability" in objectives:
+            policy.production_time_ns = 20.0
+        # else: default 10ns
 
     return policy
 
@@ -772,6 +781,7 @@ def _build_minimization_params(
         "emtol":      emtol,
         "emstep":     0.01,
         "nsteps":     policy.minimization_steps,
+        "hardware":   policy.hardware,
     }
 
 
@@ -793,6 +803,7 @@ def _build_equilibration_params(
         "tau_t":       tau_t,
         "ref_t":       ref_t,
         "constraints": "h-bonds",
+        "hardware":    policy.hardware,
     }
 
 
@@ -816,6 +827,7 @@ def _build_production_params(
         "nstxout_compressed": 5000,
         "nstenergy":          1000,
         "nstlog":             1000,
+        "hardware":           policy.hardware,
     }
 
 
@@ -842,7 +854,7 @@ def _build_assembly_params(
     if step.step_id == "solvate_system":
         wm = state.environment.solvent.water_model
         return {
-            "box_type":    "dodecahedron",
+            "box_type":    "triclinic",
             "box_distance": 1.2,
             "water_model": wm,
             "water_gro":   _WATER_GRO.get(wm, "spc216.gro"),
@@ -850,7 +862,7 @@ def _build_assembly_params(
 
     if step.step_id == "add_ions":
         return {
-            "concentration": state.environment.ions.concentration,
+            "concentration": state.environment.ions.concentration or 0.154,
             "positive_ion":  state.environment.ions.positive,
             "negative_ion":  state.environment.ions.negative,
         }

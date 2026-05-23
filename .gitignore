@@ -1,1 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Packaging
+*.whl
+*.tar.gz
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+
+# SimForge runtime artifacts
+simforge_runs/
+*.tpr
+*.xtc
+*.edr
+*.trr
+*.cpt
+*.gro
+*.top
+*.itp
+*.ndx
+mdout.mdp
+
+# Aider / Antigravity
 .aider*
+.antigravitycli/

@@ -1,0 +1,6 @@
+{
+    "step_id": "solvate_membrane",
+    "stage": "assembly",
+    "engine": "gromacs:solvate",
+    "step_type": "automatic"
+}

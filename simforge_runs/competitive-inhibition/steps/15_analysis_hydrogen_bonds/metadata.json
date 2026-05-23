@@ -3,11 +3,20 @@
     "stage": "analysis",
     "engine": "analysis_pipeline",
     "step_type": "automatic",
-    "analysis_type": "hydrogen_bonds",
     "blocking": false,
-    "expected_outputs": [
-        "plots/",
-        "tables/",
-        "outputs/"
+    "generated_by": "AnalysisBuilder",
+    "analysis_type": "hydrogen_bonds",
+    "gromacs_groups": "built-in defaults (pdb2gmx standard)",
+    "params": {
+        "analysis_type": "hydrogen_bonds"
+    },
+    "analyses": [
+        "Protein-Protein (1 1)",
+        "Protein-SOL (1 13)"
+    ],
+    "outputs": [
+        "tables/hbnum_protein.xvg",
+        "tables/hbdist_protein.xvg",
+        "tables/hbnum_protein_sol.xvg"
     ]
 }

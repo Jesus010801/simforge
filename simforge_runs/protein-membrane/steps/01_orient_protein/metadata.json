@@ -1,0 +1,10 @@
+{
+    "step_id": "orient_protein",
+    "stage": "preparation",
+    "engine": "gromacs:editconf",
+    "target": "ligand",
+    "step_type": "manual",
+    "expected_outputs": [
+        "ligand.sdf"
+    ]
+}

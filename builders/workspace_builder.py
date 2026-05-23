@@ -191,4 +191,13 @@ class WorkspaceBuilder:
         manifest_path = metadata_dir / "execution_manifest.json"
         manifest_path.write_text(json.dumps(manifest_data, indent=4))
 
+        # ────────────────────────────────────────────────────────────────────
+        # Compile report (professional scientific summary)
+        # ────────────────────────────────────────────────────────────────────
+        try:
+            from core.report_generator import generate_compile_report
+            generate_compile_report(result, root)
+        except Exception:
+            pass   # report failure must never block workspace creation
+
         return root

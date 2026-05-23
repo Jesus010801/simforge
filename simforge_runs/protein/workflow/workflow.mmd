@@ -1,0 +1,52 @@
+graph TD
+
+    classDef blocking fill:#ff6b6b,stroke:#c0392b,color:#fff
+    classDef manual   fill:#f39c12,stroke:#e67e22,color:#fff
+    classDef external fill:#8e44ad,stroke:#6c3483,color:#fff
+    classDef default  fill:#2ecc71,stroke:#27ae60,color:#fff
+
+    subgraph sg_preparation["🔧 Preparation"]
+        prepare_protein_1["Preparar proteína protein_1"]
+    end
+
+    subgraph sg_assembly["🏗️  Assembly"]
+        assemble_system["Construcción del sistema completo"]
+        solvate_system["Solvatación"]
+        add_ions["Adición de iones"]
+    end
+
+    subgraph sg_minimization["⚡ Minimization"]
+        energy_minimization["Minimización energética"]
+    end
+
+    subgraph sg_equilibration["🌡️  Equilibration"]
+        equilibration["Equilibración"]
+    end
+
+    subgraph sg_production["🚀 Production MD"]
+        production_md["Dinámica molecular de producción"]
+    end
+
+    subgraph sg_analysis["📊 Analysis"]
+        analysis_distance_analysis["Análisis distance_analysis"]
+        analysis_energy["Análisis energy"]
+        analysis_hydrogen_bonds["Análisis hydrogen_bonds"]
+        analysis_radius_of_gyration["Análisis radius_of_gyration"]
+        analysis_rmsd["Análisis rmsd"]
+        analysis_rmsf["Análisis rmsf"]
+    end
+
+    prepare_protein_1 --> assemble_system
+    assemble_system --> solvate_system
+    solvate_system --> add_ions
+    add_ions --> energy_minimization
+    energy_minimization --> equilibration
+    equilibration --> production_md
+    production_md --> analysis_distance_analysis
+    production_md --> analysis_energy
+    production_md --> analysis_hydrogen_bonds
+    production_md --> analysis_radius_of_gyration
+    production_md --> analysis_rmsd
+    production_md --> analysis_rmsf
+
+    class prepare_protein_1,assemble_system,solvate_system,add_ions,energy_minimization,equilibration,production_md,analysis_distance_analysis,analysis_energy,analysis_hydrogen_bonds,analysis_radius_of_gyration,analysis_rmsd,analysis_rmsf default

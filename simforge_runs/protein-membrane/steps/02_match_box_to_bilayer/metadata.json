@@ -1,0 +1,6 @@
+{
+    "step_id": "match_box_to_bilayer",
+    "stage": "assembly",
+    "engine": "gromacs:editconf",
+    "step_type": "manual"
+}
