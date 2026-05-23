@@ -1,0 +1,16 @@
+{
+    "step_id": "add_ions",
+    "stage": "assembly",
+    "engine": "gromacs:genion",
+    "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "AssemblyBuilder",
+    "expected_outputs": [
+        "aaions.gro"
+    ],
+    "params": {
+        "concentration": 0.154,
+        "positive_ion": "NA",
+        "negative_ion": "CL"
+    }
+}

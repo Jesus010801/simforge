@@ -1,3 +1,18 @@
-gmx grompp     -f md.mdp     -c npt.gro     -t npt.cpt     -p topol.top     -o md.tpr
+#!/bin/bash
+# ─── Production MD ───────────────────────────────────────────────────────────
+# Paths resueltos desde DAG
 
-gmx mdrun     -v     -deffnm md     -nb gpu
+EQ_DIR="../11_equilibration"
+TOPOL_DIR="../07_assemble_system"
+
+gmx grompp \
+    -f md.mdp \
+    -c "$EQ_DIR/npt.gro" \
+    -t "$EQ_DIR/npt.cpt" \
+    -p "$TOPOL_DIR/topol.top" \
+    -o md.tpr
+
+gmx mdrun \
+    -v \
+    -deffnm md \
+    -nb gpu

@@ -1,0 +1,34 @@
+; O-LINKED GLYCAN [SER/THR - SUGAR]
+
+[ bondtypes ]
+   OS       Cg_S   1  0.14100   267776.0   ; mark Prot:OG   Carb:C1    [ CT    OS      1    0.14100   267776.0  ]
+     
+
+[ angletypes ]    
+    CT     OS      Cg_S     1  109.500    502.080 ; mark    Prot:CB    Prot:OG    Carb:C1     
+    OS     Cg_S    H2_S     1  109.500    292.880 ; mark    Prot:OG    Carb:C1    Carb:H1  
+    OS     Cg_S    Os_S     1  123.400    694.544 ; mark    Prot:OG    Carb:C1    Carb:O5   
+    OS     Cg_S    Cg_S     1  109.500    418.400 ; mark    Prot:OG    Carb:C1    Carb:C2 
+    OS     CT      CT_2     1  109.500    418.400 ; mark    Prot:OG    Prot:CB    Prot:CA  
+       
+
+[ dihedraltypes ]    
+    CT    CT      OS       Cg_S    3     1.71544   2.84512   1.04600  -5.60656   0.00000   0.00000 ; mark    Prot:CA    Prot:CB    Prot:OG    Carb:C1 
+    CT    OS       Cg_S    H2_S    3     1.58992   4.76976   0.00000  -6.35968   0.00000   0.00000 ; mark    Prot:CB    Prot:OG    Carb:C1    Carb:H1 
+    CT    OS       Cg_S    Os_S    3    -5.35761  13.61683   8.44331 -16.70253   0.00000   0.00000 ; mark    Prot:CB    Prot:OG    Carb:C1    Carb:O5  
+    CT    OS       Cg_S    Cg_S    3     1.71544   2.84512   1.04600  -5.60656   0.00000   0.00000 ; mark    Prot:CB    Prot:OG    Carb:C1    Carb:C2 
+    HC    CT      OS       Cg_S    3     1.58992   4.76976   0.00000  -6.35968   0.00000   0.00000 ; mark    Prot:HB    Prot:CB    Prot:OG    Carb:C1 
+    OS     Cg_S    Os_S    Cg_S    3    -5.35761  13.61683   8.44331 -16.70253   0.00000   0.00000 ; mark    Prot:OG    Carb:C1    Carb:O5    Carb:C5 
+    OS     Cg_S    Cg_S    Cg_S    3     2.87441   0.58158   2.09200  -5.54799   0.00000   0.00000 ; mark    Prot:OG    Carb:C1    Carb:C2    Carb:C3   
+    OS     Cg_S    Cg_S    H1_S    3     0.97905   2.93716   0.00000  -3.91622   0.00000   0.00000 ; mark    Prot:OG    Carb:C1    Carb:C2    Carb:H2 
+    OS     Cg_S    Cg_S    Ng_S    3    22.054   -21.6956   -9.81734   4.40504   7.47583  -1.83112 ; mark    Prot:OG    Carb:C1    Carb:C2    Carb:N2      
+    CT_2   CT      OS      Cg_S    3     1.71544   2.84512   1.04600  -5.60656   0.00000   0.00000 ; mark    Prot:CA    Prot:CB    Prot:OG/OG1 Carb:C1 
+    N      CT_2    CT      OS      3     9.89307  -4.71746   3.67774  -8.85335   0.00000   0.00000 ; mark    Prot:N     Prot:CA,   Prot:CB     Prot:OG 
+    HC     CT_2    CT      OS      3     0.97905   2.93716   0.00000  -3.91622   0.00000   0.00000 ; mark    Prot:HA    Prot:CA    Prot:CB     Prot:OG 
+    C      CT_2    CT      OS      3   -15.47661  11.82816   3.64845   0.00000   0.00000   0.00000 ; mark    Prot:C     Prot:CA    Prot:CB     Prot:OG 
+
+   
+ 
+
+
+    

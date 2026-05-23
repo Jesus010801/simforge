@@ -3,11 +3,23 @@
     "stage": "analysis",
     "engine": "analysis_pipeline",
     "step_type": "automatic",
-    "analysis_type": "distance_analysis",
     "blocking": false,
-    "expected_outputs": [
-        "plots/",
-        "tables/",
-        "outputs/"
+    "generated_by": "AnalysisBuilder",
+    "analysis_type": "distance_analysis",
+    "gromacs_groups": "built-in defaults (pdb2gmx standard)",
+    "params": {
+        "analysis_type": "distance_analysis",
+        "selection": {
+            "group1": "substrate_1",
+            "group2": "ligand_1"
+        }
+    },
+    "selection": {
+        "group1": "substrate_1",
+        "group2": "ligand_1"
+    },
+    "requires_make_ndx": true,
+    "outputs": [
+        "tables/distance_avg.xvg"
     ]
 }

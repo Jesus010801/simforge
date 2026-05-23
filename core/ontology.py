@@ -176,6 +176,8 @@ ANALYSIS_TYPES = [
 
     "density_profile",
 
+    "energy",
+
 ]
 
 OUTPUT_FORMATS = [

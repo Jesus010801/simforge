@@ -350,10 +350,13 @@ class IonsConfig(BaseModel):
 
 
 class EnvironmentModel(BaseModel):
-    membrane:      MembraneConfig = MembraneConfig()
-    solvent:       SolventConfig  = SolventConfig()
-    ions:          IonsConfig     = IonsConfig()
-    temperature_K: float          = 300.0
+    membrane:      MembraneConfig  = MembraneConfig()
+    solvent:       SolventConfig   = SolventConfig()
+    ions:          IonsConfig      = IonsConfig()
+    temperature_K: float           = 300.0
+    # Optional user override for production duration.
+    # If None, decision_engine workflow policies decide.
+    duration_ns:   Optional[float] = None
 
 
 class ForcefieldsModel(BaseModel):

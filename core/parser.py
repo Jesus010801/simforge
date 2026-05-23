@@ -65,20 +65,50 @@ def _validate_protein_component(comp: ComponentModel) -> ComponentValidation:
     Si el archivo no existe o falla, retorna una validación con error.
     """
     from validators.protein_validator import validate_protein
+    from validators.file_resolver import resolve_structure_file, StructureFileError
 
-    path = Path(comp.file)
+    raw_path = Path(comp.file)
 
-    if not path.exists():
+    # Smart directory detection before calling validator
+    try:
+        path, auto_warning = resolve_structure_file(raw_path, component_id=comp.id)
+        # Patch the component's file path so downstream stages use the resolved path
+        comp.file = str(path)
+    except StructureFileError as e:
         return ComponentValidation(
-            validator_used = "protein_validator",
-            is_valid       = False,
-            validation_error = f"Archivo no encontrado: {path}",
-            warnings = [Warning(
-                message  = f"Archivo de proteína no encontrado: {path.name}",
+            validator_used   = "protein_validator",
+            is_valid         = False,
+            validation_error = str(e),
+            warnings=[Warning(
+                message  = str(e),
+                target   = comp.id,
+                severity = Severity.HIGH,
+            )],
+            risks=[Risk(
+                message  = "Archivo de estructura no resuelto — pipeline bloqueado",
                 target   = comp.id,
                 severity = Severity.HIGH,
             )],
         )
+    except FileNotFoundError:
+        return ComponentValidation(
+            validator_used = "protein_validator",
+            is_valid       = False,
+            validation_error = f"Archivo no encontrado: {raw_path}",
+            warnings = [Warning(
+                message  = f"Archivo de proteína no encontrado: {raw_path.name}",
+                target   = comp.id,
+                severity = Severity.HIGH,
+            )],
+        )
+
+    extra_warnings: list[Warning] = []
+    if auto_warning:
+        extra_warnings.append(Warning(
+            message  = auto_warning,
+            target   = comp.id,
+            severity = Severity.MEDIUM,
+        ))
 
     try:
         pv = validate_protein(path)
@@ -86,7 +116,7 @@ def _validate_protein_component(comp: ComponentModel) -> ComponentValidation:
             validator_used   = "protein_validator",
             is_valid         = True,
             validation_error = None,
-            warnings         = pv.warnings,
+            warnings         = extra_warnings + pv.warnings,
             risks            = pv.risks,
             recommendations  = pv.recommendations,
             data             = pv.model_dump(),
@@ -96,7 +126,7 @@ def _validate_protein_component(comp: ComponentModel) -> ComponentValidation:
             validator_used   = "protein_validator",
             is_valid         = False,
             validation_error = str(e),
-            warnings = [Warning(
+            warnings = extra_warnings + [Warning(
                 message  = f"Error al validar proteína: {e}",
                 target   = comp.id,
                 severity = Severity.HIGH,
@@ -114,20 +144,48 @@ def _validate_ligand_component(comp: ComponentModel) -> ComponentValidation:
     Ejecuta ligand_validator y empaqueta el resultado en ComponentValidation.
     """
     from validators.ligand_validator import validate_ligand
+    from validators.file_resolver import resolve_structure_file, StructureFileError
 
-    path = Path(comp.file)
+    raw_path = Path(comp.file)
 
-    if not path.exists():
+    try:
+        path, auto_warning = resolve_structure_file(raw_path, component_id=comp.id)
+        comp.file = str(path)
+    except StructureFileError as e:
         return ComponentValidation(
             validator_used   = "ligand_validator",
             is_valid         = False,
-            validation_error = f"Archivo no encontrado: {path}",
-            warnings = [Warning(
-                message  = f"Archivo de ligando no encontrado: {path.name}",
+            validation_error = str(e),
+            warnings=[Warning(
+                message  = str(e),
+                target   = comp.id,
+                severity = Severity.HIGH,
+            )],
+            risks=[Risk(
+                message  = "Archivo de ligando no resuelto — parametrización imposible",
                 target   = comp.id,
                 severity = Severity.HIGH,
             )],
         )
+    except FileNotFoundError:
+        return ComponentValidation(
+            validator_used   = "ligand_validator",
+            is_valid         = False,
+            validation_error = f"Archivo no encontrado: {raw_path}",
+            warnings = [Warning(
+                message  = f"Archivo de ligando no encontrado: {raw_path.name}",
+                target   = comp.id,
+                severity = Severity.HIGH,
+            )],
+        )
+
+    extra_warnings: list[Warning] = []
+    if auto_warning:
+        extra_warnings.append(Warning(
+            message  = auto_warning,
+            target   = comp.id,
+            severity = Severity.MEDIUM,
+        ))
 
     try:
         lv = validate_ligand(path, role=comp.role)
@@ -135,7 +193,7 @@ def _validate_ligand_component(comp: ComponentModel) -> ComponentValidation:
             validator_used   = "ligand_validator",
             is_valid         = lv.is_complete,
             validation_error = None if lv.is_complete else "Parser reportó archivo incompleto",
-            warnings         = lv.warnings,
+            warnings         = extra_warnings + lv.warnings,
             risks            = lv.risks,
             recommendations  = lv.recommendations,
             data             = lv.model_dump(),
@@ -145,7 +203,7 @@ def _validate_ligand_component(comp: ComponentModel) -> ComponentValidation:
             validator_used   = "ligand_validator",
             is_valid         = False,
             validation_error = str(e),
-            warnings = [Warning(
+            warnings = extra_warnings + [Warning(
                 message  = f"Error al validar ligando: {e}",
                 target   = comp.id,
                 severity = Severity.HIGH,

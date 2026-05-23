@@ -80,6 +80,16 @@ class AssemblyBuilder:
             var_name  = component.upper()                 # "PROTEIN_1", "LIGAND_1"
             inputs.append((var_name, f"{_rel(step_dir, dep_dir)}/{gro}"))
 
+        # Locate protein prep dir to hand off topol.top
+        protein_prep_dep = next(
+            (d for d in step.depends_on if d.startswith("prepare_protein_") and d in step_dir_map),
+            None,
+        )
+        protein_prep_ref = (
+            _rel(step_dir, step_dir_map[protein_prep_dep])
+            if protein_prep_dep else None
+        )
+
         var_lines = "\n".join(f'{name}="{path}"' for name, path in inputs)
         cat_args  = " ".join(f"${name}" for name, _ in inputs)
         itp_lines = "\n".join(
@@ -88,12 +98,21 @@ class AssemblyBuilder:
             if dep_id.startswith("parametrize_")
         )
 
+        topol_block = ""
+        if protein_prep_ref:
+            topol_block = f"""
+# Handoff topology from protein prep
+PROTEIN_PREP_DIR="{protein_prep_ref}"
+cp "$PROTEIN_PREP_DIR/topol.top" topol.top
+cp "$PROTEIN_PREP_DIR/posre.itp" posre.itp
+"""
+
         script = f"""#!/bin/bash
 # ─── Assembly: combinar proteína y ligandos ───────────────────────────────────
 # Paths resueltos desde DAG — no editar manualmente
 
 {var_lines}
-
+{topol_block}
 # Combinar estructuras
 cat {cat_args} > complex_raw.gro
 
@@ -162,7 +181,8 @@ gmx editconf \\
     -o box.gro \\
     -c \\
     -d {box_distance} \\
-    -bt {box_type}
+    -bt {box_type} \\
+    -princ
 
 # Agregar agua
 gmx solvate \\

@@ -22,11 +22,28 @@ from pathlib import Path
 from datetime import datetime
 import json
 
+from rich.console import Console
+from rich.panel import Panel
+
 from executors.execution_state import (
     WorkspaceExecutionState,
     StepExecutionRecord,
     StepStatus,
 )
+
+_console = Console(highlight=False)
+
+
+def _fmt_elapsed(seconds: float) -> str:
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    mins = int(seconds // 60)
+    secs = int(seconds % 60)
+    if mins < 60:
+        return f"{mins}m {secs}s"
+    hours = mins // 60
+    mins  = mins % 60
+    return f"{hours}h {mins}m"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -67,17 +84,25 @@ class BaseExecutor(ABC):
 
         self.state.started_at = datetime.now()
 
+        n_total = len(self.state.steps)
+
         try:
-            for record in self.state.steps:
+            for idx, record in enumerate(self.state.steps, 1):
 
                 # Verificar que las dependencias completaron
                 if self._is_blocked(record):
                     record.status = StepStatus.BLOCKED
-                    self._log(f"[BLOCKED]  {record.step_id}")
+                    _console.print(
+                        f"  [dim]⊘  [{idx}/{n_total}] {record.step_id}  (blocked)[/dim]"
+                    )
                     continue
 
-                # Ejecutar
+                # Banner de inicio visible
+                _console.print(
+                    f"\n  [bold cyan]▶[/bold cyan]  [{idx}/{n_total}] [bold]{record.step_id}[/bold]"
+                )
                 self._log(f"[START]    {record.step_id}")
+
                 record.status     = StepStatus.RUNNING
                 record.started_at = datetime.now()
                 self._save_state()
@@ -92,6 +117,27 @@ class BaseExecutor(ABC):
                 if record.status == StepStatus.RUNNING:
                     record.status = StepStatus.DONE
 
+                elapsed_str = _fmt_elapsed(record.elapsed_s)
+
+                if record.status == StepStatus.DONE:
+                    _console.print(
+                        f"  [green]✓[/green]  {record.step_id}  "
+                        f"[dim]({elapsed_str})[/dim]"
+                    )
+                elif record.status == StepStatus.SKIPPED:
+                    _console.print(
+                        f"  [dim]–  {record.step_id}  (skipped)[/dim]"
+                    )
+                else:
+                    _console.print(
+                        f"  [red]✗[/red]  [bold]{record.step_id}[/bold]  "
+                        f"[dim]({elapsed_str})[/dim]"
+                    )
+                    if record.error_message:
+                        _console.print(
+                            f"     [red]{record.error_message[:200]}[/red]"
+                        )
+
                 self._log(
                     f"[{record.status.value.upper():8}] "
                     f"{record.step_id} "
@@ -105,6 +151,10 @@ class BaseExecutor(ABC):
                     step_dir = Path(record.step_dir)
                     meta     = self._read_metadata(step_dir)
                     if meta.get("blocking", False):
+                        _console.print(
+                            f"\n  [red bold]✗ Blocking step failed:[/red bold] "
+                            f"{record.step_id} — aborting pipeline.\n"
+                        )
                         self._log(
                             f"[ABORT] Step bloqueante falló: {record.step_id}"
                         )
@@ -112,6 +162,7 @@ class BaseExecutor(ABC):
 
         except KeyboardInterrupt:
             self.state.was_interrupted = True
+            _console.print("\n  [yellow]⚡ Execution interrupted by user.[/yellow]")
             self._log("[INTERRUPTED] Ejecución interrumpida por el usuario")
 
         finally:
@@ -266,6 +317,8 @@ class BaseExecutor(ABC):
         return False
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    # ── Internal helpers ──────────────────────────────────────────────────────
 
     def _log(self, message: str) -> None:
         ts  = datetime.now().strftime("%H:%M:%S")

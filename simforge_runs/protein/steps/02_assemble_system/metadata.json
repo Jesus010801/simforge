@@ -1,0 +1,20 @@
+{
+    "step_id": "assemble_system",
+    "stage": "assembly",
+    "engine": "system_builder",
+    "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "AssemblyBuilder",
+    "expected_outputs": [
+        "complex.gro",
+        "topol.top"
+    ],
+    "params": {
+        "inputs": [
+            {
+                "var": "PROTEIN_1",
+                "path": "../01_prepare_protein_1/protein_1_processed.gro"
+            }
+        ]
+    }
+}

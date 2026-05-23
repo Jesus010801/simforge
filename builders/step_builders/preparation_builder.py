@@ -4,8 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import shutil
 
 from core.execution_models import SimulationStep
+
+# GROMACS uses "oplsaa" (no dash) as the -ff argument; the ontology uses "opls-aa"
+_FF_GROMACS_NAME: dict[str, str] = {
+    "opls-aa":          "oplsaa",
+    "opls-aa-membrane": "oplsaa_membrane",
+}
 
 
 class PreparationBuilder:
@@ -43,66 +50,34 @@ class PreparationBuilder:
         step_dir: Path,
     ) -> None:
 
-        target = (
-            step.target_components[0]
-            if step.target_components
-            else "protein"
-        )
+        target      = step.target_components[0] if step.target_components else "protein"
+        source_file = step.params.get("source_file")
+        forcefield  = step.params.get("forcefield", "charmm36")
+        water_model = step.params.get("water_model", "tip3p")
 
-        commands = f"""#!/bin/bash
+        # Translate ontology FF name → GROMACS -ff argument
+        ff_gmx = _FF_GROMACS_NAME.get(forcefield, forcefield)
+
+        # Copy source PDB into the step directory at compile time
+        if source_file:
+            src = Path(source_file)
+            dst = step_dir / f"{target}.pdb"
+            if src.exists() and src.resolve() != dst.resolve():
+                shutil.copy2(src, dst)
+
+        script = f"""#!/bin/bash
 # ─── Preparación de proteína: {target} ───────────────────────────────────────
-# Engine: gromacs:pdb2gmx
-# Ejecutar manualmente — requiere selección interactiva de forcefield
 
-# 1. Verificar archivo de entrada
-#    El archivo PDB debe estar limpio (sin HETATM inesperados, sin cadenas rotas)
-
-# 2. Generar topología con pdb2gmx
 gmx pdb2gmx \\
     -f {target}.pdb \\
     -o {target}_processed.gro \\
     -p topol.top \\
-    -ignh \\
-    -ter
-
-# Flags importantes:
-#   -ignh     → ignorar hidrógenos existentes, agregar nuevos
-#   -ter      → modo interactivo para terminales (N y C)
-#
-# Seleccionar en modo interactivo:
-#   Forcefield → según configs/hmg_competition.yaml (charmm36)
-#   Water      → tip3p
-
-# 3. Verificar outputs
-#   {target}_processed.gro  → estructura procesada
-#   topol.top               → topología
-#   posre.itp               → restraints de posición (generado automáticamente)
+    -ff {ff_gmx} \\
+    -water {water_model} \\
+    -ignh
 """
 
-        readme = f"""# Preparación: {target}
-
-## Qué hace este step
-Convierte el PDB de la proteína a formato GROMACS con topología completa.
-
-## Engine
-`gromacs:pdb2gmx`
-
-## Notas
-{chr(10).join(f'- {n}' for n in step.notes)}
-
-## Outputs esperados
-- `{target}_processed.gro`
-- `topol.top`
-- `posre.itp`
-
-## Cómo ejecutar
-```bash
-bash commands.sh
-```
-"""
-
-        (step_dir / "commands.sh").write_text(commands)
-        (step_dir / "README.md").write_text(readme)
+        (step_dir / "run.sh").write_text(script)
         (step_dir / "metadata.json").write_text(json.dumps({
             "step_id":          step.step_id,
             "stage":            step.stage.value,

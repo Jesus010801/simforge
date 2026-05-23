@@ -58,6 +58,8 @@ class StepStage(str, Enum):
 
     ANALYSIS = "analysis"
 
+    MEMBRANE_EMBEDDING = "membrane_embedding"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Step individual del workflow
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -142,6 +144,7 @@ class WorkflowPolicy(BaseModel):
     timestep_ps:           float = 0.002
     enhanced_sampling:     bool  = False
     sampling_method:       str   = "standard"   # "standard" | "REST2" | "metadynamics"
+    hardware:              str   = "auto"        # "auto" | "gpu" | "cpu"
 
 
 class SimulationPlan(BaseModel):

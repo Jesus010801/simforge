@@ -1,0 +1,42 @@
+project:
+  name: membrane_test
+  description: DPPC bilayer + single-pass TM peptide (OPLS-AA) — compile test
+
+
+components:
+
+  - id: peptide_1
+    role: protein
+    file: peptide_A.pdb
+
+
+environment:
+
+  membrane:
+    enabled: true
+    type: DPPC
+
+  solvent:
+    water_model: spce
+
+  ions:
+    concentration: 0.15
+
+  temperature_K: 309.65
+
+  duration_ns: 100.0
+
+
+forcefields:
+
+  protein: opls-aa
+
+
+simulation_objectives:
+
+  - membrane_insertion
+
+
+analysis:
+
+  - type: rmsd

@@ -1,0 +1,23 @@
+{
+    "step_id": "membrane_embedding",
+    "stage": "membrane_embedding",
+    "engine": "gromacs+perl:inflategro",
+    "step_type": "automatic",
+    "blocking": true,
+    "generated_by": "EmbeddingBuilder",
+    "expected_outputs": [
+        "converged.gro",
+        "shrink_telemetry.json"
+    ],
+    "params": {
+        "lipid": "DPPC",
+        "lipid_residue_name": "DPP",
+        "forcefield": "opls-aa",
+        "temperature_K": 309.65,
+        "apl_target_ang2": 64.0,
+        "apl_tolerance_ang2": 2.0,
+        "inflate_factor": 4.0,
+        "deflate_factor": 0.95,
+        "max_iterations": 200
+    }
+}

@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "simforge"
+version = "0.1.0"
+description = "Molecular simulation workflow compiler"
+requires-python = ">=3.11"
+dependencies = [
+    "typer[all]>=0.9",
+    "rich>=13",
+    "pydantic>=2",
+    "pyyaml>=6",
+]
+
+[project.scripts]
+simforge = "simforge.cli:app"
+
+# py-modules includes root cli.py so non-editable installs can also find it
+[tool.setuptools]
+py-modules = ["cli"]
+
+# Explicit include avoids scanning venv/ and other non-code directories
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "simforge*",
+    "core*",
+    "builders*",
+    "executors*",
+    "pipelines*",
+    "descriptors*",
+    "validators*",
+    "workflows*",
+    "adapters*",
+]

@@ -1,0 +1,25 @@
+{
+    "step_id": "equilibration",
+    "stage": "equilibration",
+    "engine": "gromacs",
+    "step_type": "automatic",
+    "blocking": false,
+    "generated_by": "EquilibrationBuilder",
+    "equilibration_type": [
+        "NVT",
+        "NPT"
+    ],
+    "expected_outputs": [
+        "npt.gro",
+        "npt.cpt"
+    ],
+    "params": {
+        "dt": 0.002,
+        "nvt_nsteps": 50000,
+        "npt_nsteps": 50000,
+        "temperature": 309.65,
+        "pcoupltype": "isotropic",
+        "pcoupl_npt": "Parrinello-Rahman",
+        "tc_grps": "Protein Non-Protein"
+    }
+}

@@ -1,0 +1,31 @@
+project:
+  name: WT
+
+components:
+  - id: protein_1
+    role: protein
+    file: /home/jesusxd/Escritorio/slc16a11_idr_project/WT.pdb
+
+environment:
+  solvent:
+    water_model: spce
+  ions:
+    concentration: 0.154
+  temperature_K: 309.65
+  duration_ns: 1.0
+
+forcefields:
+  protein: opls-aa
+
+simulation_objectives:
+  - stability
+
+analysis:
+  - type: rmsd
+  - type: rmsf
+  - type: energy
+  - type: hydrogen_bonds
+  - type: radius_of_gyration
+  - type: distance_analysis
+
+hardware: cpu

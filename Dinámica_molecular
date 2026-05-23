@@ -1,0 +1,32 @@
+
+. Obtención de la topologı́a: 
+gmx pdb2gmx -f aa.pdb -o aa.gro
+
+2. Solvatación de la celda de simulación:
+gmx editconf -f aa.gro -o ab.gro -c -d 1.0 -bt triclinic -princ
+gmx solvate -cp ab.gro -cs spc216.gro -p topol.top -o aasolv.gro
+
+3. Adición de iones: 
+gmx grompp -f ions.mdp -c aasolv.gro -p topol.top -o ions.tpr
+gmx genion -s ions.tpr -o aaions.gro -p topol.top -pname NA -nname CL -neutral -conc 0.154
+
+4. Minimización energética del sistema:
+gmx grompp -f em.mdp -c aaions.gro -p topol.top -o em.tpr -maxwarn 1
+gmx mdrun -v -deffnm em -nb gpu
+gmx mdrun -v -deffnm em -nb cpu -pme cpu -ntmpi 1 -ntomp 1 -pin off
+
+5. Equilibrio del sistema - simulación NVT:
+gmx grompp -f nvt.mdp -c em.gro -r em.gro -p topol.top -o nvt.tpr -maxwarn 1
+gmx mdrun -v -deffnm nvt -gpu_id 0 -pme gpu -bonded gpu -nb gpu -update cpu -ntomp 10 -nstlist 150 -pin on -tunepme no -pmefft gpu -dlb auto
+gmx mdrun -v -deffnm nvt  -nb gpu
+
+6. Equilibrio del sistema - simulación NPT
+gmx grompp -f npt.mdp -c nvt.gro -r nvt.gro -t nvt.cpt -p topol.top -o npt.tpr -maxwarn 1 
+gmx mdrun -v -deffnm npt -gpu_id 0 -pme gpu -bonded gpu -nb gpu -update cpu -ntomp 10 -nstlist 150 -pin on -tunepme no -pmefft gpu -dlb auto
+gmx mdrun -v -deffnm npt  -nb gpu
+
+7. Simulación DM de producción:
+gmx grompp -f md.mdp -c npt.gro -t npt.cpt -p topol.top -o md.tpr -maxwarn 1
+gmx mdrun -v -deffnm md -gpu_id 0 -pme gpu -bonded gpu -nb gpu -update cpu -ntomp 10 -nstlist 150 -pin on -tunepme no -pmefft gpu -dlb auto
+gmx mdrun -v -deffnm md  -nb gpu
+

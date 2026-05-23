@@ -1,0 +1,31 @@
+project:
+  name: peptide_A
+
+components:
+  - id: protein_1
+    role: protein
+    file: peptide_A.pdb
+
+environment:
+  solvent:
+    water_model: spce
+  ions:
+    concentration: 0.154
+  temperature_K: 309.65
+  duration_ns: 1.0
+
+forcefields:
+  protein: opls-aa
+
+simulation_objectives:
+  - stability
+
+analysis:
+  - type: rmsd
+  - type: rmsf
+  - type: energy
+  - type: hydrogen_bonds
+  - type: radius_of_gyration
+  - type: distance_analysis
+
+hardware: cpu

@@ -1,0 +1,6 @@
+{
+    "step_id": "clean_water",
+    "stage": "assembly",
+    "engine": "perl:water_deletor",
+    "step_type": "external"
+}
