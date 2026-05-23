@@ -284,10 +284,10 @@ def classify_run(
             problematic = True
             warnings.append(
                 f"RMSD exceeded 1.0 nm (max={rmsd_stats['max_rmsd']:.3f} nm) — "
-                "system may have exploded or undergone a major conformational change."
+                "possible large conformational change, aggregation, or incomplete equilibration."
             )
-            recommendations.append("Inspect trajectory visually for aggregation or explosion.")
-            recommendations.append("Check periodic boundary conditions and forcefield parameters.")
+            recommendations.append("Inspect trajectory visually for structural drift, aggregation, or PBC artifacts.")
+            recommendations.append("Verify periodic boundary conditions and forcefield parameter compatibility.")
 
     if energy_stats is not None:
         if energy_stats["pct_drift"] > 5.0:

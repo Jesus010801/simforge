@@ -21,7 +21,7 @@ app     = Console()
 cli     = typer.Typer(
     name="simforge",
     help="Molecular simulation workflow compiler.",
-    add_completion=False,
+    add_completion=True,
 )
 
 
@@ -1117,7 +1117,7 @@ _STATUS_STYLE = {
 
 @cli.command()
 def status(
-    workspace: Path = typer.Argument(..., help="Workspace directory to inspect."),
+    workspace: Path = typer.Argument(Path("."), help="Workspace directory to inspect (default: current directory)."),
     verbose: bool   = typer.Option(False, "--verbose", "-v", help="Show timing and error details."),
 ):
     """Show execution status of a workspace."""
@@ -1591,7 +1591,7 @@ def _save_planning_session(record, path: Path) -> None:
 
 @cli.command()
 def summary(
-    workspace: Path = typer.Argument(..., help="Workspace directory to summarize."),
+    workspace: Path = typer.Argument(Path("."), help="Workspace directory to summarize (default: current directory)."),
     json_out:  bool = typer.Option(False, "--json", help="Output raw JSON instead of rich text."),
 ):
     """Show (or generate) the scientific summary for a workspace."""
@@ -1663,7 +1663,7 @@ _QUALITY_STYLE = {
 
 @cli.command()
 def analyze(
-    path:    str           = typer.Argument(help="Path to simulation directory or XVG files"),
+    path:    str           = typer.Argument(".", help="Path to simulation directory or XVG files (default: current directory)"),
     output:  Optional[str] = typer.Option(None,        "--output",  "-o", help="Output file (default: stdout)"),
     format:  str           = typer.Option("markdown",  "--format",  "-f", help="Output format: markdown|json"),
     context: Optional[str] = typer.Option(None,        "--context", "-c",
@@ -1758,6 +1758,226 @@ def analyze(
     if output:
         Path(output).write_text(report.as_markdown())
         app.print(f"\n[dim]Report written to {output}[/dim]")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# study
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_FIND_LEVEL_COLOR = {"highlight": "cyan",   "info": "dim",  "warning": "yellow"}
+_FIND_LEVEL_ICON  = {"highlight": "→",      "info": "·",    "warning": "⚠"}
+
+
+@cli.command()
+def study(
+    path:   Path          = typer.Argument(Path("."), help="Directory containing XVG files (default: current directory)."),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Write JSON summary to file."),
+):
+    """Analyze a multi-system comparative MD study: auto-discovers systems, replicas,
+    and observables, computes aggregate statistics, detects outliers, and produces
+    a comparative summary.
+
+    Expected filename convention:
+      SYSTEM-REPLICAobservable.xvg    e.g.  AA-A1rmsd_protein.xvg
+      SYSTEM-REPLICA_observable.xvg   e.g.  LP-A4_rmsd-ligand.xvg
+    """
+    from runtime.study_analyzer import parse_study
+
+    if not path.exists():
+        app.print(f"[red]Error:[/red] Path not found: {path}")
+        raise typer.Exit(1)
+
+    app.print(Panel(
+        f"[bold cyan]SimForge Study[/bold cyan]  [dim]{path.resolve()}[/dim]",
+        border_style="cyan", padding=(0, 2),
+    ))
+
+    with app.status("  Scanning and analyzing XVG files..."):
+        study_obj = parse_study(path)
+
+    # ── Discovery summary ─────────────────────────────────────────────────────
+    app.print(
+        f"\n  Discovered  [bold]{study_obj.n_xvg_discovered}[/bold] XVG files  "
+        f"|  [green]{study_obj.n_xvg_parsed}[/green] parsed  "
+        f"|  [dim]{study_obj.n_xvg_ungrouped} ungrouped[/dim]\n"
+    )
+
+    if study_obj.parse_errors:
+        for err in study_obj.parse_errors[:5]:
+            app.print(f"  [yellow]⚠[/yellow] {err}")
+        if len(study_obj.parse_errors) > 5:
+            app.print(f"  [dim]... and {len(study_obj.parse_errors) - 5} more errors[/dim]")
+        app.print()
+
+    if not study_obj.systems:
+        app.print(Panel(
+            "No multi-system structure detected in this directory.\n\n"
+            "Expected naming pattern:\n"
+            "  [dim]SYSTEM-REPLICAobservable.xvg[/dim]   e.g.  [dim]AA-A1rmsd_protein.xvg[/dim]\n"
+            "  [dim]SYSTEM-REPLICA_observable.xvg[/dim]  e.g.  [dim]LP-A4_contacts.xvg[/dim]\n\n"
+            "For single-simulation analysis use:  [dim]simforge analyze[/dim]",
+            title="No study structure detected",
+            border_style="yellow",
+        ))
+        raise typer.Exit(0)
+
+    # ── Systems ───────────────────────────────────────────────────────────────
+    sys_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+    sys_table.add_column("bullet", width=2)
+    sys_table.add_column("system", style="bold cyan")
+    sys_table.add_column("replicas", style="dim")
+    sys_table.add_column("observables", style="dim")
+
+    for sys_name, sg in sorted(study_obj.systems.items()):
+        obs_str = "  ".join(
+            study_obj.observable_display.get(o, o) for o in sg.observables
+        )
+        sys_table.add_row(
+            "[cyan]●[/cyan]", sys_name,
+            f"{sg.n_replicas} replica{'s' if sg.n_replicas != 1 else ''}",
+            obs_str,
+        )
+
+    app.print(Panel(
+        sys_table,
+        title=f"Systems detected  ({len(study_obj.systems)})",
+        border_style="cyan", padding=(0, 1),
+    ))
+
+    # ── Observables ───────────────────────────────────────────────────────────
+    if study_obj.observables_detected:
+        obs_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+        obs_table.add_column("bullet", width=2)
+        obs_table.add_column("display", style="white")
+        obs_table.add_column("units",   style="dim")
+        obs_table.add_column("group",   style="dim")
+
+        from runtime.observable_resolver import ObservableResolver as _OR
+        _res = _OR()
+        for obs_name in study_obj.observables_detected:
+            ro = _res.resolve(obs_name)
+            obs_table.add_row(
+                "[blue]●[/blue]",
+                study_obj.observable_display.get(obs_name, obs_name),
+                study_obj.observable_units.get(obs_name, ""),
+                ro.group,
+            )
+
+        app.print(Panel(
+            obs_table,
+            title=f"Observables detected  ({len(study_obj.observables_detected)})",
+            border_style="blue", padding=(0, 1),
+        ))
+
+    # ── Aggregate statistics table ────────────────────────────────────────────
+    obs_cols = study_obj.observables_detected[:6]
+    if obs_cols and len(study_obj.systems) > 0:
+        agg_table = Table(box=box.SIMPLE, show_header=True, header_style="bold dim")
+        agg_table.add_column("System", style="bold cyan")
+        for obs_name in obs_cols:
+            display = study_obj.observable_display.get(obs_name, obs_name)
+            units   = study_obj.observable_units.get(obs_name, "")
+            hdr     = f"{display}" + (f"\nmean ± std ({units})" if units else "\nmean ± std")
+            agg_table.add_column(hdr, justify="right")
+
+        for sys_name, sg in sorted(study_obj.systems.items()):
+            row: list[str] = [sys_name]
+            for obs_name in obs_cols:
+                if obs_name in sg.aggregate:
+                    ag = sg.aggregate[obs_name]
+                    row.append(f"{ag.mean:.3g} ± {ag.std:.3g}")
+                else:
+                    row.append("[dim]—[/dim]")
+            agg_table.add_row(*row)
+
+        app.print(Panel(
+            agg_table,
+            title="Aggregate statistics  (mean ± inter-replica std)",
+            border_style="dim", padding=(0, 1),
+        ))
+
+    summary_obj = study_obj.summary
+
+    # ── Outliers ──────────────────────────────────────────────────────────────
+    if summary_obj and summary_obj.outlier_replicas:
+        out_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+        out_table.add_column("icon", width=2)
+        out_table.add_column("message")
+        for sys_n, rep_n, reason in summary_obj.outlier_replicas:
+            out_table.add_row(
+                "[yellow]⚠[/yellow]",
+                f"[bold]{sys_n}[/bold] replica [bold]{rep_n}[/bold]  [dim]{reason}[/dim]",
+            )
+        app.print(Panel(
+            out_table,
+            title=f"Potential outliers  ({len(summary_obj.outlier_replicas)})",
+            border_style="yellow", padding=(0, 1),
+        ))
+
+    # ── Comparative findings ──────────────────────────────────────────────────
+    if summary_obj and summary_obj.findings:
+        find_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+        find_table.add_column("icon", width=2)
+        find_table.add_column("message")
+
+        sorted_findings = sorted(
+            summary_obj.findings,
+            key=lambda f: (0 if f.level != "info" else 1, f.level),
+        )
+
+        for finding in sorted_findings[:12]:
+            color = _FIND_LEVEL_COLOR.get(finding.level, "dim")
+            icon  = _FIND_LEVEL_ICON.get(finding.level, "·")
+            find_table.add_row(
+                f"[{color}]{icon}[/{color}]",
+                f"[{color}]{finding.message}[/{color}]",
+            )
+
+        app.print(Panel(
+            find_table,
+            title="Comparative analysis",
+            border_style="cyan", padding=(0, 1),
+        ))
+
+    # ── System stability ranking ──────────────────────────────────────────────
+    if summary_obj and len(summary_obj.system_ranking) > 1:
+        ranking = sorted(summary_obj.system_ranking.items(), key=lambda x: -x[1])
+        rank_lines: list[str] = []
+        for i, (sn, score) in enumerate(ranking, 1):
+            bar_filled = int(score * 20)
+            bar = "█" * bar_filled + "░" * (20 - bar_filled)
+            rank_lines.append(f"  [{i}] [cyan]{sn:<8}[/cyan] [{bar}] {score:.2f}")
+        app.print(Panel(
+            "\n".join(rank_lines),
+            title="System stability ranking  (convergence-based)",
+            border_style="dim", padding=(0, 1),
+        ))
+
+    # ── JSON output ───────────────────────────────────────────────────────────
+    if output:
+        import json as _json
+        out_data: dict = {
+            "path":             str(path.resolve()),
+            "n_xvg_discovered": study_obj.n_xvg_discovered,
+            "n_xvg_parsed":     study_obj.n_xvg_parsed,
+            "systems": {
+                sn: {
+                    "n_replicas":  sg.n_replicas,
+                    "observables": sg.observables,
+                    "aggregate": {
+                        obs: {"mean": ag.mean, "std": ag.std, "n_replicas": ag.n_replicas}
+                        for obs, ag in sg.aggregate.items()
+                    },
+                }
+                for sn, sg in study_obj.systems.items()
+            },
+            "outliers": [
+                {"system": s, "replica": r, "reason": reason}
+                for s, r, reason in (summary_obj.outlier_replicas if summary_obj else [])
+            ],
+        }
+        Path(output).write_text(_json.dumps(out_data, indent=2))
+        app.print(f"\n[dim]JSON written to {output}[/dim]")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
