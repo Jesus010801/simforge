@@ -7,13 +7,13 @@ generalización prematura.  Cada step refleja una decisión científica
 real; los parámetros físicos vienen de core/membrane_knowledge.py.
 
 DAG generado:
-    orient_protein          PREPARATION   MANUAL
-    match_box_to_bilayer    ASSEMBLY      MANUAL
-    embed_in_bilayer        ASSEMBLY      MANUAL
+    orient_protein          PREPARATION   AUTOMATED (with structural_annotation) / GUIDED (without)
+    match_box_to_bilayer    ASSEMBLY      AUTOMATED (MatchBoxBuilder — box_match_report gate)
+    embed_in_bilayer        ASSEMBLY      AUTOMATED (MoveMembAdapter Python — no gfortran)
     generate_topology       PREPARATION   AUTO   (pdb2gmx oplsaa_membrane.ff)
     membrane_embedding      MEMBRANE_EMBEDDING AUTO  (shrink loop)
     solvate_membrane        ASSEMBLY      AUTO
-    clean_water             ASSEMBLY      EXTERNAL  (water_deletor.pl stub)
+    clean_water             ASSEMBLY      AUTOMATED (WaterDeletorAdapter Python)
     add_ions                ASSEMBLY      AUTO
     energy_minimization     MINIMIZATION  AUTO   (-DPOSRES -DSTRONG_POSRES)
     equilibration           EQUILIBRATION AUTO   (semiisotropic, Berendsen NPT)
@@ -28,6 +28,7 @@ from __future__ import annotations
 from pipelines.base_pipeline import BasePipeline
 from core.models import SystemState
 from core.execution_models import (
+    AutomationLevel,
     SimulationPlan,
     SimulationStep,
     PlanStatus,
@@ -96,74 +97,124 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         prot_file = protein.file if protein else "protein.pdb"
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 1: orient protein (manual — depends on structure inspection)
+        # Step 1: orient protein
+        #   AUTOMATED when structural_annotation has EC + IC topology (new format)
+        #             OR environment.membrane.orientation has the legacy fields.
+        #   GUIDED    otherwise (user must rotate manually and provide GRO).
         # ─────────────────────────────────────────────────────────────────────
+        sa = state.structural_annotation
+        ec_residues: str | None = None
+        ic_residues: str | None = None
+        tm_residues: str | None = None
+        ec_target_side: str = "+z"  # GROMACS convention default
+
+        if sa is not None and sa.membrane_topology is not None:
+            mt = sa.membrane_topology
+            # Join multiple EC/IC regions with commas — structural_annotation
+            # supports multi-segment topology, builder uses flat range string.
+            if mt.extracellular_regions:
+                ec_residues = ",".join(mt.extracellular_regions)
+            if mt.intracellular_regions:
+                ic_residues = ",".join(mt.intracellular_regions)
+            if mt.transmembrane_segments:
+                from core.structural_annotation import TransmembraneSegment
+                tm_parts = [
+                    (s.residues if isinstance(s, TransmembraneSegment) else s)
+                    for s in mt.transmembrane_segments
+                ]
+                tm_residues = ",".join(tm_parts)
+            # Explicit orientation axis from structural_annotation
+            if sa.orientation is not None:
+                ec_target_side = sa.orientation.extracellular_side
+        else:
+            # Backward compat: read legacy environment.membrane.orientation
+            legacy = getattr(mem, "orientation", None)
+            if legacy is not None:
+                ec_residues = getattr(legacy, "extracellular_residues", None)
+                ic_residues = getattr(legacy, "intracellular_residues", None)
+                tm_residues = getattr(legacy, "tm_segments", None)
+                # Legacy format had no axis declaration → assume +z
+
+        has_orient = bool(ec_residues and ic_residues)
+
+        orient_step_type = StepType.AUTOMATIC if has_orient else StepType.MANUAL
+        orient_params: dict = {"source_file": prot_file}
+
+        if has_orient:
+            orient_params["_orientation"] = {
+                "extracellular_residues": ec_residues,
+                "intracellular_residues": ic_residues,
+                "tm_segments":            tm_residues,
+                "extracellular_side":     ec_target_side,
+            }
+        else:
+            orient_params["note"] = (
+                "1. gmx editconf -f protein.pdb -o protein_princ.gro -c -d 1.5 -bt triclinic -princ\n"
+                "2. Inspect in VMD/PyMOL — identify rotation needed to align TM helix with Z\n"
+                "3. gmx editconf -f protein_princ.gro -o protein_oriented.gro -rotate 0 ROT 0 -c -d 1.5 -bt triclinic -princ\n"
+                "   Tip: add structural_annotation.membrane_topology to YAML "
+                "to make this step automatic."
+            )
+
         plan.steps.append(SimulationStep(
             step_id="orient_protein",
             title="Orientar proteína (eje TM alineado con Z)",
             stage=StepStage.PREPARATION,
-            step_type=StepType.MANUAL,
-            engine="gromacs:editconf",
-            params={
-                "source_file": prot_file,
-                "note": (
-                    "1. gmx editconf -f protein.pdb -o protein_princ.gro -c -d 1.5 -bt triclinic -princ\n"
-                    "2. Inspect in VMD/PyMOL — identify rotation needed to align TM helix with Z\n"
-                    "3. gmx editconf -f protein_princ.gro -o protein_oriented.gro -rotate 0 ROT 0 -c -d 1.5 -bt triclinic -princ"
-                ),
-            },
-            notes=["Rotation angle depends on structure — cannot be inferred automatically in v1"],
+            step_type=orient_step_type,
+            automation_level=(
+                AutomationLevel.AUTOMATED if has_orient else AutomationLevel.GUIDED
+            ),
+            engine="gromacs:editconf+orient",
+            params=orient_params,
+            notes=(
+                ["Rotation computed from EC/IC Cα centres of mass via structural_annotation"]
+                if has_orient else
+                ["Add structural_annotation.membrane_topology to YAML to enable automatic rotation"]
+            ),
         ))
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 2: match box to bilayer (manual — bilayer dimensions are fixed)
+        # Step 2: match box to bilayer (automated — MatchBoxBuilder computes
+        # bounding box from protein_oriented.gro and recommends dimensions)
         # ─────────────────────────────────────────────────────────────────────
-        bilayer = mk.bilayer_for_box(12.84, 12.89, lipid)
-        box_x   = bilayer.box_x_nm if bilayer else 12.84
-        box_y   = bilayer.box_y_nm if bilayer else 12.89
-        box_z_note = "Adjust Z so protein fits (bilayer thickness ~4nm + protein height + 2x water layer)"
-
         plan.steps.append(SimulationStep(
             step_id="match_box_to_bilayer",
-            title="Ajustar caja al tamaño de la bicapa",
+            title="Calcular y validar caja de bicapa",
             stage=StepStage.ASSEMBLY,
-            step_type=StepType.MANUAL,
-            engine="gromacs:editconf",
+            step_type=StepType.AUTOMATIC,
+            automation_level=AutomationLevel.AUTOMATED,
+            engine="gromacs:box_match",
             depends_on=["orient_protein"],
             params={
-                "box_x_nm": box_x,
-                "box_y_nm": box_y,
-                "note": (
-                    f"gmx editconf -f protein_oriented.gro -o protein_boxed.gro "
-                    f"-box {box_x} {box_y} BOX_Z -c\n"
-                    f"# {box_z_note}"
-                ),
+                "lipid": lipid,
             },
+            notes=[
+                "Reads protein_oriented.gro → computes protein bounding box",
+                "Recommends XY = footprint + 2×padding, Z = bilayer + protein + 2×solvent",
+                f"Lipid: {lipid} — parameters from core/bilayer_geometry.py",
+                "Produces box_match_report.json (gate) + protein_boxed.gro",
+            ],
         ))
 
         # ─────────────────────────────────────────────────────────────────────
         # Step 3: embed in bilayer (manual — requires MoveMemb Z-displacement)
         # ─────────────────────────────────────────────────────────────────────
+        bilayer     = mk.bilayer_for_box(12.84, 12.89, lipid)
         bilayer_file = bilayer.filename if bilayer else "dppc512_whole.gro"
         plan.steps.append(SimulationStep(
             step_id="embed_in_bilayer",
             title="Embutir proteína en bicapa lipídica",
             stage=StepStage.ASSEMBLY,
-            step_type=StepType.MANUAL,
+            step_type=StepType.AUTOMATIC,
+            automation_level=AutomationLevel.AUTOMATED,
             engine="movememb+genrestr",
             depends_on=["match_box_to_bilayer"],
             params={
-                "bilayer_file": bilayer_file,
-                "lipid": lipid,
-                "note": (
-                    f"1. cat protein_boxed.gro {bilayer_file} > concat.gro  (fix atom count + remove header duplicate)\n"
-                    "2. gfortran -o MoveMemb MoveMemb.f && ./MoveMemb  (shift bilayer in Z to avoid overlap)\n"
-                    f"3. cat protein_boxed.gro dppc512_nb.gro > system.gro  (fix atom count)\n"
-                    "4. gmx genrestr -f system.gro -o strong_posre.itp -fc 100000 100000 100000\n"
-                    "5. gmx editconf -f system.gro -o system.gro -resnr 1"
-                ),
+                "bilayer_file":       bilayer_file,
+                "lipid":              lipid,
+                "lipid_residue_name": lipid_resname,   # GRO resname (e.g. "DPP" for DPPC OPLS-AA)
             },
-            notes=["MoveMembAdapter.run() not yet implemented — use MoveMemb.f directly"],
+            notes=["MoveMembAdapter (Python) aligns bilayer Z-midplane to protein Z-centre — no gfortran required"],
         ))
 
         # ─────────────────────────────────────────────────────────────────────
@@ -179,6 +230,7 @@ class MembraneWorkflowOPLSAA(BasePipeline):
             target_components=[prot_id],
             params={
                 "source_file": "system.gro",
+                "source_step": "embed_in_bilayer",   # input = embed_in_bilayer/system.gro
                 "forcefield":  "opls-aa-membrane",   # → _FF_GROMACS_NAME → oplsaa_membrane
                 "water_model": wm,
                 "note": (
@@ -242,21 +294,15 @@ class MembraneWorkflowOPLSAA(BasePipeline):
             step_id="clean_water",
             title=f"Eliminar agua interior de bicapa ({atom_names.headgroup_ref}/{atom_names.tail_middle})",
             stage=StepStage.ASSEMBLY,
-            step_type=StepType.EXTERNAL,
-            engine="perl:water_deletor",
+            step_type=StepType.AUTOMATIC,
+            automation_level=AutomationLevel.AUTOMATED,
+            engine="python:water_deletor",
             depends_on=["solvate_membrane"],
             params={
                 "ref_atom":    atom_names.headgroup_ref,
                 "middle_atom": atom_names.tail_middle,
                 "nwater":      3,
-                "note": (
-                    f"perl water_deletor.pl "
-                    f"-in solvated.gro -out system_clean.gro "
-                    f"-ref {atom_names.headgroup_ref} -middle {atom_names.tail_middle} -nwater 3\n"
-                    "Then update SOL count in topol.top manually."
-                ),
             },
-            notes=["WaterDeletorAdapter.run() not yet implemented — run perl script directly"],
         ))
 
         # ─────────────────────────────────────────────────────────────────────

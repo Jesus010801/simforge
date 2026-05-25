@@ -6,8 +6,11 @@ from executors.execution_state import StepStatus
 
 # ── Dry-run completion ────────────────────────────────────────────────────────
 
-def test_dry_run_completes(execution_state):
-    assert execution_state.is_complete
+def test_dry_run_not_complete_with_manual_steps(execution_state):
+    # The hmg_competition workflow has a MANUAL review step that blocks
+    # downstream automatic steps. is_complete is False until the user
+    # completes the manual step and re-runs.
+    assert not execution_state.is_complete
 
 
 def test_dry_run_has_no_failed_steps(execution_state):
@@ -15,16 +18,17 @@ def test_dry_run_has_no_failed_steps(execution_state):
 
 
 def test_dry_run_done_count(execution_state):
-    assert execution_state.n_done() == 14
+    # Steps before the MANUAL review run: prepare × 3 + parametrize × 2 = 5
+    assert execution_state.n_done() == 5
 
 
 def test_dry_run_skipped_count(execution_state):
-    # review_parametrization_substrate_1 and rest2_sampling are manual/external
+    # review_parametrization_substrate_1 is SKIPPED (manual, no script)
     skipped = sum(
         1 for s in execution_state.steps
-        if s.status in (StepStatus.SKIPPED, StepStatus.BLOCKED)
+        if s.status == StepStatus.SKIPPED
     )
-    assert skipped == 2
+    assert skipped == 1
 
 
 # ── Step record correctness ───────────────────────────────────────────────────
@@ -63,11 +67,13 @@ def test_analysis_steps_depend_on_production(execution_state):
         assert any("production" in d for d in record.depends_on)
 
 
-# ── No blocked steps beyond expected skips ───────────────────────────────────
+# ── Blocked steps downstream of manual step ──────────────────────────────────
 
-def test_no_unexpected_blocked_steps(execution_state):
-    blocked = [
-        r for r in execution_state.steps
-        if r.status == StepStatus.BLOCKED
-    ]
-    assert blocked == [], f"Unexpected blocked steps: {[r.step_id for r in blocked]}"
+def test_assemble_and_downstream_are_blocked(execution_state):
+    # assemble_system depends on the MANUAL review step → it must be BLOCKED.
+    # All steps that follow it transitively are also BLOCKED.
+    blocked = {r.step_id for r in execution_state.steps if r.status == StepStatus.BLOCKED}
+    assert "assemble_system" in blocked, "assemble_system must be blocked (depends on manual review)"
+    # production and analysis steps must also be blocked transitively
+    assert "production_md" in blocked
+    assert any(s.startswith("analysis_") for s in blocked)

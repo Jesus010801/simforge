@@ -295,13 +295,16 @@ def _show_parse_error(exc: Exception) -> None:
 
 
 def _show_semantic_normalization_notes(state) -> None:
-    """Show normalization notes and membrane auto-inference hints after parse."""
-    from core.semantic_inference import detect_membrane_protein_signals
+    """Show normalization notes, membrane inference, and workflow selection hints."""
 
     # Surface objective normalization notes from global_reasoning
     semantic_notes = [
         n for n in (state.global_reasoning.notes or [])
         if n.startswith("[semantic]")
+    ]
+    inference_notes = [
+        n for n in (state.global_reasoning.notes or [])
+        if n.startswith("[inference]")
     ]
     # Surface unknown objective warnings
     unknown_warns = [
@@ -309,7 +312,13 @@ def _show_semantic_normalization_notes(state) -> None:
         if "Unknown simulation objective" in w.message
     ]
 
-    if not semantic_notes and not unknown_warns:
+    is_membrane = state.inferred_system_type in (
+        "protein-membrane", "protein-membrane-ligand"
+    )
+    hints = state.workflow_hints
+
+    has_anything = semantic_notes or unknown_warns or inference_notes or is_membrane
+    if not has_anything:
         return
 
     from rich.table import Table
@@ -318,6 +327,27 @@ def _show_semantic_normalization_notes(state) -> None:
     table.add_column("message")
 
     has_warn = False
+
+    # ── Membrane workflow trazabilidad ────────────────────────────────────────
+    if is_membrane:
+        mem = state.environment.membrane
+        lipid = (getattr(mem, "type", None) or "DPPC").upper()
+        table.add_row("[green]✓[/green]", f"[green]Membrane system detected → [bold]MembraneWorkflowOPLSAA[/bold] selected[/green]")
+        table.add_row("[green]✓[/green]", f"[green]Lipid environment: [bold]{lipid}[/bold][/green]")
+        if hints.semiisotropic_coupling:
+            table.add_row("[green]✓[/green]", "[green]Semiisotropic pressure coupling enabled[/green]")
+        if hints.conservative_timestep:
+            table.add_row("[green]✓[/green]", "[green]Conservative timestep (dt=0.001 ps) enabled[/green]")
+        if hints.membrane_equilibration:
+            table.add_row("[green]✓[/green]", "[green]Membrane equilibration protocol enabled[/green]")
+
+    # ── Inference fallback warnings ───────────────────────────────────────────
+    for note in inference_notes:
+        clean = note.removeprefix("[inference] ")
+        table.add_row("[yellow]⚠[/yellow]", f"[yellow]{clean}[/yellow]")
+        has_warn = True
+
+    # ── Objective normalization notes ─────────────────────────────────────────
     for note in semantic_notes:
         clean = note.removeprefix("[semantic] ")
         table.add_row("[cyan]◆[/cyan]", f"[cyan]{clean}[/cyan]")
@@ -337,8 +367,9 @@ def _show_semantic_normalization_notes(state) -> None:
         table.add_row("[yellow]⚠[/yellow]", msg)
         has_warn = True
 
-    border = "yellow" if has_warn else "cyan"
-    app.print(Panel(table, title="Semantic Normalization", border_style=border, padding=(0, 1)))
+    border = "yellow" if has_warn else ("green" if is_membrane else "cyan")
+    title = "Semantic Normalization"
+    app.print(Panel(table, title=title, border_style=border, padding=(0, 1)))
 
 
 def _inspect_variants(yaml_path: Path) -> None:
@@ -1200,6 +1231,76 @@ def status(
     else:
         app.print()
 
+    # Orientation gate report (shown when orient_protein has been executed)
+    try:
+        from runtime.orientation_gate import read_orientation_report
+        orient = read_orientation_report(workspace)
+        if orient is not None:
+            conf    = orient.get("confidence", 0.0)
+            passed  = orient.get("passed", False)
+            warns   = orient.get("warnings", [])
+            errors  = orient.get("errors",   [])
+            status_color = "green" if passed else "red"
+            status_label = "yes" if passed else "no"
+            lines = [
+                f"  confidence: {conf:.2f}   "
+                f"passed: [{status_color}]{status_label}[/{status_color}]",
+            ]
+            for w in warns:
+                lines.append(f"  [yellow]⚠[/yellow]  {w}")
+            for e in errors:
+                lines.append(f"  [red]✗[/red]  {e}")
+            app.print(Panel(
+                "\n".join(lines),
+                title="Orientation",
+                border_style="yellow" if (warns or errors) else "green",
+                padding=(0, 2),
+            ))
+    except Exception:
+        pass
+
+    # Box-match report (shown when match_box_to_bilayer has been executed)
+    try:
+        from runtime.box_match_gate import read_box_match_report
+        bm = read_box_match_report(workspace)
+        if bm is not None:
+            rb      = bm.get("recommended_box", {})
+            est     = bm.get("estimates", {})
+            passed  = bm.get("passed", False)
+            conf    = bm.get("confidence", 0.0)
+            warns   = bm.get("warnings", [])
+            errors  = bm.get("errors",   [])
+            sc      = "green" if passed else "red"
+            sl      = "yes" if passed else "no"
+            lines   = [
+                f"  confidence: {conf:.2f}   passed: [{sc}]{sl}[/{sc}]"
+                f"   lipid: {bm.get('lipid_type', '?')}",
+            ]
+            if rb:
+                lines.append(
+                    f"  box: {rb.get('box_x_nm', '?'):.3f} × "
+                    f"{rb.get('box_y_nm', '?'):.3f} × "
+                    f"{rb.get('box_z_nm', '?'):.3f} nm"
+                )
+            if est.get("n_lipids_estimate"):
+                coverage_pct = int(est.get("protein_xy_coverage", 0) * 100)
+                lines.append(
+                    f"  N lipids estimate: {est['n_lipids_estimate']}   "
+                    f"protein XY coverage: {coverage_pct}%"
+                )
+            for w in warns:
+                lines.append(f"  [yellow]⚠[/yellow]  {w}")
+            for e in errors:
+                lines.append(f"  [red]✗[/red]  {e}")
+            app.print(Panel(
+                "\n".join(lines),
+                title="Box–Bilayer Match",
+                border_style="yellow" if (warns or errors) else "green",
+                padding=(0, 2),
+            ))
+    except Exception:
+        pass
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # init
@@ -1282,6 +1383,129 @@ def init(
         ("protein_ligand",    "Proteína + ligando (inhibición, binding)"),
         ("protein_membrane",  "Proteína + membrana"),
     ])
+
+    # ── 2b. Configuración de membrana ─────────────────────────────────────────
+    lipid_type: str | None = None
+    if system_type == "protein_membrane":
+        lipid_type = _ask("Tipo de lípido para la bicapa", [
+            ("DPPC", "DPPC  (dipalmitoylphosphatidylcholine — más común, OPLS-AA)"),
+            ("POPC", "POPC  (1-palmitoyl-2-oleoyl-sn-glycero-3-phosphocholine)"),
+            ("POPE", "POPE  (phosphatidylethanolamine)"),
+            ("DMPC", "DMPC  (dimyristoylphosphatidylcholine — bicapas finas)"),
+        ])
+
+    # ── 2c. Structural annotation (protein_membrane only) ─────────────────────
+    _structural_ann = None
+    if system_type == "protein_membrane":
+        want_ann = _ask("¿Añadir anotación EC/IC/TM ahora?", [
+            ("yes", "Sí — definir topología de membrana (habilita orient_protein AUTOMATED)"),
+            ("no",  "No — añadir después con 'simforge annotate-structure <config>'"),
+        ], default=2)
+        if want_ann == "yes":
+            from core.structural_annotation import (
+                StructuralAnnotation,
+                MembraneTopologyAnnotation,
+                OrientationAnnotation,
+                OrientationEvidence,
+            )
+            app.print(Panel(
+                "[bold cyan]Structural Biology Annotation[/bold cyan]  "
+                "[dim]EC · IC · TM topology[/dim]",
+                border_style="cyan",
+                padding=(0, 2),
+            ))
+
+            app.print("\n[bold]── Regiones extracelulares ──────────────────────────────────────────[/bold]")
+            _ec = _ask_range_list("Residuos en la cara extracelular", [])
+
+            app.print("\n[bold]── Regiones intracelulares ──────────────────────────────────────────[/bold]")
+            if _ec:
+                app.print(
+                    "  [dim]Necesario para orientación automática: sin IC no se puede calcular el eje EC→IC.[/dim]"
+                )
+            _ic = _ask_range_list("Residuos en la cara intracelular", [])
+
+            if _ec and not _ic:
+                app.print(
+                    "\n  [yellow]⚠[/yellow]  [yellow]orient_protein quedará GUIDED:[/yellow] "
+                    "hay regiones EC pero faltan regiones IC.\n"
+                    "     Define al menos una región IC para habilitar orientación automática."
+                )
+
+            app.print("\n[bold]── Segmentos transmembrana ──────────────────────────────────────────[/bold]")
+            _tm = _ask_tm_segments([])
+
+            app.print("\n[bold]── Orientación geométrica ───────────────────────────────────────────[/bold]")
+            app.print(
+                "  [dim]¿En qué dirección del eje Z queda la cara extracelular "
+                "después de editconf -princ?[/dim]"
+            )
+            _ec_side = _ask("Cara extracelular", [
+                ("+z", "+Z  (convención GROMACS estándar)"),
+                ("-z", "-Z  (proteína invertida respecto a la convención)"),
+            ])
+            _ic_side = "-z" if _ec_side == "+z" else "+z"
+
+            app.print("\n[bold]── Fuente y confianza ───────────────────────────────────────────────[/bold]")
+            _source = _ask("Fuente de la anotación", [
+                ("user_annotation", "Anotación manual (tú lo sabes)"),
+                ("opm_database",    "OPM database (Orientations of Proteins in Membranes)"),
+                ("pdbtm",           "PDBTM (PDB Transmembrane database)"),
+                ("uniprot",         "UniProt (feature annotations)"),
+                ("predicted",       "Predicción computacional (TMH, DeepTMHMM, etc.)"),
+            ])
+            _conf = max(0.0, min(1.0, _ask_float("Confianza [0.0–1.0]", 0.9)))
+            _ref  = _ask_str("Referencia (OPM accession, PubMed ID, URL — opcional)")
+
+            _topology = MembraneTopologyAnnotation(
+                extracellular_regions=_ec,
+                intracellular_regions=_ic,
+                transmembrane_segments=_tm,
+            )
+            _orientation = OrientationAnnotation(
+                extracellular_side=_ec_side,
+                intracellular_side=_ic_side,
+                source=_source,
+                confidence=_conf,
+                reference=_ref or None,
+            ) if (_ec or _ic) else None
+            _evidence_note = (
+                "Anotación creada con simforge init"
+                + (f"; referencia: {_ref}" if _ref else "")
+            )
+            _structural_ann = StructuralAnnotation(
+                membrane_topology=_topology if (_ec or _ic or _tm) else None,
+                orientation=_orientation,
+                evidence=[OrientationEvidence(
+                    source=_source, confidence=_conf,
+                    reference=_ref or None, notes=_evidence_note,
+                )] if (_ec or _ic) else [],
+            )
+
+            # Show validation and resulting automation level
+            _ann_warns = _structural_ann.validation_warnings()
+            if _ann_warns:
+                app.print("\n[yellow]Advertencias:[/yellow]")
+                for w in _ann_warns:
+                    app.print(f"  [yellow]⚠[/yellow]  {w}")
+
+            _overlap_warns = _topology.overlap_warnings() if (_ec or _ic or _tm) else []
+            if _overlap_warns:
+                app.print("\n[red]Solapamiento de regiones:[/red]")
+                for w in _overlap_warns:
+                    app.print(f"  [red]✗[/red]  {w}")
+
+            app.print()
+            if _structural_ann.is_complete_for_orient() or _structural_ann.is_partial_for_orient():
+                app.print(
+                    "  [green]● orient_protein → AUTOMATED[/green]  "
+                    "[dim](EC + IC + orientación definidas)[/dim]"
+                )
+            else:
+                app.print(
+                    "  [red]● orient_protein → GUIDED[/red]  "
+                    "[dim](topología incompleta — añade IC/EC para AUTOMATED)[/dim]"
+                )
 
     # ── 3. Componentes ────────────────────────────────────────────────────────
     app.print("\n  [bold]Archivos PDB[/bold]")
@@ -1410,13 +1634,20 @@ def init(
 
     hardware_line = f"\nhardware: {hardware}\n" if hardware != "auto" else ""
 
+    membrane_section = ""
+    if system_type == "protein_membrane" and lipid_type:
+        membrane_section = f"""  membrane:
+    enabled: true
+    type: {lipid_type}
+"""
+
     yaml_content = f"""project:
   name: {name}
 
 components:
 {components_yaml}
 environment:
-  solvent:
+{membrane_section}  solvent:
     water_model: {water_model}
   ions:
     concentration: 0.154
@@ -1438,6 +1669,29 @@ analysis:{analyses_yaml}
         output = configs_dir / f"{name}.yaml"
 
     output.write_text(yaml_content)
+
+    # Inject structural_annotation if collected during the wizard
+    if _structural_ann is not None:
+        from ruamel.yaml import YAML as RuamelYAML
+        _ryaml = RuamelYAML()
+        _ryaml.preserve_quotes   = True
+        _ryaml.default_flow_style = False
+        _ryaml.best_sequence_indent = 2
+        _ryaml.best_map_flow_style  = False
+        _ryaml.width = 4096
+        with open(output) as _f:
+            _doc = _ryaml.load(_f)
+        _doc["structural_annotation"] = _annotation_to_yaml_dict(_structural_ann)
+        with open(output, "w") as _f:
+            _ryaml.dump(_doc, _f)
+        app.print(f"  [green]✓[/green] structural_annotation incluida")
+        if _structural_ann.membrane_topology:
+            _mt = _structural_ann.membrane_topology
+            app.print(
+                f"    EC: {_mt.extracellular_regions}  "
+                f"IC: {_mt.intracellular_regions}  "
+                f"TM: {_mt.tm_segment_count()} segmentos"
+            )
 
     app.print(f"\n[bold green]✓[/bold green] Config generado → [cyan]{output}[/cyan]")
     app.print(f"\nSiguiente:  [dim]simforge compile {output}[/dim]\n")
@@ -1638,6 +1892,89 @@ def summary(
         border_style="cyan",
     ))
 
+    # Orientation section (membrane workflows only)
+    try:
+        from runtime.orientation_gate import read_orientation_report
+        orient = read_orientation_report(workspace)
+        if orient is not None:
+            conf   = orient.get("confidence", 0.0)
+            passed = orient.get("passed", False)
+            warns  = orient.get("warnings", [])
+            errors = orient.get("errors",   [])
+            geom   = orient.get("geometry", {})
+            status_color = "green" if passed else "red"
+            status_label = "yes" if passed else "no"
+            orient_lines = [
+                f"  confidence: {conf:.2f}   "
+                f"passed: [{status_color}]{status_label}[/{status_color}]",
+            ]
+            if geom.get("tilt_angle_deg") is not None:
+                orient_lines.append(f"  tilt: {geom['tilt_angle_deg']:.1f}°   "
+                    f"EC COM z: {geom.get('ec_com_z_nm', 'N/A')} nm   "
+                    f"IC COM z: {geom.get('ic_com_z_nm', 'N/A')} nm")
+            for w in warns:
+                orient_lines.append(f"  [yellow]⚠[/yellow]  {w}")
+            for e in errors:
+                orient_lines.append(f"  [red]✗[/red]  {e}")
+            app.print(Panel(
+                "\n".join(orient_lines),
+                title="Orientation",
+                border_style="yellow" if (warns or errors) else "green",
+                padding=(0, 2),
+            ))
+    except Exception:
+        pass
+
+    # Box-match section (membrane workflows only)
+    try:
+        from runtime.box_match_gate import read_box_match_report
+        bm = read_box_match_report(workspace)
+        if bm is not None:
+            rb     = bm.get("recommended_box", {})
+            pg     = bm.get("protein_geometry", {})
+            est    = bm.get("estimates", {})
+            passed = bm.get("passed", False)
+            conf   = bm.get("confidence", 0.0)
+            warns  = bm.get("warnings", [])
+            errors = bm.get("errors",   [])
+            sc     = "green" if passed else "red"
+            sl     = "yes" if passed else "no"
+            bm_lines = [
+                f"  confidence: {conf:.2f}   passed: [{sc}]{sl}[/{sc}]"
+                f"   lipid: {bm.get('lipid_type', '?')}",
+            ]
+            if rb:
+                bm_lines.append(
+                    f"  recommended box: {rb.get('box_x_nm', '?'):.3f} × "
+                    f"{rb.get('box_y_nm', '?'):.3f} × "
+                    f"{rb.get('box_z_nm', '?'):.3f} nm"
+                )
+            if pg:
+                bm_lines.append(
+                    f"  protein footprint: {pg.get('x_extent_nm', '?'):.2f} × "
+                    f"{pg.get('y_extent_nm', '?'):.2f} nm   "
+                    f"height: {pg.get('z_extent_nm', '?'):.2f} nm"
+                )
+            if est.get("n_lipids_estimate"):
+                cov = int(est.get("protein_xy_coverage", 0) * 100)
+                bm_lines.append(
+                    f"  N lipids estimate: {est['n_lipids_estimate']}   "
+                    f"XY coverage: {cov}%   "
+                    f"solvent: {est.get('solvent_volume_nm3', '?'):.0f} nm³"
+                )
+            for w in warns:
+                bm_lines.append(f"  [yellow]⚠[/yellow]  {w}")
+            for e in errors:
+                bm_lines.append(f"  [red]✗[/red]  {e}")
+            app.print(Panel(
+                "\n".join(bm_lines),
+                title="Box–Bilayer Match",
+                border_style="yellow" if (warns or errors) else "green",
+                padding=(0, 2),
+            ))
+    except Exception:
+        pass
+
     if sm.rmsd_verdict:
         app.print(Panel(sm.rmsd_verdict,   title="RMSD Convergence",  border_style="dim"))
     if sm.energy_verdict:
@@ -1767,11 +2104,224 @@ def analyze(
 _FIND_LEVEL_COLOR = {"highlight": "cyan",   "info": "dim",  "warning": "yellow"}
 _FIND_LEVEL_ICON  = {"highlight": "→",      "info": "·",    "warning": "⚠"}
 
+_STATE_STYLE: dict[str, tuple[str, str]] = {
+    "stable_binding":               ("green",    "●"),
+    "interaction_persistent":       ("green",    "●"),
+    "structurally_stable":          ("green",    "●"),
+    "weak_binding":                 ("yellow",   "◐"),
+    "flexible_but_stable":          ("yellow",   "◐"),
+    "transient_binding":            ("yellow",   "◑"),
+    "ligand_destabilization":       ("red",      "○"),
+    "conformational_rearrangement": ("red",      "○"),
+    "possible_dissociation":        ("red",      "✗"),
+    "uncertain_behavior":           ("dim",      "?"),
+}
+
+
+def _generate_markdown_report(study_obj, summary_obj, synthesis, path: Path) -> str:
+    from datetime import date as _date
+
+    lines: list[str] = []
+
+    # ── Header ────────────────────────────────────────────────────────────────
+    lines += [
+        "# SimForge Study Report",
+        f"**Path:** `{path.resolve()}`  ",
+        f"**Date:** {_date.today().isoformat()}  ",
+        f"**Files:** {study_obj.n_xvg_parsed} XVG parsed / {study_obj.n_xvg_discovered} discovered",
+        "",
+    ]
+
+    # ── Systems overview ──────────────────────────────────────────────────────
+    lines += ["---", "", "## Systems Overview", ""]
+    lines += ["| System | Replicas | Observables |", "|--------|----------|-------------|"]
+    for sys_name, sg in sorted(study_obj.systems.items()):
+        obs_str = ", ".join(study_obj.observable_display.get(o, o) for o in sg.observables)
+        lines.append(f"| {sys_name} | {sg.n_replicas} | {obs_str} |")
+    lines.append("")
+
+    # ── Observable statistics ──────────────────────────────────────────────────
+    if study_obj.observables_detected:
+        sys_names = sorted(study_obj.systems.keys())
+        lines += ["## Observable Statistics", ""]
+        header_cols = " | ".join(f"{s} mean ± std" for s in sys_names)
+        sep_cols    = "|".join("---" for _ in sys_names)
+        lines += [f"| Observable | {header_cols} |", f"|------------|{sep_cols}|"]
+        for obs in study_obj.observables_detected:
+            disp  = study_obj.observable_display.get(obs, obs)
+            units = study_obj.observable_units.get(obs, "")
+            row   = f"| {disp}"
+            for sys_name in sys_names:
+                sg = study_obj.systems.get(sys_name)
+                if sg and obs in sg.aggregate:
+                    agg = sg.aggregate[obs]
+                    u   = f" {units}" if units else ""
+                    row += f" | {agg.mean:.3g} ± {agg.std:.3g}{u}"
+                else:
+                    row += " | —"
+            lines.append(row + " |")
+        lines.append("")
+
+    # ── Scientific synthesis ───────────────────────────────────────────────────
+    if synthesis:
+        lines += ["## Scientific Synthesis", ""]
+
+        # Interaction state classification
+        if synthesis.systems:
+            lines += ["### Interaction State Classification", ""]
+            lines += [
+                "| System | State | Conf. | Binding | Stability | Evidence |",
+                "|--------|-------|-------|---------|-----------|----------|",
+            ]
+            for sys_name, syn in sorted(synthesis.systems.items()):
+                _, icon = _STATE_STYLE.get(syn.primary_state, ("dim", "?"))
+                state_label = f"{icon} {syn.primary_state.replace('_', ' ')}"
+                ev_str = "; ".join(syn.evidence[:2]) if syn.evidence else "—"
+                lines.append(
+                    f"| {sys_name} | {state_label} | {syn.primary_confidence:.2f}"
+                    f" | {syn.binding_score:.2f} | {syn.stability_score:.2f} | {ev_str} |"
+                )
+            lines.append("")
+
+        # Composite ranking
+        if synthesis.ranking and len(synthesis.ranking) > 1:
+            lines += ["### Composite Ranking", ""]
+            lines += ["| Rank | System | Composite | Binding | Stability |",
+                      "|------|--------|-----------|---------|-----------|"]
+            for i, (sys_name, score) in enumerate(synthesis.ranking, 1):
+                syn = synthesis.systems.get(sys_name)
+                b = f"{syn.binding_score:.3f}"   if syn else "—"
+                s = f"{syn.stability_score:.3f}" if syn else "—"
+                lines.append(f"| {i} | {sys_name} | {score:.3f} | {b} | {s} |")
+            lines.append("")
+
+        # Temporal events
+        if synthesis.events:
+            lines += ["### Temporal Events", ""]
+            lines += [
+                "| System | Replica | Observable | Event | Time (ns) |",
+                "|--------|---------|------------|-------|-----------|",
+            ]
+            for evt in synthesis.events:
+                obs_d = study_obj.observable_display.get(evt.observable, evt.observable)
+                etype = evt.event_type.replace("_", " ")
+                lines.append(
+                    f"| {evt.system} | {evt.replica} | {obs_d}"
+                    f" | {etype} | {evt.time_ns:.1f} |"
+                )
+            lines += ["", "> **Descriptions**", ""]
+            for evt in synthesis.events:
+                lines.append(f"- {evt.description}")
+            lines.append("")
+
+        # Narrative
+        if synthesis.narrative:
+            lines += ["### Scientific Narrative", "", synthesis.narrative, ""]
+
+    # ── Comparative findings ───────────────────────────────────────────────────
+    if summary_obj and summary_obj.findings:
+        sorted_findings = sorted(
+            summary_obj.findings,
+            key=lambda f: (0 if f.level != "info" else 1, f.level),
+        )
+        lines += ["## Comparative Findings", ""]
+        _ICON = {"highlight": "→", "info": "·", "warning": "⚠"}
+        for f in sorted_findings[:12]:
+            icon = _ICON.get(f.level, "·")
+            lines.append(f"{icon} {f.message}")
+        lines.append("")
+
+    # ── Outlier replicas ───────────────────────────────────────────────────────
+    if summary_obj and summary_obj.outlier_replicas:
+        lines += ["## Outlier Replicas", ""]
+        lines += ["| System | Replica | Reason |", "|--------|---------|--------|"]
+        for sys_n, rep_n, reason in summary_obj.outlier_replicas:
+            lines.append(f"| {sys_n} | {rep_n} | {reason} |")
+        lines.append("")
+
+    lines += ["---", "*Generated by [SimForge](https://github.com/simforge)*", ""]
+    return "\n".join(lines)
+
+
+def _show_interaction_states(synthesis, study_obj) -> None:
+    table = Table(box=box.SIMPLE, show_header=True, header_style="bold dim")
+    table.add_column("System",    style="bold cyan")
+    table.add_column("State",     min_width=26)
+    table.add_column("Conf",      justify="right", style="dim")
+    table.add_column("Binding",   justify="right", style="dim")
+    table.add_column("Stability", justify="right", style="dim")
+    table.add_column("Evidence",  overflow="fold")
+
+    for sys_name, syn in sorted(synthesis.systems.items()):
+        color, icon = _STATE_STYLE.get(syn.primary_state, ("dim", "?"))
+        state_label = syn.primary_state.replace("_", " ")
+        ev_str      = "; ".join(syn.evidence[:2]) if syn.evidence else "—"
+        table.add_row(
+            sys_name,
+            f"[{color}]{icon} {state_label}[/{color}]",
+            f"{syn.primary_confidence:.0%}",
+            f"{syn.binding_score:.2f}",
+            f"{syn.stability_score:.2f}",
+            f"[dim]{ev_str}[/dim]",
+        )
+
+    app.print(Panel(
+        table,
+        title="Interaction State Classification",
+        border_style="magenta", padding=(0, 1),
+    ))
+
+
+def _show_scientific_ranking(synthesis) -> None:
+    lines: list[str] = []
+    for i, (sys_name, score) in enumerate(synthesis.ranking, 1):
+        syn = synthesis.systems.get(sys_name)
+        color, _ = _STATE_STYLE.get(syn.primary_state if syn else "", ("dim", "?"))
+        bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
+        state_tag = (
+            f"  [{color}]{syn.primary_state.replace('_', ' ')}[/{color}]" if syn else ""
+        )
+        lines.append(f"  [{i}] [cyan]{sys_name:<8}[/cyan] [{bar}] {score:.2f}{state_tag}")
+
+    app.print(Panel(
+        "\n".join(lines),
+        title="Scientific composite ranking  (binding × 0.5 + stability × 0.3 + convergence × 0.2)",
+        border_style="magenta", padding=(0, 1),
+    ))
+
+
+def _show_temporal_events(synthesis) -> None:
+    _EVT_COLOR = {
+        "abrupt_transition":    "red",
+        "late_destabilization": "yellow",
+        "contact_loss":         "yellow",
+        "ligand_drift":         "magenta",
+    }
+    table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+    table.add_column("icon", width=2)
+    table.add_column("message")
+
+    for evt in synthesis.events[:8]:
+        color = _EVT_COLOR.get(evt.event_type, "dim")
+        table.add_row(
+            f"[{color}]▶[/{color}]",
+            f"[{color}][bold]{evt.system}[/bold] {evt.replica}[/{color}]  "
+            f"[dim]{evt.description}[/dim]",
+        )
+
+    border = "red" if any(e.event_type == "abrupt_transition" for e in synthesis.events) else "yellow"
+    app.print(Panel(
+        table,
+        title=f"Time-resolved events  ({len(synthesis.events)})",
+        border_style=border, padding=(0, 1),
+    ))
+
 
 @cli.command()
 def study(
     path:   Path          = typer.Argument(Path("."), help="Directory containing XVG files (default: current directory)."),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Write JSON summary to file."),
+    report: Optional[str] = typer.Option(None, "--report", "-r", help="Export Markdown report to file."),
 ):
     """Analyze a multi-system comparative MD study: auto-discovers systems, replicas,
     and observables, computes aggregate statistics, detects outliers, and produces
@@ -1898,6 +2448,16 @@ def study(
 
     summary_obj = study_obj.summary
 
+    # ── Scientific synthesis ──────────────────────────────────────────────────
+    synthesis = None
+    if study_obj.systems and study_obj.observables_detected:
+        try:
+            from runtime.scientific_synthesis import synthesize_study as _synth
+            with app.status("  Running scientific synthesis..."):
+                synthesis = _synth(study_obj)
+        except Exception as _e:
+            app.print(f"  [dim]Scientific synthesis skipped: {_e}[/dim]")
+
     # ── Outliers ──────────────────────────────────────────────────────────────
     if summary_obj and summary_obj.outlier_replicas:
         out_table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
@@ -1939,8 +2499,18 @@ def study(
             border_style="cyan", padding=(0, 1),
         ))
 
-    # ── System stability ranking ──────────────────────────────────────────────
-    if summary_obj and len(summary_obj.system_ranking) > 1:
+    # ── Interaction state classification ──────────────────────────────────────
+    if synthesis and synthesis.systems:
+        _show_interaction_states(synthesis, study_obj)
+
+    # ── Time-resolved events ──────────────────────────────────────────────────
+    if synthesis and synthesis.events:
+        _show_temporal_events(synthesis)
+
+    # ── Scientific ranking ────────────────────────────────────────────────────
+    if synthesis and synthesis.ranking and len(synthesis.ranking) > 1:
+        _show_scientific_ranking(synthesis)
+    elif summary_obj and len(summary_obj.system_ranking) > 1:
         ranking = sorted(summary_obj.system_ranking.items(), key=lambda x: -x[1])
         rank_lines: list[str] = []
         for i, (sn, score) in enumerate(ranking, 1):
@@ -1951,6 +2521,14 @@ def study(
             "\n".join(rank_lines),
             title="System stability ranking  (convergence-based)",
             border_style="dim", padding=(0, 1),
+        ))
+
+    # ── Scientific narrative ──────────────────────────────────────────────────
+    if synthesis and synthesis.narrative:
+        app.print(Panel(
+            synthesis.narrative,
+            title="Scientific Narrative",
+            border_style="magenta", padding=(1, 2),
         ))
 
     # ── JSON output ───────────────────────────────────────────────────────────
@@ -1975,9 +2553,378 @@ def study(
                 {"system": s, "replica": r, "reason": reason}
                 for s, r, reason in (summary_obj.outlier_replicas if summary_obj else [])
             ],
+            **({"synthesis": {
+                "ranking": [
+                    {"system": sn, "composite_score": sc}
+                    for sn, sc in synthesis.ranking
+                ],
+                "systems": {
+                    sn: {
+                        "primary_state":      syn.primary_state,
+                        "primary_confidence": syn.primary_confidence,
+                        "binding_score":      syn.binding_score,
+                        "stability_score":    syn.stability_score,
+                        "composite_score":    syn.composite_score,
+                        "evidence":           syn.evidence,
+                    }
+                    for sn, syn in synthesis.systems.items()
+                },
+                "events": [
+                    {
+                        "system": e.system, "replica": e.replica,
+                        "observable": e.observable, "event_type": e.event_type,
+                        "time_ns": e.time_ns, "description": e.description,
+                    }
+                    for e in synthesis.events
+                ],
+                "narrative": synthesis.narrative,
+            }} if synthesis else {}),
         }
         Path(output).write_text(_json.dumps(out_data, indent=2))
         app.print(f"\n[dim]JSON written to {output}[/dim]")
+
+    # ── Markdown report ───────────────────────────────────────────────────────
+    if report:
+        md = _generate_markdown_report(study_obj, summary_obj, synthesis, path)
+        Path(report).write_text(md, encoding="utf-8")
+        app.print(f"\n[dim]Markdown report written to {report}[/dim]")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# annotate-structure
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _ask_range_list(label: str, existing: list[str]) -> list[str]:
+    """Prompt the user to enter a list of residue range strings (e.g. '1-50').
+
+    Shows current values, lets user add or replace entries.
+    Empty input on first prompt keeps existing list.
+    """
+    app.print(f"\n  [bold]{label}[/bold]")
+    app.print("  [dim]Formato: '1-50', '1-20,45-60', o '5,10,15'. Línea vacía para terminar.[/dim]")
+    if existing:
+        app.print(f"  [dim]Actuales: {existing}[/dim]")
+        raw = input("  ¿Reemplazar? (s/n, Enter=n): ").strip().lower()
+        if raw != "s":
+            return existing
+
+    from core.structural_annotation import parse_residue_range
+    entries: list[str] = []
+    while True:
+        raw = input(f"  {'Rango ' + str(len(entries)+1)}: ").strip()
+        if not raw:
+            break
+        try:
+            parse_residue_range(raw)
+            entries.append(raw)
+        except ValueError as e:
+            app.print(f"  [red]{e}[/red]")
+    return entries
+
+
+def _ask_tm_segments(existing: list) -> list:
+    """Prompt for transmembrane segments (string or {residues, label, helix_type})."""
+    from core.structural_annotation import parse_residue_range, TransmembraneSegment
+
+    app.print("\n  [bold]Segmentos transmembrana[/bold] [dim](opcional)[/dim]")
+    app.print("  [dim]Formato: '51-75' o entrada detallada con label/tipo.[/dim]")
+
+    if existing:
+        names = [
+            (s.residues if isinstance(s, TransmembraneSegment) else s)
+            for s in existing
+        ]
+        app.print(f"  [dim]Actuales: {names}[/dim]")
+        raw = input("  ¿Reemplazar? (s/n, Enter=n): ").strip().lower()
+        if raw != "s":
+            return existing
+
+    mode = _ask("Modo de entrada", [
+        ("simple",   "Simple — solo rangos de residuos"),
+        ("detailed", "Detallado — rangos + label + tipo de hélice"),
+    ])
+
+    segments: list = []
+    i = 1
+    while True:
+        raw_r = input(f"  TM{i} residuos (Enter para terminar): ").strip()
+        if not raw_r:
+            break
+        try:
+            parse_residue_range(raw_r)
+        except ValueError as e:
+            app.print(f"  [red]{e}[/red]")
+            continue
+
+        if mode == "detailed":
+            label     = input(f"  TM{i} label (ej: TM1, Enter=TM{i}): ").strip() or f"TM{i}"
+            helix_raw = _ask("Tipo de hélice", [
+                ("alpha", "α-hélice (más común)"),
+                ("310",   "Hélice 3₁₀"),
+                ("pi",    "Hélice π"),
+                ("none",  "No especificar"),
+            ])
+            segments.append(TransmembraneSegment(
+                residues=raw_r,
+                label=label,
+                helix_type=helix_raw if helix_raw != "none" else None,
+            ))
+        else:
+            segments.append(raw_r)
+        i += 1
+    return segments
+
+
+def _annotation_to_yaml_dict(ann) -> dict:
+    """Convert a StructuralAnnotation to a plain dict suitable for YAML serialization."""
+    from core.structural_annotation import TransmembraneSegment
+
+    def _tm_entry(s):
+        if isinstance(s, TransmembraneSegment):
+            d: dict = {"residues": s.residues}
+            if s.label:
+                d["label"] = s.label
+            if s.helix_type:
+                d["helix_type"] = s.helix_type
+            return d
+        return s
+
+    result: dict = {}
+
+    if ann.membrane_topology:
+        mt = ann.membrane_topology
+        topo: dict = {}
+        if mt.extracellular_regions:
+            topo["extracellular_regions"] = mt.extracellular_regions
+        if mt.intracellular_regions:
+            topo["intracellular_regions"] = mt.intracellular_regions
+        if mt.transmembrane_segments:
+            topo["transmembrane_segments"] = [_tm_entry(s) for s in mt.transmembrane_segments]
+        result["membrane_topology"] = topo
+
+    if ann.orientation:
+        o = ann.orientation
+        result["orientation"] = {
+            "extracellular_side": o.extracellular_side,
+            "intracellular_side": o.intracellular_side,
+            "source":             o.source,
+            "confidence":         o.confidence,
+        }
+        if o.reference:
+            result["orientation"]["reference"] = o.reference
+
+    if ann.evidence:
+        evlist = []
+        for ev in ann.evidence:
+            d = {"source": ev.source, "confidence": ev.confidence}
+            if ev.reference:
+                d["reference"] = ev.reference
+            if ev.notes:
+                d["notes"] = ev.notes
+            evlist.append(d)
+        result["evidence"] = evlist
+
+    return result
+
+
+@cli.command("annotate-structure")
+def annotate_structure(
+    yaml_path: Path = typer.Argument(..., help="Config YAML a anotar."),
+    output: Optional[Path] = typer.Option(
+        None, "--output", "-o",
+        help="Ruta de salida (default: sobreescribe el YAML de entrada).",
+    ),
+):
+    """Wizard interactivo — define la Structural Biology Annotation Layer de un YAML.
+
+    Permite especificar topología de membrana, dominios biológicos, orientación
+    geométrica y evidencia. El resultado se escribe de vuelta al YAML como
+    la clave top-level `structural_annotation:`.
+    """
+    from core.structural_annotation import (
+        StructuralAnnotation,
+        MembraneTopologyAnnotation,
+        OrientationAnnotation,
+        OrientationEvidence,
+    )
+    from ruamel.yaml import YAML as RuamelYAML
+    import yaml as pyyaml
+
+    if not yaml_path.exists():
+        app.print(f"[red]Archivo no encontrado: {yaml_path}[/red]")
+        raise typer.Exit(1)
+
+    app.print(Panel(
+        "[bold cyan]SimForge · Annotate Structure[/bold cyan]  "
+        "[dim]Structural Biology Annotation Layer[/dim]",
+        border_style="cyan",
+    ))
+
+    # ── Cargar YAML y mostrar estado actual ───────────────────────────────────
+    with open(yaml_path) as f:
+        raw = pyyaml.safe_load(f)
+
+    project_name = (raw.get("project") or {}).get("name", yaml_path.stem)
+    app.print(f"\n  Proyecto: [bold]{project_name}[/bold]")
+
+    existing_ann: Optional[StructuralAnnotation] = None
+    sa_raw = raw.get("structural_annotation")
+    if sa_raw:
+        try:
+            existing_ann = StructuralAnnotation(**sa_raw)
+            app.print("  [dim]structural_annotation existente detectada.[/dim]")
+        except Exception:
+            app.print("  [yellow]structural_annotation existente tiene errores — se reemplazará.[/yellow]")
+
+    existing_mt = existing_ann.membrane_topology if existing_ann else None
+    existing_orient = existing_ann.orientation if existing_ann else None
+    existing_evidence = existing_ann.evidence if existing_ann else []
+
+    # ── 1. Topología extracellular ────────────────────────────────────────────
+    app.print("\n[bold]── 1 · Regiones extracelulares ─────────────────────────────────────[/bold]")
+    ec = _ask_range_list("Residuos en la cara extracelular", existing_mt.extracellular_regions if existing_mt else [])
+
+    # ── 2. Topología intracelular ─────────────────────────────────────────────
+    app.print("\n[bold]── 2 · Regiones intracelulares ──────────────────────────────────────[/bold]")
+    if ec:
+        app.print(
+            "  [dim]Necesario para orientación automática: sin IC no se puede calcular el eje EC→IC.[/dim]"
+        )
+    ic = _ask_range_list("Residuos en la cara intracelular", existing_mt.intracellular_regions if existing_mt else [])
+
+    if ec and not ic:
+        app.print(
+            "\n  [yellow]⚠[/yellow]  [yellow]orient_protein quedará GUIDED:[/yellow] "
+            "hay regiones EC pero faltan regiones IC.\n"
+            "     Sin al menos una región intracelular no se puede calcular el eje EC→IC.\n"
+            "     Puedes continuar el wizard y añadir IC, o volver a ejecutarlo después."
+        )
+
+    # ── 3. Segmentos transmembrana ────────────────────────────────────────────
+    app.print("\n[bold]── 3 · Segmentos transmembrana ──────────────────────────────────────[/bold]")
+    tm = _ask_tm_segments(existing_mt.transmembrane_segments if existing_mt else [])
+
+    # ── 4. Orientación geométrica ─────────────────────────────────────────────
+    app.print("\n[bold]── 4 · Orientación geométrica ───────────────────────────────────────[/bold]")
+    app.print("  [dim]¿En qué dirección del eje Z queda la cara extracelular después de editconf -princ?[/dim]")
+    ec_side = _ask("Cara extracelular", [
+        ("+z", "+Z  (convención GROMACS estándar)"),
+        ("-z", "-Z  (proteína invertida respecto a la convención)"),
+    ], default=1 if (not existing_orient or existing_orient.extracellular_side == "+z") else 2)
+
+    ic_side = "-z" if ec_side == "+z" else "+z"
+
+    # ── 5. Fuente y confianza ─────────────────────────────────────────────────
+    app.print("\n[bold]── 5 · Fuente y confianza ───────────────────────────────────────────[/bold]")
+    source = _ask("Fuente de la anotación", [
+        ("user_annotation", "Anotación manual (tú lo sabes)"),
+        ("opm_database",    "OPM database (Orientations of Proteins in Membranes)"),
+        ("pdbtm",           "PDBTM (PDB Transmembrane database)"),
+        ("uniprot",         "UniProt (feature annotations)"),
+        ("predicted",       "Predicción computacional (TMH, DeepTMHMM, etc.)"),
+    ])
+
+    default_conf = existing_orient.confidence if existing_orient else 0.9
+    confidence = _ask_float("Confianza [0.0–1.0]", default_conf)
+    confidence = max(0.0, min(1.0, confidence))
+
+    ref = _ask_str("Referencia (OPM accession, PubMed ID, URL — opcional)")
+
+    # ── Construir StructuralAnnotation ────────────────────────────────────────
+    topology = MembraneTopologyAnnotation(
+        extracellular_regions=ec,
+        intracellular_regions=ic,
+        transmembrane_segments=tm,
+    )
+    orientation = OrientationAnnotation(
+        extracellular_side=ec_side,
+        intracellular_side=ic_side,
+        source=source,
+        confidence=confidence,
+        reference=ref or None,
+    ) if (ec or ic) else None
+
+    evidence_note = (
+        "Anotación creada con simforge annotate-structure"
+        + (f"; referencia: {ref}" if ref else "")
+    )
+    evidence = [OrientationEvidence(
+        source=source,
+        confidence=confidence,
+        reference=ref or None,
+        notes=evidence_note,
+    )] if (ec or ic) else existing_evidence
+
+    ann = StructuralAnnotation(
+        membrane_topology=topology if (ec or ic or tm) else None,
+        orientation=orientation,
+        evidence=evidence,
+    )
+
+    # ── Mostrar validación ────────────────────────────────────────────────────
+    warns = ann.validation_warnings()
+    if warns:
+        app.print("\n[yellow]Advertencias de consistencia:[/yellow]")
+        for w in warns:
+            app.print(f"  [yellow]⚠[/yellow]  {w}")
+
+    overlap_warns = topology.overlap_warnings() if (ec or ic or tm) else []
+    if overlap_warns:
+        app.print("\n[red]Solapamiento de regiones:[/red]")
+        for w in overlap_warns:
+            app.print(f"  [red]✗[/red]  {w}")
+
+    # ── Mostrar AutomationLevel resultante ────────────────────────────────────
+    app.print("\n")
+    if ann.is_complete_for_orient():
+        app.print("  [green]● orient_protein → AUTOMATED[/green]  "
+                  "[dim](EC + IC + orientación definidas)[/dim]")
+    elif ann.is_partial_for_orient():
+        app.print("  [green]● orient_protein → AUTOMATED[/green]  "
+                  "[dim](EC + IC definidas; eje asumido como estándar +Z)[/dim]")
+    else:
+        if ec and not ic:
+            guided_reason = "falta intracellular_regions — no se puede calcular el eje EC→IC"
+            guided_hint   = "Define al menos una región IC (ej. '200-250') para habilitar orientación automática."
+        elif ic and not ec:
+            guided_reason = "falta extracellular_regions — no se puede calcular el eje EC→IC"
+            guided_hint   = "Define al menos una región EC (ej. '1-50') para habilitar orientación automática."
+        else:
+            guided_reason = "sin topología de membrana definida"
+            guided_hint   = "Define regiones EC e IC con 'simforge annotate-structure <config.yaml>'."
+        app.print(f"  [red]● orient_protein → GUIDED[/red]  [dim]({guided_reason})[/dim]")
+        app.print(f"  [dim]  → {guided_hint}[/dim]")
+
+    # ── Confirmar escritura ───────────────────────────────────────────────────
+    app.print()
+    confirm = input("  ¿Escribir structural_annotation al YAML? (s/n, Enter=s): ").strip().lower()
+    if confirm == "n":
+        app.print("[dim]Cancelado.[/dim]")
+        raise typer.Exit(0)
+
+    # ── Escribir con ruamel.yaml (preserva formato y comentarios) ─────────────
+    ryaml = RuamelYAML()
+    ryaml.preserve_quotes = True
+    ryaml.default_flow_style = False
+    ryaml.best_sequence_indent = 2
+    ryaml.best_map_flow_style  = False
+    ryaml.width = 4096  # avoid line-wrapping in long lists
+
+    with open(yaml_path) as f:
+        doc = ryaml.load(f)
+
+    doc["structural_annotation"] = _annotation_to_yaml_dict(ann)
+
+    out_path = output or yaml_path
+    with open(out_path, "w") as f:
+        ryaml.dump(doc, f)
+
+    app.print(f"\n[green]✓[/green] structural_annotation escrita en [bold]{out_path}[/bold]")
+    if ann.membrane_topology:
+        mt = ann.membrane_topology
+        app.print(f"  EC: {mt.extracellular_regions}  IC: {mt.intracellular_regions}  "
+                  f"TM: {mt.tm_segment_count()} segmentos")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

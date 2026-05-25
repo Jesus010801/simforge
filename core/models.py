@@ -9,22 +9,28 @@ ahora viven DENTRO del SystemState, en cada ComponentModel.
 
     SystemState
     │
-    ├── project           ProjectModel
-    ├── forcefields       ForcefieldsModel
-    ├── environment       EnvironmentModel
+    ├── project                ProjectModel
+    ├── forcefields            ForcefieldsModel
+    ├── environment            EnvironmentModel
     ├── simulation_objectives
     ├── restraints
     ├── analysis
     ├── output
     │
-    ├── components        list[ComponentModel]
+    ├── structural_annotation  StructuralAnnotation | None  ← top-level YAML key
+    │    ├── membrane_topology  MembraneTopologyAnnotation
+    │    ├── orientation        OrientationAnnotation
+    │    ├── domains            list[BiologicalDomain]
+    │    └── evidence           list[OrientationEvidence]
+    │
+    ├── components             list[ComponentModel]
     │    └── ComponentModel
     │         ├── config       (id, role, file, biological_context)  ← del YAML
     │         ├── validation   ComponentValidation | None            ← validators/
     │         ├── descriptors  ComponentDescriptors | None           ← descriptors/
     │         └── reasoning    ComponentReasoning | None             ← inference/
     │
-    └── global_reasoning  GlobalReasoning                            ← inference.py
+    └── global_reasoning       GlobalReasoning                       ← inference.py
 
 Principios:
     - Pydantic solo valida estructura, NO infiere
@@ -50,6 +56,7 @@ from core.ontology import (
     SIMULATION_GOALS,
 )
 from core.workflow_hints import WorkflowHints
+from core.structural_annotation import StructuralAnnotation
 
 from enum import Enum
 
@@ -327,10 +334,27 @@ class GlobalReasoning(BaseModel):
 # Modelos de configuración (sin cambios respecto al original)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+class MembraneOrientation(BaseModel):
+    """
+    Semantic orientation data provided by the user.
+
+    The user specifies which residues face the extracellular side and
+    which face the intracellular side.  SimForge uses this to compute
+    the gmx editconf -rotate angles automatically so the EC face ends
+    up at +Z after editconf -princ.
+
+    Residue range format: "1-50", "1-20,45-60", "5,10,15"
+    """
+    extracellular_residues: Optional[str] = None
+    intracellular_residues: Optional[str] = None
+    tm_segments:            Optional[str] = None  # informational, not used for rotation
+
+
 class MembraneConfig(BaseModel):
-    enabled:   bool           = False
-    type:      Optional[str]  = None
-    thickness: Optional[float] = None
+    enabled:     bool                          = False
+    type:        Optional[str]                 = None
+    thickness:   Optional[float]               = None
+    orientation: Optional[MembraneOrientation] = None
 
 
 class SolventConfig(BaseModel):
@@ -465,6 +489,11 @@ class SystemState(BaseModel):
     environment:           EnvironmentModel  = EnvironmentModel()
     forcefields:           ForcefieldsModel
     simulation_objectives: list[str]         = []
+    # Structural biology knowledge — topology, domains, orientation, evidence.
+    # Lives at YAML top-level as `structural_annotation:`, separate from
+    # environment config because it represents biological knowledge, not
+    # execution parameters.
+    structural_annotation: Optional[StructuralAnnotation] = None
     # Named scientific preset — expands to objectives + workflow hints.
     # Examples: membrane_protein, soluble_protein, protein_ligand_binding, idr_sampling
     simulation_profile:    Optional[str]     = None

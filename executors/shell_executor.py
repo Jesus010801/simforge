@@ -51,20 +51,28 @@ class ShellExecutor(BaseExecutor):
     ]
 
     def _run_step(self, record: StepExecutionRecord) -> None:
-        step_dir = Path(record.step_dir)
-        meta     = self._read_metadata(step_dir)
-        script   = self._find_script(step_dir)
+        step_dir  = Path(record.step_dir)
+        meta      = self._read_metadata(step_dir)
+        step_type = meta.get("step_type", "automatic")
 
+        automation_level = meta.get("automation_level")
+        if automation_level is not None:
+            needs_user = automation_level in ("manual", "guided")
+        else:
+            needs_user = step_type in ("manual", "external", "validation")
+
+        if needs_user:
+            label = automation_level or step_type
+            record.status        = StepStatus.SKIPPED
+            record.error_message = f"Step '{label}' — requiere acción del usuario"
+            self._log(f"  [manual] {step_dir.name} → ver README.md")
+            return
+
+        script = self._find_script(step_dir)
         if script is None:
-            step_type = meta.get("step_type", "automatic")
-            if step_type in ("manual", "external", "validation"):
-                record.status        = StepStatus.SKIPPED
-                record.error_message = f"Step tipo '{step_type}' — requiere acción manual"
-                self._log(f"  [manual] {step_dir.name} → ver README.md")
-            else:
-                record.status        = StepStatus.SKIPPED
-                record.error_message = "No se encontró script ejecutable en el directorio"
-                self._log(f"  [skip]   sin script en {step_dir.name}")
+            record.status        = StepStatus.SKIPPED
+            record.error_message = "No se encontró script ejecutable en el directorio"
+            self._log(f"  [skip]   sin script en {step_dir.name}")
             return
 
         expected_outputs: list[str] = meta.get("expected_outputs", [])

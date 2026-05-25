@@ -10,6 +10,10 @@
         "em.edr",
         "em.log"
     ],
+    "required_inputs": [
+        "../08_add_ions/aaions.gro",
+        "../08_add_ions/topol.top"
+    ],
     "params": {
         "integrator": "steep",
         "emtol": 1000.0,
@@ -18,5 +22,7 @@
         "define": "-DPOSRES -DSTRONG_POSRES",
         "rcoulomb": 1.2,
         "rvdw": 1.2
-    }
+    },
+    "template_hash": "d446d5001fb6dcb6",
+    "generated_at": "2026-05-24T00:55:56"
 }

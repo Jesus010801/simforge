@@ -11,5 +11,7 @@
     ],
     "params": {
         "water_gro": "spc216.gro"
-    }
+    },
+    "template_hash": "bbc09b83cc5d3fba",
+    "generated_at": "2026-05-24T00:55:56"
 }

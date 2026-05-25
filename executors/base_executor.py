@@ -370,8 +370,9 @@ class BaseExecutor(ABC):
 
     # ── Dependencias ──────────────────────────────────────────────────────────
 
-    # Statuses that mean a dep did not complete successfully → block downstream
-    _BLOCKING_STATUSES = frozenset({StepStatus.FAILED, StepStatus.BLOCKED})
+    # Statuses that mean a dep did not complete successfully → block downstream.
+    # SKIPPED covers manual/external steps whose outputs don't exist yet.
+    _BLOCKING_STATUSES = frozenset({StepStatus.FAILED, StepStatus.BLOCKED, StepStatus.SKIPPED})
 
     def _is_blocked(self, record: StepExecutionRecord) -> bool:
         """

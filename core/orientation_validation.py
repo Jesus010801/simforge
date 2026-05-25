@@ -1,0 +1,349 @@
+# core/orientation_validation.py
+"""
+OrientationValidationLayer — validates that orient_protein produced a
+biologically coherent result.
+
+Checks:
+    1. EC/IC Z-axis separation (correct side per extracellular_side config,
+       minimum separation threshold)
+    2. EC→IC 3D vector length (detects degenerate orientations / residue-number
+       mismatches)
+    3. TM bundle tilt angle relative to Z-axis (warns if excessively tilted)
+    4. TM COM centered near the membrane plane (|z| < bilayer_half_thickness)
+
+Produces:
+    OrientationValidationReport  — confidence score + full check list
+    .to_dict()                   — for orientation_report.json
+    .to_markdown()               — for orientation_report.md
+
+Pure library: no pipeline imports. Imports private GRO-reader helpers from
+membrane_geometry (same package — not a cross-package dependency).
+"""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
+
+from core.membrane_geometry import _read_gro_ca_positions, _mean_pos
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Result models
+# ─────────────────────────────────────────────────────────────────────────────
+
+@dataclass
+class CheckResult:
+    name:      str
+    passed:    bool
+    message:   str
+    value:     Optional[float] = None
+    threshold: Optional[float] = None
+
+
+@dataclass
+class OrientationValidationReport:
+    confidence: float
+    checks:     list[CheckResult] = field(default_factory=list)
+    warnings:   list[str]        = field(default_factory=list)
+    errors:     list[str]        = field(default_factory=list)
+
+    # Raw geometry (None when atoms for that group were not found)
+    ec_com_z:          Optional[float] = None
+    ic_com_z:          Optional[float] = None
+    tm_com_z:          Optional[float] = None
+    ec_ic_distance_nm: Optional[float] = None
+    tilt_angle_deg:    Optional[float] = None
+    n_ec_atoms:        int = 0
+    n_ic_atoms:        int = 0
+    n_tm_atoms:        int = 0
+
+    @property
+    def passed(self) -> bool:
+        return not self.errors
+
+    # ── Serialization ─────────────────────────────────────────────────────────
+
+    def to_dict(self) -> dict:
+        def _r3(v): return round(v, 3) if v is not None else None
+        def _r1(v): return round(v, 1) if v is not None else None
+
+        return {
+            "confidence": round(self.confidence, 3),
+            "passed":     self.passed,
+            "geometry": {
+                "ec_com_z_nm":       _r3(self.ec_com_z),
+                "ic_com_z_nm":       _r3(self.ic_com_z),
+                "tm_com_z_nm":       _r3(self.tm_com_z),
+                "ec_ic_distance_nm": _r3(self.ec_ic_distance_nm),
+                "tilt_angle_deg":    _r1(self.tilt_angle_deg),
+                "n_ec_atoms":        self.n_ec_atoms,
+                "n_ic_atoms":        self.n_ic_atoms,
+                "n_tm_atoms":        self.n_tm_atoms,
+            },
+            "checks": [
+                {
+                    "name":      c.name,
+                    "passed":    c.passed,
+                    "message":   c.message,
+                    "value":     _r3(c.value),
+                    "threshold": c.threshold,
+                }
+                for c in self.checks
+            ],
+            "warnings": self.warnings,
+            "errors":   self.errors,
+        }
+
+    def to_markdown(self) -> str:
+        status = "PASS" if self.passed else "FAIL"
+
+        def _fz(v): return f"{v:+.3f} nm" if v is not None else "N/A"
+        def _fd(v): return f"{v:.3f} nm"  if v is not None else "N/A"
+        def _fa(v): return f"{v:.1f}°"    if v is not None else "N/A"
+
+        lines = [
+            "# Orientation Validation Report",
+            "",
+            f"**Confidence:** {self.confidence:.2f}  **Status:** {status}",
+            "",
+            "## Geometry",
+            "",
+            "| Metric | Value |",
+            "|---|---|",
+            f"| EC COM (z) | {_fz(self.ec_com_z)} |",
+            f"| IC COM (z) | {_fz(self.ic_com_z)} |",
+            f"| TM COM (z) | {_fz(self.tm_com_z)} |",
+            f"| EC→IC distance | {_fd(self.ec_ic_distance_nm)} |",
+            f"| Tilt angle (Z-axis) | {_fa(self.tilt_angle_deg)} |",
+            f"| EC atoms (Cα) | {self.n_ec_atoms} |",
+            f"| IC atoms (Cα) | {self.n_ic_atoms} |",
+            f"| TM atoms (Cα) | {self.n_tm_atoms} |",
+            "",
+            "## Checks",
+            "",
+        ]
+        for c in self.checks:
+            icon = "✅" if c.passed else "❌"
+            lines.append(f"{icon} {c.message}")
+        lines += ["", "## Warnings", ""]
+        lines += [f"⚠️  {w}" for w in self.warnings] if self.warnings else ["_None_"]
+        lines += ["", "## Errors", ""]
+        lines += [f"❌  {e}" for e in self.errors] if self.errors else ["_None_"]
+        lines += ["", "---", "_Generated by SimForge OrientationValidationLayer_"]
+        return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main validation function
+# ─────────────────────────────────────────────────────────────────────────────
+
+def validate_orientation(
+    gro_path:                  Path | str,
+    ec_residues:               set[int],
+    ic_residues:               set[int],
+    tm_residues:               set[int] | None = None,
+    extracellular_side:        str   = "+z",
+    bilayer_half_thickness_nm: float = 2.0,
+    min_ec_ic_separation_nm:   float = 0.5,
+    min_ec_ic_distance_nm:     float = 1.0,
+    max_tilt_angle_deg:        float = 45.0,
+) -> OrientationValidationReport:
+    """
+    Validate that orient_protein produced a biologically coherent GRO.
+
+    Parameters
+    ----------
+    gro_path
+        Path to protein_oriented.gro (or any post-rotation GRO).
+    ec_residues
+        Residue numbers assigned to the extracellular face.
+    ic_residues
+        Residue numbers assigned to the intracellular face.
+    tm_residues
+        Optional TM segment residue numbers (for centering check).
+    extracellular_side
+        "+z" or "-z" — which Z direction the EC face should face.
+    bilayer_half_thickness_nm
+        TM COM must be within ±this value of Z=0 to pass the centering check.
+    min_ec_ic_separation_nm
+        Minimum Z-axis separation between EC and IC COMs.
+    min_ec_ic_distance_nm
+        Minimum 3D EC→IC vector length (flags degenerate residue assignments).
+    max_tilt_angle_deg
+        Maximum allowed tilt of the EC→IC axis relative to Z.
+    """
+    gro_path = Path(gro_path)
+    ec_pts   = _read_gro_ca_positions(gro_path, ec_residues)
+    ic_pts   = _read_gro_ca_positions(gro_path, ic_residues)
+    tm_pts   = _read_gro_ca_positions(gro_path, tm_residues) if tm_residues else []
+
+    checks:  list[CheckResult] = []
+    warnings: list[str]        = []
+    errors:   list[str]        = []
+    penalty  = 0.0
+
+    ec_com_z = ic_com_z = tm_com_z = None
+    ec_ic_distance_nm = tilt_angle_deg = None
+    ec_com = ic_com = None
+
+    # ── Atom presence ─────────────────────────────────────────────────────────
+    if not ec_pts:
+        errors.append(
+            "No Cα atoms found for EC residues in GRO — verify residue numbers "
+            "in structural_annotation.membrane_topology.extracellular_regions."
+        )
+        penalty += 0.35
+    if not ic_pts:
+        errors.append(
+            "No Cα atoms found for IC residues in GRO — verify residue numbers "
+            "in structural_annotation.membrane_topology.intracellular_regions."
+        )
+        penalty += 0.35
+
+    # ── Compute COMs ──────────────────────────────────────────────────────────
+    if ec_pts:
+        ec_com   = _mean_pos(ec_pts)
+        ec_com_z = ec_com[2]
+    if ic_pts:
+        ic_com   = _mean_pos(ic_pts)
+        ic_com_z = ic_com[2]
+    if tm_pts:
+        tm_com_z = _mean_pos(tm_pts)[2]
+
+    # ── Check 1: EC/IC on correct Z sides, and separation sufficient ──────────
+    if ec_com and ic_com:
+        z_sep               = ec_com_z - ic_com_z   # positive → EC at higher Z
+        ec_should_positive  = (extracellular_side == "+z")
+        ec_is_positive      = (z_sep > 0)
+        abs_sep             = abs(z_sep)
+
+        if ec_should_positive != ec_is_positive:
+            errors.append(
+                f"Orientation inverted: EC COM_z={ec_com_z:+.3f} nm, "
+                f"IC COM_z={ic_com_z:+.3f} nm — EC should be on "
+                f"{extracellular_side} (structural_annotation.orientation.extracellular_side). "
+                "Check residue numbers or flip extracellular_side in the YAML."
+            )
+            penalty += 0.40
+            checks.append(CheckResult(
+                name="ec_ic_side", passed=False,
+                message=(
+                    f"EC/IC on wrong sides of Z "
+                    f"(EC={ec_com_z:+.3f} nm, IC={ic_com_z:+.3f} nm, "
+                    f"expected EC on {extracellular_side})"
+                ),
+                value=z_sep, threshold=0.0,
+            ))
+        elif abs_sep < min_ec_ic_separation_nm:
+            warnings.append(
+                f"EC/IC Z-separation small ({abs_sep:.3f} nm < {min_ec_ic_separation_nm} nm) — "
+                "protein may not be well oriented along Z."
+            )
+            penalty += 0.15
+            checks.append(CheckResult(
+                name="ec_ic_side", passed=False,
+                message=f"EC/IC on correct sides but Z-separation small ({abs_sep:.3f} nm)",
+                value=abs_sep, threshold=min_ec_ic_separation_nm,
+            ))
+        else:
+            checks.append(CheckResult(
+                name="ec_ic_side", passed=True,
+                message=(
+                    f"EC/IC separation correct: EC={ec_com_z:+.3f} nm, "
+                    f"IC={ic_com_z:+.3f} nm on {extracellular_side}"
+                ),
+                value=abs_sep, threshold=min_ec_ic_separation_nm,
+            ))
+
+        # ── Check 2: EC→IC 3D distance ────────────────────────────────────────
+        dx = ec_com[0] - ic_com[0]
+        dy = ec_com[1] - ic_com[1]
+        dz = ec_com[2] - ic_com[2]
+        ec_ic_distance_nm = math.sqrt(dx**2 + dy**2 + dz**2)
+
+        if ec_ic_distance_nm < min_ec_ic_distance_nm:
+            warnings.append(
+                f"EC→IC vector very short ({ec_ic_distance_nm:.3f} nm < "
+                f"{min_ec_ic_distance_nm} nm) — residue assignment may be incorrect "
+                "or protein structure is degenerate."
+            )
+            penalty += 0.15
+            checks.append(CheckResult(
+                name="ec_ic_distance", passed=False,
+                message=f"EC→IC distance short ({ec_ic_distance_nm:.3f} nm)",
+                value=ec_ic_distance_nm, threshold=min_ec_ic_distance_nm,
+            ))
+        else:
+            checks.append(CheckResult(
+                name="ec_ic_distance", passed=True,
+                message=f"EC→IC distance sufficient ({ec_ic_distance_nm:.3f} nm)",
+                value=ec_ic_distance_nm, threshold=min_ec_ic_distance_nm,
+            ))
+
+        # ── Check 3: Tilt angle ───────────────────────────────────────────────
+        if ec_ic_distance_nm > 0:
+            cos_tilt      = min(1.0, abs(dz) / ec_ic_distance_nm)
+            tilt_angle_deg = math.degrees(math.acos(cos_tilt))
+
+            if tilt_angle_deg > max_tilt_angle_deg:
+                warnings.append(
+                    f"TM bundle tilt large ({tilt_angle_deg:.1f}° > {max_tilt_angle_deg}°) — "
+                    "protein may not be well aligned with the membrane normal."
+                )
+                penalty += 0.15
+                checks.append(CheckResult(
+                    name="tilt_angle", passed=False,
+                    message=f"Tilt too large ({tilt_angle_deg:.1f}° > {max_tilt_angle_deg}°)",
+                    value=tilt_angle_deg, threshold=max_tilt_angle_deg,
+                ))
+            else:
+                checks.append(CheckResult(
+                    name="tilt_angle", passed=True,
+                    message=f"Tilt angle acceptable ({tilt_angle_deg:.1f}° ≤ {max_tilt_angle_deg}°)",
+                    value=tilt_angle_deg, threshold=max_tilt_angle_deg,
+                ))
+
+    # ── Check 4: TM COM centered near Z=0 (membrane plane) ───────────────────
+    if tm_pts:
+        if abs(tm_com_z) > bilayer_half_thickness_nm:
+            warnings.append(
+                f"TM COM far from membrane plane (z={tm_com_z:+.3f} nm, "
+                f"threshold ±{bilayer_half_thickness_nm} nm) — "
+                "check TM segment residue numbers."
+            )
+            penalty += 0.10
+            checks.append(CheckResult(
+                name="tm_centered", passed=False,
+                message=(
+                    f"TM COM outside expected bilayer region "
+                    f"(z={tm_com_z:+.3f} nm, threshold ±{bilayer_half_thickness_nm} nm)"
+                ),
+                value=abs(tm_com_z), threshold=bilayer_half_thickness_nm,
+            ))
+        else:
+            checks.append(CheckResult(
+                name="tm_centered", passed=True,
+                message=(
+                    f"TM COM near membrane plane "
+                    f"(z={tm_com_z:+.3f} nm, within ±{bilayer_half_thickness_nm} nm)"
+                ),
+                value=abs(tm_com_z), threshold=bilayer_half_thickness_nm,
+            ))
+
+    return OrientationValidationReport(
+        confidence        = max(0.0, min(1.0, 1.0 - penalty)),
+        checks            = checks,
+        warnings          = warnings,
+        errors            = errors,
+        ec_com_z          = ec_com_z,
+        ic_com_z          = ic_com_z,
+        tm_com_z          = tm_com_z,
+        ec_ic_distance_nm = ec_ic_distance_nm,
+        tilt_angle_deg    = tilt_angle_deg,
+        n_ec_atoms        = len(ec_pts),
+        n_ic_atoms        = len(ic_pts),
+        n_tm_atoms        = len(tm_pts),
+    )

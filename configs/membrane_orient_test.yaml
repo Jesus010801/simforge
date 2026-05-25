@@ -1,0 +1,68 @@
+project:
+  name: membrane_orient_test
+  description: Single-pass TM peptide with EC/IC orientation data for automated orient_protein
+
+
+components:
+
+  - id: peptide_1
+    role: protein
+    file: peptide_A.pdb
+
+
+# Structural biology annotation — topology and orientation are biological
+# knowledge, separate from execution environment configuration.
+structural_annotation:
+
+  membrane_topology:
+    extracellular_regions:
+      - "1-30"
+    intracellular_regions:
+      - "70-100"
+    transmembrane_segments:
+      - residues: "31-69"
+        label: "TM1"
+        helix_type: "alpha"
+
+  orientation:
+    extracellular_side: "+z"
+    intracellular_side: "-z"
+    source: "user_annotation"
+    confidence: 0.9
+
+  evidence:
+    - source: "user_annotation"
+      confidence: 0.9
+      notes: "Single-pass TM peptide, N-terminus extracellular"
+
+
+environment:
+
+  membrane:
+    enabled: true
+    type: DPPC
+
+  solvent:
+    water_model: spce
+
+  ions:
+    concentration: 0.15
+
+  temperature_K: 309.65
+
+  duration_ns: 50.0
+
+
+forcefields:
+
+  protein: opls-aa
+
+
+simulation_objectives:
+
+  - membrane_insertion
+
+
+analysis:
+
+  - type: rmsd

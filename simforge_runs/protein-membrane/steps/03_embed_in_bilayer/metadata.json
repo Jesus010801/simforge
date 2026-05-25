@@ -2,5 +2,7 @@
     "step_id": "embed_in_bilayer",
     "stage": "assembly",
     "engine": "movememb+genrestr",
-    "step_type": "manual"
+    "step_type": "manual",
+    "template_hash": "e3b0c44298fc1c14",
+    "generated_at": "2026-05-24T00:55:56"
 }

@@ -1,5 +1,5 @@
 01. Orientar proteína (eje TM alineado con Z)
-02. Ajustar caja al tamaño de la bicapa
+02. Calcular y validar caja de bicapa
 03. Embutir proteína en bicapa lipídica
 04. Generar topología (OPLS-AA membrana)
 05. Shrink loop — convergencia APL (DPPC, target ≤ 66 Å²)
@@ -8,5 +8,5 @@
 08. Neutralización e iones fisiológicos
 09. Minimización energética (POSRES + STRONG_POSRES)
 10. Equilibración NVT (100 ps) + NPT semiisotropic (1 ns)
-11. Producción MD (100 ns, NH+PR, semiisotropic, dt=0.001)
+11. Producción MD (50 ns, NH+PR, semiisotropic, dt=0.001)
 12. Análisis rmsd

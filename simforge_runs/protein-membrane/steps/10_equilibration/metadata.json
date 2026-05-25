@@ -13,6 +13,9 @@
         "npt.gro",
         "npt.cpt"
     ],
+    "required_inputs": [
+        "../09_energy_minimization/em.gro"
+    ],
     "params": {
         "dt": 0.002,
         "nvt_nsteps": 25000,
@@ -21,5 +24,7 @@
         "pcoupltype": "semiisotropic",
         "pcoupl_npt": "Berendsen",
         "tc_grps": "system"
-    }
+    },
+    "template_hash": "224cf88ea3a211cd",
+    "generated_at": "2026-05-24T00:55:56"
 }

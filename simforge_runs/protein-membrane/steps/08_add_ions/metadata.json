@@ -6,11 +6,14 @@
     "blocking": false,
     "generated_by": "AssemblyBuilder",
     "expected_outputs": [
-        "aaions.gro"
+        "aaions.gro",
+        "topol.top"
     ],
     "params": {
         "concentration": 0.15,
         "positive_ion": "NA",
         "negative_ion": "CL"
-    }
+    },
+    "template_hash": "74c45ed62174c0e9",
+    "generated_at": "2026-05-24T00:55:56"
 }

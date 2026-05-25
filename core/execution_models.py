@@ -38,6 +38,43 @@ class StepType(str, Enum):
 
     VALIDATION = "validation"
 
+
+class AutomationLevel(str, Enum):
+    """
+    Grado de automatización de un step de simulación.
+
+    MANUAL        — El usuario hace todo a mano; SimForge no genera scripts.
+    GUIDED        — SimForge genera instrucciones (README.md), el usuario las
+                    sigue manualmente. Sin script ejecutable.
+    SEMI_AUTOMATED — SimForge genera y ejecuta el script, pero puede requerir
+                    confirmación o input del usuario en runtime.
+    AUTOMATED     — Totalmente automático; no requiere intervención del usuario.
+
+    El runtime decide si ejecutar o saltar un step basándose en este campo.
+    Cuando no está presente en metadata.json, cae de vuelta al campo step_type
+    legado para compatibilidad con workspaces antiguos.
+    """
+    MANUAL         = "manual"
+    GUIDED         = "guided"
+    SEMI_AUTOMATED = "semi_automated"
+    AUTOMATED      = "automated"
+
+    # Mapeado de AutomationLevel → step_type legado para serialización cruzada
+    @classmethod
+    def from_step_type(cls, step_type: "StepType") -> "AutomationLevel":
+        """Derive automation level from legacy StepType."""
+        return {
+            StepType.AUTOMATIC:  cls.AUTOMATED,
+            StepType.MANUAL:     cls.GUIDED,
+            StepType.EXTERNAL:   cls.MANUAL,
+            StepType.VALIDATION: cls.GUIDED,
+        }.get(step_type, cls.AUTOMATED)
+
+    @property
+    def needs_user(self) -> bool:
+        """True when the step cannot run unattended."""
+        return self in (self.MANUAL, self.GUIDED)
+
 class StepStage(str, Enum):
 
     PREPARATION = "preparation"
@@ -74,6 +111,12 @@ class SimulationStep(BaseModel):
 
     step_type: StepType = StepType.AUTOMATIC
 
+    # automation_level is the authoritative field for runtime skip decisions.
+    # When set explicitly it overrides the legacy step_type heuristic.
+    # Defaults to None so pipelines that haven't been updated yet continue to
+    # work via the step_type fallback in the executor.
+    automation_level: Optional[AutomationLevel] = None
+
     engine: str
 
     target_components: list[str] = []
@@ -93,6 +136,12 @@ class SimulationStep(BaseModel):
     # Condición semántica que causó la inclusión de este step.
     # Metadata de auditoría — no afecta ejecución.
     condition: Optional[str] = None
+
+    def effective_automation_level(self) -> AutomationLevel:
+        """Return automation_level, falling back to step_type derivation."""
+        if self.automation_level is not None:
+            return self.automation_level
+        return AutomationLevel.from_step_type(self.step_type)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

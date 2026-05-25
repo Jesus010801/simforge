@@ -95,6 +95,7 @@ class EmbeddingBuilder:
             "step_type":      step.step_type.value,
             "blocking":       step.blocking,
             "generated_by":   "EmbeddingBuilder",
+            "gate":           {"type": "apl_report"},
             "expected_outputs": ["converged.gro", "shrink_telemetry.json"],
             "params": {
                 "lipid":              lipid,
