@@ -316,22 +316,32 @@ class RuntimeExecutor(BaseExecutor):
     # ── Async implementation ──────────────────────────────────────────────────
 
     async def _run_step_async(self, record: StepExecutionRecord) -> None:
-        step_dir = Path(record.step_dir)
-        meta     = self._read_metadata(step_dir)
-        script   = self._find_script(step_dir, record.step_id)
-        pub      = self._bus.make_publisher(self._workspace_id, record.step_id)
+        step_dir  = Path(record.step_dir)
+        meta      = self._read_metadata(step_dir)
+        pub       = self._bus.make_publisher(self._workspace_id, record.step_id)
 
-        # ── Manual / external steps → skip immediately ────────────────────────
+        # ── Decide if this step needs user intervention ───────────────────────
+        # Prefer automation_level (new field); fall back to step_type (legacy).
+        automation_level = meta.get("automation_level")
+        if automation_level is not None:
+            needs_user = automation_level in ("manual", "guided")
+        else:
+            step_type  = meta.get("step_type", "automatic")
+            needs_user = step_type in ("manual", "external", "validation")
+
+        if needs_user:
+            label = automation_level or meta.get("step_type", "manual")
+            record.status        = StepStatus.SKIPPED
+            record.error_message = f"Step '{label}' — requiere acción del usuario"
+            pub.emit(EventType.STEP_SKIPPED, message=record.error_message,
+                     step_type=label)
+            return
+
+        script = self._find_script(step_dir, record.step_id)
         if script is None:
-            step_type = meta.get("step_type", "automatic")
-            if step_type in ("manual", "external", "validation"):
-                record.status        = StepStatus.SKIPPED
-                record.error_message = f"Step tipo '{step_type}' — requiere acción manual"
-                pub.emit(EventType.STEP_SKIPPED, message=record.error_message, step_type=step_type)
-            else:
-                record.status        = StepStatus.SKIPPED
-                record.error_message = "No se encontró script ejecutable"
-                pub.emit(EventType.STEP_SKIPPED, message=record.error_message)
+            record.status        = StepStatus.SKIPPED
+            record.error_message = "No se encontró script ejecutable"
+            pub.emit(EventType.STEP_SKIPPED, message=record.error_message)
             return
 
         expected_outputs: list[str] = meta.get("expected_outputs", [])
@@ -471,6 +481,47 @@ class RuntimeExecutor(BaseExecutor):
                 if remediated:
                     return  # retry succeeded — record is now DONE
             return
+
+        # ── Artifact gate ─────────────────────────────────────────────────────
+        gate_meta = meta.get("gate")
+        if gate_meta:
+            gate_type = gate_meta.get("type", "")
+            from runtime.gate_runner import run_gate, GATE_LABELS
+            gate = run_gate(gate_type, step_dir)
+            if gate is not None:
+                label = GATE_LABELS.get(gate_type, gate_type.replace("_", " ").title())
+                if gate.blocked:
+                    record.status        = StepStatus.FAILED
+                    record.error_message = (
+                        f"{label} gate FAILED (confidence={gate.confidence:.2f}). "
+                        + "  ".join(gate.errors)
+                    )
+                    pub.emit(
+                        EventType.STEP_FAILED,
+                        message=record.error_message,
+                        severity=EventSeverity.ERROR,
+                        gate_type=gate_type,
+                        gate_confidence=gate.confidence,
+                        gate_errors=gate.errors,
+                    )
+                    _console.print(
+                        f"\n  [red bold]✗ {label} gate FAILED[/red bold]  "
+                        f"[dim](confidence={gate.confidence:.2f})[/dim]"
+                    )
+                    for err in gate.errors:
+                        _console.print(f"     [red]→[/red]  {err}")
+                    _console.print(
+                        "  [dim]Downstream steps are blocked until the issue is resolved.[/dim]\n"
+                    )
+                    return
+                elif gate.warnings:
+                    _console.print(
+                        f"  [yellow]⚠[/yellow]  {label} advisory "
+                        f"[dim](confidence={gate.confidence:.2f})[/dim]:"
+                    )
+                    for w in gate.warnings:
+                        pub.emit(EventType.WARNING, message=f"{label} advisory: {w}")
+                        _console.print(f"     [yellow]→[/yellow]  {w}")
 
         # ── Register produced artifacts ───────────────────────────────────────
         for name in found:

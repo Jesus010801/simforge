@@ -19,6 +19,7 @@ import textwrap
 from pathlib import Path
 
 from core.compiler import SimulationCompiler
+from core.execution_models import AutomationLevel
 from pipelines.membrane_pipeline import MembraneWorkflowOPLSAA
 from pipelines.md_pipeline import MDPipeline
 from adapters.water_deletor_adapter import WaterDeletorAdapter, _parse_gro, _delete_bilayer_waters
@@ -63,12 +64,24 @@ def test_step_stages(membrane_result):
     assert stages.count("production") == 1
 
 
-def test_manual_steps_are_first_three(membrane_result):
+def test_manual_steps(membrane_result):
+    # match_box_to_bilayer — promoted to AUTOMATED (MatchBoxBuilder).
+    # embed_in_bilayer    — promoted to AUTOMATED (MoveMembAdapter Python).
+    # orient_protein without structural_annotation = GUIDED (step_type=preparation, not manual).
     manual = [s for s in membrane_result.plan.steps if s.step_type.value == "manual"]
-    assert len(manual) == 3
-    assert manual[0].step_id == "orient_protein"
-    assert manual[1].step_id == "match_box_to_bilayer"
-    assert manual[2].step_id == "embed_in_bilayer"
+    step_ids = [s.step_id for s in manual]
+    assert "match_box_to_bilayer" not in step_ids, (
+        "match_box_to_bilayer is now AUTOMATED — should not appear in manual steps"
+    )
+    assert "embed_in_bilayer" not in step_ids, (
+        "embed_in_bilayer is now AUTOMATED (MoveMembAdapter) — should not appear in manual steps"
+    )
+
+
+def test_embed_in_bilayer_is_automated(membrane_result):
+    embed = next(s for s in membrane_result.plan.steps if s.step_id == "embed_in_bilayer")
+    assert embed.step_type.value == "automatic"
+    assert embed.automation_level == AutomationLevel.AUTOMATED
 
 
 # ── MDP parameter verification ────────────────────────────────────────────────

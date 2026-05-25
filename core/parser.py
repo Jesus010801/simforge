@@ -585,6 +585,41 @@ def run_global_reasoning(state: SystemState) -> SystemState:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Backward compat: legacy membrane orientation → structural_annotation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _migrate_legacy_membrane_orientation(state: SystemState) -> SystemState:
+    """
+    Promote environment.membrane.orientation → state.structural_annotation.
+
+    Called after YAML parsing so that old configs with:
+        environment:
+          membrane:
+            orientation:
+              extracellular_residues: "1-30"
+              intracellular_residues: "70-100"
+    automatically get a StructuralAnnotation, and new code that reads
+    state.structural_annotation works for both old and new YAML formats.
+
+    Does nothing if structural_annotation is already set (new-format YAML).
+    """
+    if state.structural_annotation is not None:
+        return state  # new-format YAML takes precedence
+
+    mem_orient = state.environment.membrane.orientation
+    if mem_orient is None:
+        return state  # no orientation data at all
+
+    from core.structural_annotation import migrate_from_legacy_orientation
+    state.structural_annotation = migrate_from_legacy_orientation(
+        extracellular_residues=mem_orient.extracellular_residues,
+        intracellular_residues=mem_orient.intracellular_residues,
+        tm_segments=mem_orient.tm_segments,
+    )
+    return state
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Pipeline público
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -593,7 +628,8 @@ def parse_yaml(path: str | Path) -> SystemState:
     Pipeline completo: YAML → SystemState enriquecido.
 
     Etapas:
-        1. Carga y valida el YAML → SystemState (solo config)
+        1.   Carga y valida el YAML → SystemState (solo config)
+        1.2. _migrate_legacy_membrane_orientation() → backward compat
         1.5. run_semantic_normalization() → normalize objectives, apply presets,
              infer membrane protein context
         2. run_inference()             → inferred_system_type + risks globales
@@ -618,6 +654,9 @@ def parse_yaml(path: str | Path) -> SystemState:
         state = SystemState(**raw)
     except Exception as e:
         raise ValueError(f"Error validando YAML:\n{e}")
+
+    # ── Etapa 1.2: Backward compat — promote legacy membrane orientation ───────
+    state = _migrate_legacy_membrane_orientation(state)
 
     # ── Etapa 1.5: Semantic normalization ─────────────────────────────────────
     state = run_semantic_normalization(state)

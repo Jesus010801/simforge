@@ -64,14 +64,20 @@ def test_done_dep_does_not_block(executor):
     assert not executor._is_blocked(equil)
 
 
-def test_skipped_dep_does_not_block(executor):
-    """SKIPPED steps (manual/external) should not block downstream."""
+def test_skipped_dep_blocks_downstream(executor):
+    """SKIPPED steps (manual/external not yet done) must block downstream steps.
+
+    A manual step that was skipped means its outputs don't exist yet.
+    Running downstream steps would fail with missing-input errors from GROMACS.
+    """
     executor._fake_state([
-        ("review", [],         StepStatus.SKIPPED),
-        ("assemble", ["review"], StepStatus.PENDING),
+        ("orient_protein", [],                    StepStatus.SKIPPED),
+        ("embed_in_bilayer", ["orient_protein"],   StepStatus.PENDING),
     ])
-    assemble = executor.state.steps[1]
-    assert not executor._is_blocked(assemble)
+    embed = executor.state.steps[1]
+    assert executor._is_blocked(embed), (
+        "embed_in_bilayer must be blocked when orient_protein (manual) is SKIPPED"
+    )
 
 
 # ── Transitive blocking: FAILED → BLOCKED → BLOCKED ──────────────────────────

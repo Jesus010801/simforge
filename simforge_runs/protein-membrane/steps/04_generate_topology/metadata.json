@@ -8,5 +8,10 @@
         "peptide_1_processed.gro",
         "topol.top",
         "posre.itp"
-    ]
+    ],
+    "required_inputs": [
+        "../../inputs/peptide_1.gro"
+    ],
+    "template_hash": "0e624247aa7b4349",
+    "generated_at": "2026-05-24T00:55:56"
 }

@@ -47,7 +47,12 @@ class AssemblyBuilder:
 
         sid = step.step_id
 
-        if sid == "assemble_system":
+        if sid == "match_box_to_bilayer":
+            from builders.step_builders.match_box_builder import MatchBoxBuilder
+            MatchBoxBuilder().build(step, step_dir, step_dir_map)
+        elif sid == "embed_in_bilayer":
+            self._build_embed_in_bilayer(step, step_dir, step_dir_map)
+        elif sid == "assemble_system":
             self._build_assemble(step, step_dir, step_dir_map)
         elif sid == "solvate_system":
             self._build_solvate(step, step_dir, step_dir_map)
@@ -403,16 +408,25 @@ gmx solvate \\
         script = f"""#!/usr/bin/env python3
 # ─── Eliminar agua interior de bicapa ────────────────────────────────────────
 # Reimplementación Python de water_deletor.pl (Lemkul 2017).
-# Ejecutar: python3 run_clean_water.py
-import sys
+# Outputs: system_clean.gro, topol.top, water_report.json
+import sys, re, shutil, json
 from pathlib import Path
 
-# Resolución de paths relativa a la ubicación del script
-SCRIPT_DIR  = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
+def _find_root(start):
+    p = start
+    for _ in range(12):
+        if (p / "adapters").is_dir() and (p / "core").is_dir():
+            return p
+        p = p.parent
+    raise RuntimeError(f"SimForge project root not found from {{start}}")
+
+PROJECT_ROOT = _find_root(SCRIPT_DIR)
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from adapters.water_deletor_adapter import WaterDeletorAdapter
+from validators.membrane_validators import validate_no_water_in_bilayer
 
 SOLVATE_DIR = (SCRIPT_DIR / "{solvate_ref}").resolve()
 gro_in      = SOLVATE_DIR / "solvated.gro"
@@ -438,11 +452,9 @@ print(result.stdout)
 waters_removed = result.metadata["waters_removed"]
 
 # Actualizar conteo SOL en topol.top ─────────────────────────────────────────
-import re, shutil
 shutil.copy2(topol_src, topol_local)
 text = topol_local.read_text()
 
-# Encuentra la línea SOL en la sección [ molecules ]
 def update_sol_count(text, n_removed):
     lines = text.splitlines()
     out = []
@@ -459,6 +471,27 @@ def update_sol_count(text, n_removed):
 topol_local.write_text(update_sol_count(text, waters_removed) + "\\n")
 print(f"Output: {{gro_out}}")
 print(f"topol.top updated: {{topol_local}}")
+
+# ── Water gate: verify no waters remain inside bilayer core ───────────────────
+# Threshold: >5 waters → error (gate blocks); 1-5 waters → warning; 0 → pass
+_WATER_BLOCK_THRESHOLD = 5
+wv = validate_no_water_in_bilayer(gro_out, headgroup_atom="{ref_atom}", tail_atom="{middle_atom}")
+n_remain = wv.n_waters_in_bilayer
+_w_errors   = [wv.message] if n_remain > _WATER_BLOCK_THRESHOLD else []
+_w_warnings = [wv.message] if 0 < n_remain <= _WATER_BLOCK_THRESHOLD else []
+w_report = {{
+    "passed":             n_remain == 0,
+    "waters_removed":     waters_removed,
+    "n_waters_remaining": n_remain,
+    "bilayer_z_min_nm":   wv.bilayer_z_min_nm,
+    "bilayer_z_max_nm":   wv.bilayer_z_max_nm,
+    "message":            wv.message,
+    "errors":             _w_errors,
+    "warnings":           _w_warnings,
+    "confidence":         1.0,
+}}
+(SCRIPT_DIR / "water_report.json").write_text(json.dumps(w_report, indent=2))
+print(f"[water_gate] {{wv.message}}")
 """
 
         (step_dir / "run_clean_water.py").write_text(script)
@@ -473,10 +506,171 @@ print(f"topol.top updated: {{topol_local}}")
             "stage":            step.stage.value,
             "engine":           step.engine,
             "step_type":        step.step_type.value,
+            "automation_level": "automated",
             "blocking":         step.blocking,
             "generated_by":     "AssemblyBuilder",
-            "expected_outputs": ["system_clean.gro", "topol.top"],
+            "gate":             {"type": "water_report"},
+            "expected_outputs": ["system_clean.gro", "topol.top", "water_report.json"],
             "params":           {"ref_atom": ref_atom, "middle_atom": middle_atom, "nwater": nwater},
+        }, indent=4))
+
+    # ── embed_in_bilayer ──────────────────────────────────────────────────────
+
+    def _build_embed_in_bilayer(
+        self,
+        step:         SimulationStep,
+        step_dir:     Path,
+        step_dir_map: dict[str, Path],
+    ) -> None:
+        """
+        Embeds protein_boxed.gro into a pre-built bilayer using MoveMembAdapter
+        (Python reimplementation of MoveMemb.f — no gfortran required).
+
+        Inputs (resolved from DAG):
+            match_box_to_bilayer/protein_boxed.gro
+            <bilayer_file>  (looked up in CWD then Prot-Memb_FILES/)
+
+        Outputs:
+            system.gro       — protein + shifted bilayer (foundational artifact)
+            strong_posre.itp — gmx genrestr FC=100000 on Protein group
+        """
+        p            = step.params
+        bilayer_file  = p.get("bilayer_file", "dppc512_whole.gro")
+        lipid         = p.get("lipid", "DPPC")
+        # GRO residue name differs from the common lipid name (e.g. "DPP" vs "DPPC")
+        lipid_resname = p.get("lipid_residue_name", lipid)
+
+        match_box_dir = step_dir_map.get("match_box_to_bilayer")
+        match_box_ref = _rel(step_dir, match_box_dir) if match_box_dir else "../match_box_to_bilayer"
+
+        script = f"""#!/usr/bin/env python3
+# ─── Embed protein in bilayer ─────────────────────────────────────────────────
+# Uses MoveMembAdapter (Python reimpl of MoveMemb.f) to align bilayer midplane
+# with protein Z-centre, then generates strong position restraints.
+# Inputs:  <match_box_to_bilayer>/protein_boxed.gro  +  {bilayer_file}
+# Outputs: system.gro, strong_posre.itp, overlap_report.json
+import sys, subprocess, json
+from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
+def _find_root(start):
+    p = start
+    for _ in range(12):
+        if (p / "adapters").is_dir() and (p / "core").is_dir():
+            return p
+        p = p.parent
+    raise RuntimeError(f"SimForge project root not found from {{start}}")
+
+PROJECT_ROOT = _find_root(SCRIPT_DIR)
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from adapters.movememb_adapter import MoveMembAdapter
+from validators.membrane_validators import validate_no_overlap
+
+MATCH_BOX_DIR = (SCRIPT_DIR / "{match_box_ref}").resolve()
+BILAYER_FILE  = "{bilayer_file}"
+LIPID_RESNAME = "{lipid_resname}"   # GRO residue name (e.g. "DPP" for DPPC OPLS-AA)
+
+# ── Resolve bilayer GRO ───────────────────────────────────────────────────────
+bilayer_path = Path(BILAYER_FILE)
+if not bilayer_path.exists():
+    candidate = PROJECT_ROOT / "Prot-Memb_FILES" / BILAYER_FILE
+    if candidate.exists():
+        bilayer_path = candidate
+    else:
+        print(f"ERROR: bilayer '{{BILAYER_FILE}}' not found in CWD or Prot-Memb_FILES/", file=sys.stderr)
+        sys.exit(1)
+
+protein_gro = MATCH_BOX_DIR / "protein_boxed.gro"
+gro_out     = SCRIPT_DIR / "system.gro"
+
+if not protein_gro.exists():
+    print(f"ERROR: protein_boxed.gro not found at {{protein_gro}}", file=sys.stderr)
+    sys.exit(1)
+
+# ── MoveMemb: align bilayer Z-midplane with protein Z-centre ──────────────────
+adapter = MoveMembAdapter()
+result  = adapter.run(
+    protein_gro=protein_gro,
+    bilayer_gro=bilayer_path,
+    gro_out=gro_out,
+)
+
+if not result.success:
+    print(f"ERROR: MoveMembAdapter failed: {{result.error_message}}", file=sys.stderr)
+    sys.exit(1)
+
+print(result.stdout)
+m = result.metadata
+print(f"Z-shift:          {{m['z_shift_nm']:+.4f}} nm")
+print(f"Protein Z:        [{{m['protein_z_min']:.3f}}, {{m['protein_z_max']:.3f}}] nm")
+print(f"Bilayer Z (orig): [{{m['bilayer_z_min']:.3f}}, {{m['bilayer_z_max']:.3f}}] nm")
+print(f"Combined atoms:   {{m['atoms_total']}}")
+
+# ── gmx genrestr — strong position restraints on protein heavy atoms ──────────
+posre_out = SCRIPT_DIR / "strong_posre.itp"
+ret = subprocess.run(
+    ["gmx", "genrestr",
+     "-f", str(gro_out),
+     "-o", str(posre_out),
+     "-fc", "100000", "100000", "100000"],
+    input="Protein\\n", text=True, capture_output=True,
+)
+if ret.returncode != 0:
+    print(f"ERROR: gmx genrestr failed:\\n{{ret.stderr}}", file=sys.stderr)
+    sys.exit(1)
+print(f"Position restraints: {{posre_out}}")
+
+# ── gmx editconf — renumber residues from 1 ──────────────────────────────────
+ret = subprocess.run(
+    ["gmx", "editconf",
+     "-f", str(gro_out),
+     "-o", str(gro_out),
+     "-resnr", "1"],
+    capture_output=True, text=True,
+)
+if ret.returncode != 0:
+    print(f"ERROR: gmx editconf -resnr 1 failed:\\n{{ret.stderr}}", file=sys.stderr)
+    sys.exit(1)
+print(f"Output: {{gro_out}}")
+
+# ── Overlap gate: check for protein–lipid clashes ────────────────────────────
+ov = validate_no_overlap(gro_out, lipid_residue_name=LIPID_RESNAME)
+ov_report = {{
+    "passed":          ov.n_clashes == 0,
+    "n_clashes":       ov.n_clashes,
+    "n_protein_atoms": ov.n_protein_atoms,
+    "n_lipid_atoms":   ov.n_lipid_atoms,
+    "message":         ov.message,
+    "errors":          [] if ov.n_clashes == 0 else [ov.message],
+    "warnings":        [],
+    "confidence":      1.0,
+}}
+(SCRIPT_DIR / "overlap_report.json").write_text(json.dumps(ov_report, indent=2))
+print(f"[overlap_gate] {{ov.message}}")
+"""
+
+        (step_dir / "run_embed.py").write_text(script)
+        (step_dir / "run.sh").write_text(
+            "#!/bin/bash\n"
+            "# ─── embed_in_bilayer (automatic) ──────────────────────────────────\n"
+            'python3 "$(dirname "$0")/run_embed.py"\n'
+        )
+        (step_dir / "metadata.json").write_text(json.dumps({
+            "step_id":          step.step_id,
+            "stage":            step.stage.value,
+            "engine":           step.engine,
+            "step_type":        "automatic",
+            "automation_level": "automated",
+            "generated_by":     "AssemblyBuilder",
+            "gate":             {"type": "overlap_report"},
+            "expected_outputs": ["system.gro", "strong_posre.itp", "overlap_report.json"],
+            "params": {
+                "bilayer_file":       bilayer_file,
+                "lipid":              lipid,
+                "lipid_residue_name": lipid_resname,
+            },
         }, indent=4))
 
     # ── build_membrane ────────────────────────────────────────────────────────

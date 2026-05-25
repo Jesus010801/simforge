@@ -56,7 +56,11 @@ _RULES: list[tuple[str, str, str, str, Callable[[str], bool]]] = [
 
     # Catalytic distance — before generic distance
     ("catalytic_distance", "Catalytic Distance", "nm", "interaction",
-     lambda s: "catalytic" in s or "dist_cat" in s or "cat_dist" in s or "active_dist" in s),
+     lambda s: (
+         "catalytic" in s or "dist_cat" in s or "cat_dist" in s
+         or "active_dist" in s or "active_site" in s or "dist_active" in s
+         or "lig_cat" in s or "cat_lig" in s or "reaction_coord" in s
+     )),
 
     # Contacts
     ("contacts", "Contacts", "", "interaction",
@@ -68,7 +72,10 @@ _RULES: list[tuple[str, str, str, str, Callable[[str], bool]]] = [
 
     # Hydrogen bonds
     ("hydrogen_bonds", "Hydrogen Bonds", "", "interaction",
-     lambda s: "hbond" in s or "h_bond" in s or "hydrogen" in s or "hb_" in s),
+     lambda s: (
+         "hbond" in s or "h_bond" in s or "hydrogen" in s
+         or "hb_" in s or "_hb" in s or "hbnum" in s or "nhb" in s
+     )),
 
     # Kinetic energy — before generic energy
     ("kinetic_energy", "Kinetic Energy", "kJ/mol", "energetic",

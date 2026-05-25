@@ -13,13 +13,19 @@
         "md.gro",
         "md.cpt"
     ],
+    "required_inputs": [
+        "../10_equilibration/npt.gro",
+        "../10_equilibration/npt.cpt"
+    ],
     "params": {
         "dt": 0.001,
-        "nsteps": 100000000,
+        "nsteps": 50000000,
         "temperature": 309.65,
         "pressure": 1.0,
         "tc_grps": "system",
         "constraints": "h-bonds",
         "nstxout_compressed": 20000
-    }
+    },
+    "template_hash": "805c4e236f0919c7",
+    "generated_at": "2026-05-24T00:55:56"
 }

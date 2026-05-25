@@ -25,6 +25,23 @@ def infer_system_type(state: SystemState) -> SystemState:
     has_allosteric  = "allosteric_ligand" in roles
     has_membrane    = state.environment.membrane.enabled
 
+    # Secondary membrane signals (set by run_semantic_normalization before us):
+    #   - workflow_hints.membrane_required: set when membrane objectives detected
+    #   - objectives already normalized: membrane_perturbation/membrane_insertion/permeability
+    _MEM_OBJ = {"membrane_perturbation", "membrane_insertion", "permeability"}
+    has_membrane_hints = getattr(state.workflow_hints, "membrane_required", False)
+    has_membrane_obj   = bool(set(state.simulation_objectives) & _MEM_OBJ)
+
+    # implicit_membrane: treat as membrane system when objectives say so but
+    # explicit flag is missing — covers old YAMLs and manual edits.
+    # Guard: only when no ligand/substrate that would classify differently.
+    implicit_membrane = (
+        (has_membrane_hints or has_membrane_obj)
+        and not has_membrane
+        and not (has_substrate or has_competitive)
+        and not has_allosteric
+    )
+
     if has_protein and has_substrate and has_competitive:
         state.inferred_system_type = "competitive-inhibition"
 
@@ -36,6 +53,18 @@ def infer_system_type(state: SystemState) -> SystemState:
 
     elif has_protein and has_membrane:
         state.inferred_system_type = "protein-membrane"
+
+    elif has_protein and implicit_membrane:
+        # Membrane inferred from objectives — enable bilayer flag so pipeline
+        # and downstream hints work correctly.
+        state.environment.membrane.enabled = True
+        state.inferred_system_type = "protein-membrane"
+        state.global_reasoning.notes.append(
+            "[inference] membrane.enabled was False but membrane objectives "
+            f"({sorted(set(state.simulation_objectives) & _MEM_OBJ)}) detected — "
+            "routing to protein-membrane workflow. "
+            "Add 'environment.membrane.enabled: true' to suppress this fallback."
+        )
 
     elif has_protein and (has_substrate or has_competitive):
         state.inferred_system_type = "protein-ligand"

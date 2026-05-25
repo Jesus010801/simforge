@@ -223,12 +223,13 @@ class WorkspaceBuilder:
         manifest_entries = []
         for i, step in enumerate(result.execution_order, start=1):
             manifest_entries.append({
-                "step_id":   step.step_id,
-                "dir_name":  f"{i:02d}_{step.step_id}",
-                "stage":     step.stage.value,
-                "step_type": step.step_type.value,
-                "blocking":  step.blocking,
-                "depends_on": step.depends_on,
+                "step_id":         step.step_id,
+                "dir_name":        f"{i:02d}_{step.step_id}",
+                "stage":           step.stage.value,
+                "step_type":       step.step_type.value,
+                "automation_level": step.effective_automation_level().value,
+                "blocking":        step.blocking,
+                "depends_on":      step.depends_on,
             })
 
         compiled_at       = datetime.now().isoformat(timespec="seconds")

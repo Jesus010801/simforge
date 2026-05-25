@@ -1,5 +1,10 @@
 {
-    "compiled_at": "2026-05-22T21:18:04",
+    "compile_id": "aef9d259-7ba2-46c1-a784-0543e419252f",
+    "compiled_at": "2026-05-24T00:55:56",
+    "simforge_version": "0.1.0",
+    "yaml_source": "/home/jesusxd/Escritorio/simforge/configs/membrane_orient_test.yaml",
+    "builder_signature": "103a2ba12b16abd2485a606d",
+    "build_signature": "ea8433f7f4c39fa260ccbefc",
     "system_type": "protein-membrane",
     "n_steps": 12,
     "steps": [
@@ -7,7 +12,8 @@
             "step_id": "orient_protein",
             "dir_name": "01_orient_protein",
             "stage": "preparation",
-            "step_type": "manual",
+            "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": []
         },
@@ -15,7 +21,8 @@
             "step_id": "match_box_to_bilayer",
             "dir_name": "02_match_box_to_bilayer",
             "stage": "assembly",
-            "step_type": "manual",
+            "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "orient_protein"
@@ -26,6 +33,7 @@
             "dir_name": "03_embed_in_bilayer",
             "stage": "assembly",
             "step_type": "manual",
+            "automation_level": "guided",
             "blocking": false,
             "depends_on": [
                 "match_box_to_bilayer"
@@ -36,6 +44,7 @@
             "dir_name": "04_generate_topology",
             "stage": "preparation",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "embed_in_bilayer"
@@ -46,6 +55,7 @@
             "dir_name": "05_membrane_embedding",
             "stage": "membrane_embedding",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": true,
             "depends_on": [
                 "embed_in_bilayer",
@@ -57,6 +67,7 @@
             "dir_name": "06_solvate_membrane",
             "stage": "assembly",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "membrane_embedding"
@@ -67,6 +78,7 @@
             "dir_name": "07_clean_water",
             "stage": "assembly",
             "step_type": "external",
+            "automation_level": "manual",
             "blocking": false,
             "depends_on": [
                 "solvate_membrane"
@@ -77,6 +89,7 @@
             "dir_name": "08_add_ions",
             "stage": "assembly",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "clean_water"
@@ -87,6 +100,7 @@
             "dir_name": "09_energy_minimization",
             "stage": "minimization",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": true,
             "depends_on": [
                 "add_ions"
@@ -97,6 +111,7 @@
             "dir_name": "10_equilibration",
             "stage": "equilibration",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "energy_minimization"
@@ -107,6 +122,7 @@
             "dir_name": "11_production_md",
             "stage": "production",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "equilibration"
@@ -117,6 +133,7 @@
             "dir_name": "12_analysis_rmsd",
             "stage": "analysis",
             "step_type": "automatic",
+            "automation_level": "automated",
             "blocking": false,
             "depends_on": [
                 "production_md"
