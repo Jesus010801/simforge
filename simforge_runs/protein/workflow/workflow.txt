@@ -1,9 +1,0 @@
-01. Construcción del sistema completo
-02. Solvatación
-03. Adición de iones
-04. Minimización energética
-05. Equilibración
-06. Dinámica molecular de producción
-07. Análisis energy
-08. Análisis rmsd
-09. Análisis rmsf
