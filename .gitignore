@@ -42,3 +42,4 @@ mdout.mdp
 # Aider / Antigravity
 .aider*
 .antigravitycli/
+__pycache__/
