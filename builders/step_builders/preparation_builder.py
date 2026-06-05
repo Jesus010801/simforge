@@ -212,12 +212,12 @@ class PreparationBuilder:
                 f"# ─── Preparación de proteína: {target} ────────────────────────────────────\n"
                 f"# El PDB de entrada vive en workspace/inputs/ — workspace auto-contenido.\n\n"
                 f'INPUTS_DIR="{inputs_ref}"\n\n'
-                f"gmx pdb2gmx \\\\\n"
-                f'    -f "$INPUTS_DIR/{pdb_name}" \\\\\n'
-                f"    -o {output_gro} \\\\\n"
-                f"    -p topol.top \\\\\n"
-                f"    -ff {ff_gmx} \\\\\n"
-                f"    -water {water_model} \\\\\n"
+                f"gmx pdb2gmx \\\n"
+                f'    -f "$INPUTS_DIR/{pdb_name}" \\\n'
+                f"    -o {output_gro} \\\n"
+                f"    -p topol.top \\\n"
+                f"    -ff {ff_gmx} \\\n"
+                f"    -water {water_model} \\\n"
                 f"    -ignh\n"
             )
             (step_dir / "run.sh").write_text(script)

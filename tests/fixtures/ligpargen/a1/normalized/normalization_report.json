@@ -1,0 +1,14 @@
+{
+  "source_gro": "tests/fixtures/ligpargen/a1/A1_ligpargen.gro",
+  "source_itp": "tests/fixtures/ligpargen/a1/A1_ligpargen.itp",
+  "source_moleculetype": "H",
+  "normalized_moleculetype": "L01",
+  "normalized_residue_name": "L01",
+  "internal_id": "L01",
+  "atom_count": 35,
+  "total_charge": -0.00039999999999997676,
+  "source_was_generic": true,
+  "warnings": [
+    "Source moleculetype 'H' is a generic LigParGen name; normalizing to 'L01'"
+  ]
+}

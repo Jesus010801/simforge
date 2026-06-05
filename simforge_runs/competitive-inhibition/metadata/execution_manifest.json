@@ -1,10 +1,10 @@
 {
-    "compile_id": "6bd9c69f-13e8-40da-ad12-bdbece816464",
-    "compiled_at": "2026-05-25T00:25:41",
+    "compile_id": "1919e169-6ebe-4153-821f-aa1806f69ab5",
+    "compiled_at": "2026-06-03T19:31:57",
     "simforge_version": "0.1.0",
     "yaml_source": "",
-    "builder_signature": "a84aca2f1d53471fa2a0c6c9",
-    "build_signature": "a84aca2f1d53471fa2a0c6c9",
+    "builder_signature": "0ce6b7fce5c17b4308186240",
+    "build_signature": "0ce6b7fce5c17b4308186240",
     "system_type": "competitive-inhibition",
     "n_steps": 16,
     "steps": [
