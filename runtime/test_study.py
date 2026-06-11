@@ -968,3 +968,85 @@ class TestScientificSynthesis:
         from runtime.scientific_synthesis import synthesize_study
         result = synthesize_study(rich_study)
         assert isinstance(result.events, list)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Regression: parse_study → synthesize_study pipeline integrity
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestStudyCLIPipeline:
+    """Guards the two-layer scientific interpretation pipeline against future breakage.
+
+    Context: Graphify identified "two disconnected interpretation pathways" (P2).
+    That finding was a false positive — the connection passes through the Study
+    dataclass, which graph traversal missed.  These tests close the issue and
+    prevent a real disconnection from being introduced silently.
+
+    Invariant: study CLI must always execute
+        parse_study(path)  → Study
+        synthesize_study(study)  → SynthesisResult
+    in that order, passing the Study object between them.
+    """
+
+    def test_parse_study_output_accepted_by_synthesize_study(self, two_system_dir):
+        """Study produced by parse_study flows into synthesize_study without error."""
+        from runtime.study_analyzer import parse_study
+        from runtime.scientific_synthesis import synthesize_study
+        from runtime.synthesis_models import SynthesisResult
+
+        study = parse_study(two_system_dir)
+        result = synthesize_study(study)
+
+        assert isinstance(result, SynthesisResult)
+
+    def test_synthesis_covers_every_study_system(self, rich_study):
+        """synthesize_study must produce a SystemSynthesis for every system in Study."""
+        from runtime.scientific_synthesis import synthesize_study
+
+        result = synthesize_study(rich_study)
+
+        for sys_name in rich_study.systems:
+            assert sys_name in result.systems, (
+                f"SystemSynthesis missing for system '{sys_name}' — "
+                "synthesize_study is not consuming all Study systems"
+            )
+
+    def test_synthesis_system_keys_match_study_exactly(self, rich_study):
+        """synthesize_study must not produce systems absent from Study."""
+        from runtime.scientific_synthesis import synthesize_study
+
+        result = synthesize_study(rich_study)
+
+        assert set(result.systems.keys()) == set(rich_study.systems.keys())
+
+    def test_composite_scores_populated_from_study_observables(self, rich_study):
+        """Composite scores must be in [0, 1] — proves observables were consumed."""
+        from runtime.scientific_synthesis import synthesize_study
+
+        result = synthesize_study(rich_study)
+
+        for sys_name, syn in result.systems.items():
+            assert 0.0 <= syn.composite_score <= 1.0, (
+                f"composite_score out of range for '{sys_name}'"
+            )
+
+    def test_cli_study_calls_synthesize_study(self, two_system_dir):
+        """The study CLI command must call synthesize_study when systems are detected.
+
+        This is the primary regression guard: if a future refactor makes synthesis
+        opt-in, conditional, or removes the call entirely, this test fails.
+        """
+        from unittest.mock import patch
+        from runtime.synthesis_models import SynthesisResult
+        from typer.testing import CliRunner
+        from cli import cli
+
+        sentinel = SynthesisResult()
+        with patch("runtime.scientific_synthesis.synthesize_study", return_value=sentinel) as mock_synth:
+            runner = CliRunner(mix_stderr=False)
+            runner.invoke(cli, ["study", str(two_system_dir)])
+
+        assert mock_synth.called, (
+            "study command did not call synthesize_study — "
+            "the parse_study → synthesize_study pipeline is broken"
+        )

@@ -408,7 +408,7 @@ gmx solvate \\
         script = f"""#!/usr/bin/env python3
 # ─── Eliminar agua interior de bicapa ────────────────────────────────────────
 # Reimplementación Python de water_deletor.pl (Lemkul 2017).
-# Outputs: system_clean.gro, topol.top, water_report.json
+# Outputs: system_clean.gro, topol.top, clean_water_report.json, water_report.json
 import sys, re, shutil, json
 from pathlib import Path
 
@@ -425,7 +425,7 @@ def _find_root(start):
 PROJECT_ROOT = _find_root(SCRIPT_DIR)
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from adapters.water_deletor_adapter import WaterDeletorAdapter
+from adapters.water_deletor_adapter import WaterDeletorAdapter, _parse_gro
 from validators.membrane_validators import validate_no_water_in_bilayer
 
 SOLVATE_DIR = (SCRIPT_DIR / "{solvate_ref}").resolve()
@@ -433,6 +433,13 @@ gro_in      = SOLVATE_DIR / "solvated.gro"
 gro_out     = SCRIPT_DIR / "system_clean.gro"
 topol_src   = SOLVATE_DIR / "topol.top"
 topol_local = SCRIPT_DIR / "topol.top"
+
+# Count input SOL molecules (one OW per water)
+def _count_sol(path, resname="SOL", ow="OW"):
+    _, atoms, _ = _parse_gro(path)
+    return sum(1 for l in atoms if l[5:10].strip() == resname and l[10:15].strip() == ow)
+
+input_water_count = _count_sol(gro_in)
 
 adapter = WaterDeletorAdapter()
 result  = adapter.run(
@@ -449,7 +456,8 @@ if not result.success:
     sys.exit(1)
 
 print(result.stdout)
-waters_removed = result.metadata["waters_removed"]
+waters_removed    = result.metadata["waters_removed"]
+final_water_count = input_water_count - waters_removed
 
 # Actualizar conteo SOL en topol.top ─────────────────────────────────────────
 shutil.copy2(topol_src, topol_local)
@@ -468,9 +476,25 @@ def update_sol_count(text, n_removed):
         out.append(line)
     return "\\n".join(out)
 
-topol_local.write_text(update_sol_count(text, waters_removed) + "\\n")
+topology_updated = False
+try:
+    topol_local.write_text(update_sol_count(text, waters_removed) + "\\n")
+    topology_updated = True
+    print(f"topol.top updated: {{topol_local}}")
+except Exception as _te:
+    print(f"WARNING: topology update failed: {{_te}}", file=sys.stderr)
+
+# Write clean_water_report.json (primary structured report) ───────────────────
+clean_report = {{
+    "input_water_count":   input_water_count,
+    "removed_water_count": waters_removed,
+    "final_water_count":   final_water_count,
+    "cutoff_used":         {{"z_bot_nm": result.metadata["z_bot_nm"], "z_top_nm": result.metadata["z_top_nm"]}},
+    "output_gro_path":     str(gro_out),
+    "topology_updated":    topology_updated,
+}}
+(SCRIPT_DIR / "clean_water_report.json").write_text(json.dumps(clean_report, indent=2))
 print(f"Output: {{gro_out}}")
-print(f"topol.top updated: {{topol_local}}")
 
 # ── Water gate: verify no waters remain inside bilayer core ───────────────────
 # Threshold: >5 waters → error (gate blocks); 1-5 waters → warning; 0 → pass
@@ -510,8 +534,13 @@ print(f"[water_gate] {{wv.message}}")
             "blocking":         step.blocking,
             "generated_by":     "AssemblyBuilder",
             "gate":             {"type": "water_report"},
-            "expected_outputs": ["system_clean.gro", "topol.top", "water_report.json"],
-            "params":           {"ref_atom": ref_atom, "middle_atom": middle_atom, "nwater": nwater},
+            "expected_outputs": [
+                "system_clean.gro",
+                "topol.top",
+                "clean_water_report.json",
+                "water_report.json",
+            ],
+            "params": {"ref_atom": ref_atom, "middle_atom": middle_atom, "nwater": nwater},
         }, indent=4))
 
     # ── embed_in_bilayer ──────────────────────────────────────────────────────
