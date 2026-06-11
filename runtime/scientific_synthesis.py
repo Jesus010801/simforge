@@ -1,8 +1,31 @@
 """Scientific synthesis engine — multi-observable reasoning for comparative MD studies.
 
-Orchestrates: normalization → rule evaluation → consensus → events → narrative.
+Two-layer scientific interpretation pipeline
+============================================
+Layer 1  (statistical)  — runtime/study_analyzer.py
+    XVG files → ObservableResolver → StudyAnalyzer → Study
+    Produces: aggregate metrics, outlier detection, ComparativeSummary.
+
+Layer 2  (mechanistic)  — this module
+    Study → build_signal_profiles → evaluate_rules → interpret_all → SystemSynthesis
+    Produces: composite scores, interaction-state classification, narrative.
+
+Integration point: the ``study`` CLI command chains both layers in sequence::
+
+    study_obj = parse_study(path)          # Layer 1
+    synthesis  = synthesize_study(study_obj)  # Layer 2 — takes Study as its only input
+
+Layer 2 is NOT independent of Layer 1.  It consumes the Study data model produced
+by parse_study; there is no alternative production path.  ObservableResolver
+(runtime/observable_resolver.py) is the shared normalization gate for both layers.
+
+The Graphify P2 finding ("dos caminos de interpretación paralelos y desconectados")
+was a graph-analysis false positive: the connection between the layers passes through
+the Study dataclass rather than a direct inter-module function call, which caused the
+graph traversal to miss it.
 
 Entry point: synthesize_study(study) → SynthesisResult
+Orchestrates: normalization → rule evaluation → consensus → events → narrative.
 """
 from __future__ import annotations
 
