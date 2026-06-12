@@ -23,6 +23,10 @@ class LigandExportResult(BaseModel):
     error: Optional[str] = None
     # RMSD of heavy atoms between input and processed output (via Kabsch alignment)
     heavy_atom_rmsd: Optional[float] = None
+    # Canonical SMILES — populated by export_for_ligpargen_smiles() and legacy export
+    smiles: Optional[str] = None
+    # Net formal charge computed by RDKit; None when not computed (e.g. mocked in tests)
+    formal_charge: Optional[int] = None
 
 
 class LigandPreparationValidationResult(BaseModel):
