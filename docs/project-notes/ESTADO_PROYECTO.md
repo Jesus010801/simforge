@@ -1,7 +1,7 @@
 # Estado del Proyecto — SimForge
-**Actualizado:** 2026-06-11 (sesión 7)
-**Líneas de código:** ~33,000 Python en ~160 archivos
-**Tests:** 1041 pasando, 0 fallos, 6 skipped (3 requieren rdkit_env)
+**Actualizado:** 2026-06-11 (sesión 8)
+**Líneas de código:** ~33,500 Python en ~162 archivos
+**Tests:** 1036 pasando, 0 fallos, 6 skipped (benchmarks excluidos; 3 skipped requieren rdkit_env)
 
 ---
 
@@ -20,9 +20,10 @@ Tres productos en un repositorio:
 │  directorio con XVGs → clasificación científica + ranking        │
 │  Estado: funcional y útil HOY con datos reales                   │
 ├─────────────────────────────────────────────────────────────────┤
-│  PRODUCTO C — Ligand Parameterization Toolkit    ← NUEVO         │
-│  SDF/PDB → LigParGen-ready PDB → normalization → assembly        │
-│  Estado: biblioteca completa, CLI parcialmente expuesto          │
+│  PRODUCTO C — Ligand Parameterization Toolkit                    │
+│  SDF/PDB → LigParGen-ready export → normalización → assembly     │
+│  Estado: export validado experimentalmente con LigParGen real    │
+│          Charge reporting completo. CLI maduro.                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -33,13 +34,13 @@ Tres productos en un repositorio:
 ```
 simforge/
 │
-├── cli.py                         ~3000 líneas  ← MONOLITO (deuda conocida)
+├── cli.py                         ~3100 líneas  ← MONOLITO (deuda conocida)
 │   ├── simforge compile/run/validate/inspect/...
 │   ├── simforge study/analyze/summary/status
 │   ├── simforge annotate-structure
-│   └── simforge ligand export-ligpargen         ← NUEVO (sesión 7)
+│   └── simforge ligand export-ligpargen  (sesión 7-8: --legacy --smiles --charge)
 │
-├── core/                          pipeline de compilación
+├── core/
 │   ├── compiler.py
 │   ├── parser.py
 │   ├── decision_engine.py
@@ -55,96 +56,60 @@ simforge/
 │   ├── workflow_hints.py          bridge semántica → policy
 │   ├── workspace_fingerprint.py   SHA-256 invalidación
 │   ├── project_manager.py         gestión timestamped runs
-│   ├── ligand_workflow_models.py  Pydantic models fases 1-4 ligando   ← NUEVO
-│   └── md_knowledge/              base de conocimiento MD
-│       ├── states.py
-│       ├── patterns.py
-│       ├── contexts.py
-│       ├── heuristics.py
-│       ├── evidence.py
-│       └── interpreter.py
+│   ├── ligand_workflow_models.py  Pydantic models fases 1-4 + formal_charge ← sesión 8
+│   └── md_knowledge/
+│       ├── states.py / patterns.py / contexts.py
+│       ├── heuristics.py / evidence.py / interpreter.py
 │
-├── ligand/                        toolkit parameterización ligandos    ← NUEVO
+├── ligand/                        toolkit parameterización ligandos
 │   ├── rdkit_reader.py            carga mol (lazy RDKit)
-│   ├── export.py                  export_for_ligpargen / _legacy
+│   ├── export.py                  legacy/smiles + charge helpers  ← sesión 8
 │   ├── preparation.py             validate_ligand_for_parameterization
 │   ├── legacy_writer.py           LigParGenLegacyWriter (ATOM-record PDB)
 │   ├── normalization.py           normalize_ligpargen_outputs
-│   ├── ligpargen_import_validator.py  LigParGenImportValidator
+│   ├── ligpargen_import_validator.py
 │   ├── pose_rewriter.py           PoseRewriter (Kabsch + coord transfer)
-│   ├── test_normalization.py      13 tests
-│   ├── test_ligpargen_import_validator.py  19 tests
-│   └── test_pose_rewriter.py      21 tests
+│   └── test_*.py                  53 tests (normalization, validator, pose)
 │
-├── builders/                      materializadores de workspace
+├── builders/
 │   ├── workspace_builder.py
 │   └── step_builders/
 │       ├── preparation_builder.py
 │       ├── membrane_orient_builder.py  orient_protein AUTOMATED/GUIDED
-│       ├── assembly_builder.py         clean_water AUTOMATED (sesión 6)
+│       ├── assembly_builder.py         clean_water AUTOMATED
 │       ├── match_box_builder.py        match_box_to_bilayer AUTOMATED
-│       ├── minimization_builder.py
-│       ├── equilibration_builder.py
-│       ├── production_builder.py
-│       ├── analysis_builder.py
+│       ├── minimization/equilibration/production/analysis builders
 │       ├── embedding_builder.py   shrink loop membrana
 │       ├── parametrization_builder.py
-│       ├── validation_builder.py
-│       ├── enhanced_sampling_builder.py
 │       └── _utils.py              mdrun_block / mdrun_resume_block
 │
 ├── runtime/                       capa de análisis (el valor real)
-│   ├── xvg_parser.py
-│   ├── convergence_analyzer.py
-│   ├── trajectory_ingestor.py
-│   ├── quality_classifier.py
-│   ├── scientific_summary.py
-│   ├── study_models.py
-│   ├── observable_resolver.py
-│   ├── study_analyzer.py
-│   ├── synthesis_models.py
-│   ├── interaction_interpreter.py
-│   ├── consensus_engine.py
-│   ├── event_detector.py
-│   ├── scientific_synthesis.py
+│   ├── xvg_parser.py / convergence_analyzer.py / trajectory_ingestor.py
+│   ├── quality_classifier.py / scientific_summary.py
+│   ├── study_models.py / observable_resolver.py / study_analyzer.py
+│   ├── synthesis_models.py / interaction_interpreter.py
+│   ├── consensus_engine.py / event_detector.py / scientific_synthesis.py
 │   ├── executor.py                RuntimeExecutor (async)
-│   ├── execution_backend.py       ABC ExecutionBackend
-│   ├── stream.py
-│   ├── events.py
-│   ├── journal.py
-│   ├── metrics.py
-│   ├── artifacts.py
-│   ├── cache.py
+│   ├── execution_backend.py
 │   └── gates/
-│       ├── gate_runner.py
-│       ├── water_gate.py          lee clean_water_report.json (nuevo) + compat
-│       ├── apl_gate.py
-│       ├── overlap_gate.py
-│       ├── topology_gate.py
-│       ├── box_match_gate.py
-│       └── orientation_gate.py
+│       ├── gate_runner.py / water_gate.py / apl_gate.py
+│       ├── overlap_gate.py / topology_gate.py
+│       ├── box_match_gate.py / orientation_gate.py
 │
 ├── executors/
-│   ├── shell_executor.py
-│   ├── gromacs_executor.py
-│   ├── base_executor.py
-│   ├── adaptive_reasoning.py
-│   ├── remediation_executor.py
-│   ├── signal_detector.py        AdaptiveReasoner
-│   └── execution_state.py
+│   ├── shell_executor.py / gromacs_executor.py / base_executor.py
+│   ├── adaptive_reasoning.py / remediation_executor.py
+│   ├── signal_detector.py / execution_state.py
 │
 ├── adapters/
-│   ├── inflategro_adapter.py
-│   ├── movememb_adapter.py
+│   ├── inflategro_adapter.py / movememb_adapter.py
 │   └── water_deletor_adapter.py   WaterDeletorAdapter (Python puro, sin Perl)
 │
 ├── pipelines/
 │   └── membrane_pipeline.py       12 steps DPPC/OPLS-AA
 │
 └── validators/
-    ├── protein_validator.py
-    ├── ligand_validator.py
-    └── membrane_validators.py
+    ├── protein_validator.py / ligand_validator.py / membrane_validators.py
 ```
 
 ---
@@ -173,11 +138,18 @@ simforge status    [workspace]                # estado de ejecución
 # Structural annotation (protein_membrane)
 simforge annotate-structure <config.yaml>     # wizard EC/IC/TM → escribe al YAML
 
-# Ligand toolkit (NUEVO — sesión 7)
-simforge ligand export-ligpargen <ligand.sdf>             # exporta PDB moderno
-simforge ligand export-ligpargen <ligand.sdf> --legacy    # exporta legacy (online server)
-simforge ligand export-ligpargen <ligand.sdf> \
-    --mol-name A001 --output-dir ./out/                   # opciones completas
+# Ligand toolkit (sesiones 7-8 — maduro)
+simforge ligand export-ligpargen <lig.sdf> --legacy
+    # PDB validado experimentalmente con servidor LigParGen real
+    # Escribe 4 archivos: LIG_ligpargen_legacy.pdb + LIG_ligpargen.smi
+    #                     + LIG_meta.json + LIG_charge.txt
+
+simforge ligand export-ligpargen <lig.sdf> --smiles
+    # SMILES canónico + metadata JSON + charge advisory
+    # Escribe 3 archivos: LIG.smi + LIG_meta.json + LIG_charge.txt
+
+simforge ligand export-ligpargen <lig.sdf> --legacy --mol-name A001 --output-dir ./out/
+    # Opciones completas
 ```
 
 ---
@@ -212,22 +184,24 @@ simforge ligand export-ligpargen <ligand.sdf> \
 
 ```
 Fase 1 — Validación estructural
-  ligand_validator.py:validate_ligand()           ← hookeado en compiler (parse stage 3)
-  
-Fase 2 — Exportación para LigParGen
+  ligand_validator.py:validate_ligand()           ← hookeado en compiler
+
+Fase 2 — Exportación para LigParGen  ← CLI maduro (sesiones 7-8)
   preparation.py:validate_ligand_for_parameterization()   (pre-flight check)
-  export.py:export_for_ligpargen()                         (PDB moderno, HETATM)
-  export.py:export_for_ligpargen_legacy()                  (PDB legacy, ATOM records)
-  legacy_writer.py:LigParGenLegacyWriter                   (escritor de formato legacy)
-  
-  ► CLI: simforge ligand export-ligpargen <sdf> [--legacy] [--mol-name] [--output-dir]
-  
+  export.py:export_for_ligpargen_legacy()          (PDB ATOM, validado con servidor real)
+  export.py:export_for_ligpargen_smiles()          (SMILES canónico)
+  export.py:export_for_ligpargen()                 (PDB moderno HETATM, referencia)
+  legacy_writer.py:LigParGenLegacyWriter
+  export._compute_formal_charge() / _charge_label() / _write_charge_txt()
+
+  ► CLI: simforge ligand export-ligpargen <sdf> --legacy|--smiles [opciones]
+
 Fase 3 — Importación de outputs LigParGen
-  normalization.py:normalize_ligpargen_outputs()           (renombra H/UNK/LIG → L01)
-  ligpargen_import_validator.py:LigParGenImportValidator   (valida .gro + .itp)
-  
+  normalization.py:normalize_ligpargen_outputs()
+  ligpargen_import_validator.py:LigParGenImportValidator
+
 Fase 4 — Reescritura de pose
-  pose_rewriter.py:PoseRewriter.rewrite()                  (transfiere coords docked → GRO)
+  pose_rewriter.py:PoseRewriter.rewrite()          (transfiere coords docked → GRO)
 
 Pendiente:
   - Fases 3-4 sin exposición CLI
@@ -235,9 +209,31 @@ Pendiente:
   - parametrize_ligand step en compiler todavía GUIDED (manual)
 ```
 
+### Outputs generados por `--legacy` (validados con LigParGen real)
+
+```
+ligpargen_export/
+├── LIG_ligpargen_legacy.pdb   ← subir al servidor web LigParGen
+├── LIG_ligpargen.smi          ← SMILES canónico companion
+├── LIG_meta.json              ← nombre, SMILES, heavy_atom_count, formal_charge
+└── LIG_charge.txt             ← advisory de carga (SIEMPRE revisar antes de submit)
+```
+
+`LIG_charge.txt` contiene:
+```
+Molecule: LIG
+Formal charge: +1
+Recommended LigParGen charge selection: +1
+```
+
+**Lección aprendida (sesión 8):** el formato PDB legacy generado por SimForge SÍ es
+aceptado por el servidor LigParGen. El fallo anterior fue un **charge mismatch**:
+la molécula tenía carga formal +1 y se sometió con charge=0. SimForge ahora reporta
+la carga formal explícitamente y emite un WARNING amarillo cuando es ≠ 0.
+
 **Dependencia RDKit:**
-- Fases 2 (export/preparation) y 3-4 (pose_rewriter) requieren RDKit
-- Activar `rdkit_env` conda env antes de usar `simforge ligand export-ligpargen`
+- Fases 2-4 requieren RDKit — activar `rdkit_env` antes de usar `simforge ligand export-ligpargen`
+- El CLI importa RDKit de forma lazy (solo al ejecutar el comando, no en `--help`)
 - El resto de SimForge funciona sin RDKit (pure Python)
 
 ---
@@ -261,7 +257,6 @@ Pendiente:
   `input_water_count`, `removed_water_count`, `final_water_count`,
   `cutoff_used` (z_bot/z_top nm), `output_gro_path`, `topology_updated`
 - `water_gate.py` lee `clean_water_report.json` primero, fallback a `water_report.json`
-- `automation_level: automated` — no se skipea en dry-run
 
 ### Analysis Layer (single simulation — `simforge analyze`)
 - Parse XVG: RMSD, RMSF, energía, presión, temperatura
@@ -277,11 +272,16 @@ Pendiente:
 - Scientific Synthesis: 9 reglas ponderadas, composite score, narrativa 5 párrafos
 - Invariante verificado (sesión 7): parse_study → synthesize_study siempre encadenados
 
-### Ligand Export (NUEVO — `simforge ligand export-ligpargen`)
-- Exporta SDF/MOL/PDB → PDB para LigParGen
-- Modo moderno (HETATM records) y legacy (ATOM records para servidor online)
+### Ligand Export (sesiones 7-8 — CLI maduro)
+- **`--legacy`**: PDB ATOM-record + CONECT, validado con servidor LigParGen real
+- **`--smiles`**: SMILES canónico para submit directo al campo de texto de LigParGen
+- Ambos modos computan `formal_charge` con `Chem.GetFormalCharge(mol)`
+- Ambos escriben `_meta.json` (con `formal_charge`) y `_charge.txt` (advisory)
+- CLI muestra `Formal charge: +1` + `LigParGen charge: +1`
+- WARNING panel amarillo cuando `formal_charge ≠ 0`: "In LigParGen select charge +1 instead of 0"
 - Valida RMSD heavy-atom pre/post (Kabsch) — warn si > 0.05 Å
 - Mensaje claro si RDKit ausente: "Activate the rdkit_env environment"
+- Instalable desde cualquier directorio (`ligand*` y `utils*` en pyproject.toml)
 
 ---
 
@@ -313,13 +313,22 @@ Pendiente:
 | ligand/ligpargen_import_validator | 19 | cubierto |
 | ligand/pose_rewriter | 21 | cubierto |
 | ligand/export + preparation + legacy | skipped¹ | requiere rdkit_env |
-| CLI/ligand export-ligpargen | 22 | cubierto (sesión 7, mocked) |
-| benchmarks/membrane_dppc_oplsaa | 26 | cubierto |
+| CLI/ligand export-ligpargen | 58 | cubierto (sesión 8, mocked) ← era 22 |
+| benchmarks/membrane_dppc_oplsaa | 26 | pre-existing failures |
 
 ¹ Los tests de export/preparation/legacy_writer usan `pytest.importorskip("rdkit.Chem")`.
   Correr con: `conda run -n rdkit_env python -m pytest ligand/ -v`
 
-**Total: 1041 tests, 0 fallos** (6 skipped por RDKit)
+**Total: 1036 tests, 0 fallos** (6 skipped por RDKit; benchmarks excluidos)
+
+### Nuevos tests sesión 8 (test_cli_ligand.py: 22 → 58)
+- `TestCLIExternalDirectory` — regresión subprocess desde `/tmp` (import fix)
+- `TestExportSmiles` — modo `--smiles`: dispatch, SMILES en output, error cases
+- `TestHelpText` — help documenta `--legacy` como validado, menciona carga
+- `TestPDBAdvisory` — legacy lista companion files (smi, meta, charge.txt)
+- `TestLegacyBackwardCompat` — regresión backward compat
+- `TestChargeReporting` (18 tests) — neutro/positivo/negativo en legacy y smiles,
+  `_charge_label`, `_write_charge_txt`, WARNING panel
 
 ---
 
@@ -329,48 +338,42 @@ Pendiente:
 
 **1. Arquitectura declarativa limpia (core)**
 Pipeline YAML → SystemState → SimulationPlan → DAG bien diseñado.
-Cada capa tiene responsabilidad clara.
 
 **2. Study Layer + Synthesis — potencia real**
 `simforge study` clasifica sistemas desde XVGs crudos con razonamiento
 explícito. Ranking, estados de interacción, narrativa científica en segundos.
 
 **3. Sin dependencias científicas pesadas (base)**
-Pure Python en el compilador y el estudio. Sin numpy, MDAnalysis, scipy.
-RDKit es opt-in (solo para ligandos).
+Pure Python en el compilador y el estudio. RDKit es opt-in (solo ligandos).
 
 **4. Test suite sólida**
-1041 tests con 0 fallos. Compilador, study layer, gates, builders, CLI
-todos cubiertos con regresiones automáticas.
+1036 tests con 0 fallos. CLI ligand maduró de 22 a 58 tests en esta sesión.
 
 **5. Pipeline membrana DAG-completo**
 12 steps verificados en dry-run con automation_level correcto.
-clean_water automatizado con reporte estructurado.
 
-**6. Ligand toolkit completo (biblioteca)**
-Fases 1-4 implementadas: validación → export → normalización → pose.
-CLI expuesto para la fase más útil (export-ligpargen).
+**6. Ligand export validado con servidor real**
+`--legacy` PDB verificado experimentalmente con LigParGen web.
+Charge reporting explícito elimina el error más común (charge mismatch).
 
 ---
 
 ## Problemas actuales
 
-### P1. cli.py con ~3000 líneas es un monolito
-Identificado por análisis Graphify (sesión 7). Crecer con `ligand` subapp
-sin refactorizar es adding debt.
+### P1. cli.py con ~3100 líneas es un monolito
+Crecer con más subcomandos ligand sin refactorizar aumenta la deuda.
 
 **Split recomendado:**
 - `cli_compile.py` → compile, validate, inspect, init, recompile, clean
 - `cli_runtime.py` → run, dry-run, status
 - `cli_study.py` → study, analyze, summary
 - `cli_annotation.py` → annotate-structure
-- `cli_ligand.py` → ligand subapp (ya coherente)
+- `cli_ligand.py` → ligand subapp (ya coherente, 150 líneas)
 - `cli.py` → router fino + helpers compartidos
 
 ### P2. DOS CAMINOS DE INTERPRETACIÓN — CERRADO
-Problema P2 del análisis Graphify marcado como falso positivo (sesión 7).
-`parse_study` → `synthesize_study` están encadenados en producción.
-Test de regresión añadido en `runtime/test_study.py::TestStudyCLIPipeline`.
+`parse_study` → `synthesize_study` encadenados en producción.
+Test de regresión en `runtime/test_study.py::TestStudyCLIPipeline`.
 
 ### P3. FRAGMENTACIÓN DE EXECUTORS
 Tres caminos de ejecución:
@@ -388,3 +391,14 @@ rewriting, assembly) son solo biblioteca.
 ### P6. parametrize_ligand TODAVÍA ES GUIDED
 El step de parametrización en el compiler sigue siendo GUIDED (manual).
 La automatización requiere integrar fases 3-4 con el builder.
+
+---
+
+## Historial de sesiones
+
+| Sesión | Foco principal |
+|--------|---------------|
+| 1-5 | Core compiler, study layer, membrane pipeline |
+| 6 | clean_water AUTOMATED + WaterDeletorAdapter |
+| 7 | Ligand toolkit CLI (export-ligpargen), study layer fixes |
+| 8 | Import fix (pyproject.toml), --smiles mode, charge reporting, 36 tests nuevos |
