@@ -344,7 +344,7 @@ def parse_study(path: Path) -> Study:
     obs_all: set[str] = set()
 
     for system_name, replica_label, resolved, data, xvg_path in matched:
-        times_ns = [t / 1000.0 for t in data.time_ps]
+        times_ns = data.times_ns()
         values   = data.series[0].values[: len(times_ns)]
 
         series = ObservableSeries(

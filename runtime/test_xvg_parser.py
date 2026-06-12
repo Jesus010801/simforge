@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from runtime.xvg_parser import parse_xvg, XVGData, XVGSeries
+from runtime.xvg_parser import parse_xvg, XVGData, XVGSeries, _extract_x_unit
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -114,6 +114,90 @@ class TestXVGData:
         p = _write_xvg(tmp_path, "0.0  0.1\n")
         data = parse_xvg(p)
         assert data.source == p
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# X-axis unit detection
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestXVGUnitDetection:
+    """Unit detection from xlabel and unit-aware times_ns() conversion."""
+
+    # ── _extract_x_unit helper ────────────────────────────────────────────────
+
+    def test_extract_ps(self):
+        assert _extract_x_unit('Time (ps)') == "ps"
+
+    def test_extract_ns(self):
+        assert _extract_x_unit('Time (ns)') == "ns"
+
+    def test_extract_us_ascii(self):
+        assert _extract_x_unit('Time (us)') == "us"
+
+    def test_extract_us_unicode_mu(self):
+        assert _extract_x_unit('Time (µs)') == "us"
+
+    def test_extract_none_no_parens(self):
+        assert _extract_x_unit('Time') is None
+
+    def test_extract_none_empty(self):
+        assert _extract_x_unit('') is None
+
+    def test_extract_case_insensitive(self):
+        assert _extract_x_unit('TIME (NS)') == "ns"
+
+    # ── parse_xvg sets x_unit from file ──────────────────────────────────────
+
+    def test_parse_sets_x_unit_ps(self, tmp_path):
+        p = _write_xvg(tmp_path, '@ xaxis label "Time (ps)"\n0.0 0.1\n1000.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.x_unit == "ps"
+
+    def test_parse_sets_x_unit_ns(self, tmp_path):
+        p = _write_xvg(tmp_path, '@ xaxis label "Time (ns)"\n0.0 0.1\n100.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.x_unit == "ns"
+
+    def test_parse_sets_x_unit_us(self, tmp_path):
+        p = _write_xvg(tmp_path, '@ xaxis label "Time (µs)"\n0.0 0.1\n0.1 0.2\n')
+        data = parse_xvg(p)
+        assert data.x_unit == "us"
+
+    def test_parse_x_unit_none_when_no_xlabel(self, tmp_path):
+        p = _write_xvg(tmp_path, '0.0 0.1\n1000.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.x_unit is None
+
+    def test_parse_x_unit_none_when_xlabel_has_no_unit(self, tmp_path):
+        p = _write_xvg(tmp_path, '@ xaxis label "Time"\n0.0 0.1\n1000.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.x_unit is None
+
+    # ── times_ns() unit-aware conversion ─────────────────────────────────────
+
+    def test_times_ns_with_ps_label(self, tmp_path):
+        p = _write_xvg(tmp_path, '@ xaxis label "Time (ps)"\n0.0 0.1\n1000.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.times_ns() == pytest.approx([0.0, 1.0])
+
+    def test_times_ns_with_ns_label(self, tmp_path):
+        """100 ns in file → 100 ns after conversion (no scaling)."""
+        p = _write_xvg(tmp_path, '@ xaxis label "Time (ns)"\n0.0 0.1\n100.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.times_ns() == pytest.approx([0.0, 100.0])
+
+    def test_times_ns_with_us_label(self, tmp_path):
+        """0.1 µs in file → 100 ns after conversion."""
+        p = _write_xvg(tmp_path, '@ xaxis label "Time (us)"\n0.0 0.1\n0.1 0.2\n')
+        data = parse_xvg(p)
+        assert data.times_ns() == pytest.approx([0.0, 100.0])
+
+    def test_times_ns_no_unit_assumes_ps(self, tmp_path):
+        """Missing xlabel → assume ps → divide by 1000."""
+        p = _write_xvg(tmp_path, '0.0 0.1\n1000.0 0.2\n')
+        data = parse_xvg(p)
+        assert data.x_unit is None
+        assert data.times_ns() == pytest.approx([0.0, 1.0])
 
 
 # ─────────────────────────────────────────────────────────────────────────────

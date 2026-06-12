@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 
 # Patterns for @ directives
@@ -17,6 +18,22 @@ _TITLE_RE   = re.compile(r'@\s+title\s+"(.+)"',   re.IGNORECASE)
 _XLABEL_RE  = re.compile(r'@\s+xaxis\s+label\s+"(.+)"', re.IGNORECASE)
 _YLABEL_RE  = re.compile(r'@\s+yaxis\s+label\s+"(.+)"', re.IGNORECASE)
 _LEGEND_RE  = re.compile(r'@\s+s(\d+)\s+legend\s+"(.+)"', re.IGNORECASE)
+
+# ns conversion factors keyed by unit string
+_NS_FACTORS: dict[str, float] = {"ps": 1e-3, "ns": 1.0, "us": 1e3}
+
+
+def _extract_x_unit(xlabel: str) -> Optional[str]:
+    """Return 'ps', 'ns', or 'us' from an xlabel like 'Time (ns)'.
+
+    Recognises µs / μs / us. Returns None when no unit is declared.
+    """
+    lower = xlabel.lower()
+    for token, unit in [("(us)", "us"), ("(µs)", "us"), ("(μs)", "us"),
+                        ("(ns)", "ns"), ("(ps)", "ps")]:
+        if token in lower:
+            return unit
+    return None
 
 
 @dataclass
@@ -30,13 +47,19 @@ class XVGData:
     title:    str
     xlabel:   str
     ylabel:   str
-    time_ps:  list[float]     # first column (time or x-axis)
+    time_ps:  list[float]     # raw x-axis values (unit given by x_unit)
     series:   list[XVGSeries]
     source:   Path
+    x_unit:   Optional[str] = None  # "ps", "ns", "us", or None (not declared → assume ps)
 
     def times_ns(self) -> list[float]:
-        """Convert time_ps to nanoseconds."""
-        return [t / 1000.0 for t in self.time_ps]
+        """Convert x-axis values to nanoseconds using the detected unit.
+
+        When x_unit is None (not declared in the XVG header) ps is assumed for
+        backward compatibility, matching GROMACS default output behaviour.
+        """
+        factor = _NS_FACTORS.get(self.x_unit or "ps", 1e-3)
+        return [t * factor for t in self.time_ps]
 
 
 def parse_xvg(path: Path) -> XVGData:
@@ -46,6 +69,9 @@ def parse_xvg(path: Path) -> XVGData:
     - malformed / non-float data lines (skipped)
     - missing directives (empty string defaults)
     - files with no data (returns empty series)
+
+    The x_unit field is extracted from the xaxis label if present.
+    When missing, x_unit is None and times_ns() will assume ps (backward compat).
     """
     title:   str = ""
     xlabel:  str = ""
@@ -110,4 +136,5 @@ def parse_xvg(path: Path) -> XVGData:
         time_ps = time_ps,
         series  = series,
         source  = path,
+        x_unit  = _extract_x_unit(xlabel),
     )

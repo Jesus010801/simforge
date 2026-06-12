@@ -2028,6 +2028,8 @@ def analyze(
     ctx_label = f" [{context}]" if context else ""
     with app.status(f"  Analyzing [cyan]{sim_path}[/cyan]{ctx_label}..."):
         try:
+            from runtime.trajectory_ingestor import discover_trajectory
+            manifest = discover_trajectory(sim_path)
             _summary, report = analyze_trajectory(sim_path, context=context)
         except Exception as exc:
             app.print(f"[red]Analysis error:[/red] {exc}")
@@ -2038,7 +2040,9 @@ def analyze(
 
     # ── JSON output ──────────────────────────────────────────────────────────
     if format == "json":
-        out_text = _json.dumps(report.as_dict(), indent=2)
+        out = report.as_dict()
+        out["discovered_files"] = {lbl: str(p.name) for lbl, p in manifest.xvg_files.items()}
+        out_text = _json.dumps(out, indent=2)
         if output:
             Path(output).write_text(out_text)
             app.print(f"[dim]Written to {output}[/dim]")
@@ -2066,6 +2070,32 @@ def analyze(
             header_lines.append(f"  RMSD data    {report.metrics['rmsd_total_ns']} ns")
         if "energy_total_ns" in report.metrics:
             header_lines.append(f"  Energy data  {report.metrics['energy_total_ns']} ns")
+
+    # ── Discovered XVG files ─────────────────────────────────────────────────
+    if manifest.xvg_files:
+        from rich.table import Table as _Table
+        from runtime.trajectory_ingestor import load_xvg_files as _load_xvg
+        _xvg_map = _load_xvg(manifest)
+        ftable = _Table(box=box.SIMPLE, show_header=False, padding=(0, 1))
+        ftable.add_column("label", style="cyan", no_wrap=True)
+        ftable.add_column("arrow", width=2, style="dim")
+        ftable.add_column("file",  style="dim")
+        ftable.add_column("unit",  style="dim")
+        for lbl, fpath in sorted(manifest.xvg_files.items()):
+            _d = _xvg_map.get(lbl)
+            if _d and _d.x_unit:
+                _unit_tag = f"[time: {_d.x_unit}]"
+            elif _d and _d.time_ps:
+                _unit_tag = "[time: ps (assumed)]"
+            else:
+                _unit_tag = ""
+            ftable.add_row(lbl, "←", fpath.name, _unit_tag)
+        app.print(Panel(ftable, title="Discovered XVG files", border_style="dim", padding=(0, 1)))
+    else:
+        app.print(Panel(
+            "  [dim]No XVG files found in this directory.[/dim]",
+            title="Discovered XVG files", border_style="dim", padding=(0, 1),
+        ))
 
     app.print(Panel(
         "\n".join(header_lines),
