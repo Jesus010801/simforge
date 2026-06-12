@@ -59,6 +59,11 @@ def _ligand_sdf(tmp_path: Path) -> Path:
     return p
 
 
+def _unwrapped_output(text: str) -> str:
+    """Collapse Rich line-wrapping so substring checks are terminal-width independent."""
+    return text.replace("\n", "")
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. Help / routing
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -524,7 +529,8 @@ class TestPDBAdvisory:
                 "--output-dir", str(tmp_path),
             ])
         assert result.exit_code == 0, result.output
-        assert "_ligpargen.smi" in result.output or "ligpargen.smi" in result.output
+        assert "LIG_ligpargen" in result.output
+        assert ".smi" in result.output
 
     def test_legacy_lists_charge_txt(self, tmp_path):
         sdf = _ligand_sdf(tmp_path)
@@ -536,7 +542,8 @@ class TestPDBAdvisory:
                 "--output-dir", str(tmp_path),
             ])
         assert result.exit_code == 0, result.output
-        assert "_charge.txt" in result.output or "charge.txt" in result.output
+        out = result.output.replace("\n", "")
+        assert "LIG_charge.txt" in out
 
     def test_modern_succeeds_without_crash(self, tmp_path):
         sdf = _ligand_sdf(tmp_path)
