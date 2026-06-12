@@ -151,7 +151,7 @@ def generate_summary(workspace_path: Path) -> ScientificSummary:
 
         # Track total simulation time from the last RMSD or any XVG time axis
         if data.time_ps and (runtime_ns is None or kind == "rmsd"):
-            candidate_ns = data.time_ps[-1] / 1000.0
+            candidate_ns = data.times_ns()[-1]
             if runtime_ns is None or candidate_ns > runtime_ns:
                 runtime_ns = candidate_ns
 

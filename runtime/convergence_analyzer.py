@@ -92,11 +92,11 @@ def analyze_rmsd_convergence(
             verdict        = "No data available for RMSD convergence analysis.",
         )
 
-    values = data.series[0].values   # first data column = RMSD
-    times  = data.time_ps
+    values   = data.series[0].values   # first data column = RMSD
+    times_ns = data.times_ns()
 
     # Align lengths (should be equal but be defensive)
-    n = min(len(values), len(times))
+    n = min(len(values), len(times_ns))
     if n == 0:
         return ConvergenceResult(
             converged=False, plateau_ns=None,
@@ -104,19 +104,17 @@ def analyze_rmsd_convergence(
             verdict="Empty data.",
         )
 
-    values = values[:n]
-    times  = times[:n]
+    values   = values[:n]
+    times_ns = times_ns[:n]
 
     # Last 20% window
-    window_start = max(1, int(n * 0.8))
-    last_vals    = values[window_start:]
-    last_times   = times[window_start:]
+    window_start  = max(1, int(n * 0.8))
+    last_vals     = values[window_start:]
+    last_times_ns = times_ns[window_start:]
 
     mean_last = _mean(last_vals)
     std_last  = _std(last_vals)
 
-    # Convert times to ns for the slope
-    last_times_ns = [t / 1000.0 for t in last_times]
     drift = _linear_slope(last_times_ns, last_vals)   # nm/ns
 
     converged = std_last < threshold_nm
@@ -130,11 +128,11 @@ def analyze_rmsd_convergence(
             if not (lo <= values[i] <= hi):
                 # Last point outside band → plateau started just after i
                 if i + 1 < n:
-                    plateau_ns = times[i + 1] / 1000.0
+                    plateau_ns = times_ns[i + 1]
                 break
         else:
             # All points in band
-            plateau_ns = times[0] / 1000.0
+            plateau_ns = times_ns[0]
 
     # Build verdict
     if converged:
@@ -176,23 +174,22 @@ def analyze_energy_stability(data: XVGData) -> StabilityResult:
             verdict="No data available for energy stability analysis.",
         )
 
-    values = data.series[0].values
-    times  = data.time_ps
+    values   = data.series[0].values
+    times_ns = data.times_ns()
 
-    n = min(len(values), len(times))
+    n = min(len(values), len(times_ns))
     if n == 0:
         return StabilityResult(
             stable=False, mean=0.0, std=0.0, drift_per_ns=0.0,
             verdict="Empty data.",
         )
 
-    values = values[:n]
-    times  = times[:n]
+    values   = values[:n]
+    times_ns = times_ns[:n]
 
     mean_val = _mean(values)
     std_val  = _std(values)
 
-    times_ns   = [t / 1000.0 for t in times]
     drift_per_ns = _linear_slope(times_ns, values)
 
     # Stability criterion: |drift| < 1% of |mean| per ns

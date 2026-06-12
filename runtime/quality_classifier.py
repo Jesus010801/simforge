@@ -133,9 +133,24 @@ def _min_data_ns() -> float:
 
 def _duration_ns(data: "XVGData") -> float:
     """Return total simulation time in ns from an XVGData object."""
-    if not data.time_ps:
-        return 0.0
-    return data.time_ps[-1] / 1000.0
+    ns = data.times_ns()
+    return ns[-1] if ns else 0.0
+
+
+def _unit_undeclared(data: "XVGData") -> bool:
+    """True when no time unit was declared AND the xlabel doesn't contain one.
+
+    Used to decide whether to warn: a directly-constructed XVGData with
+    xlabel='Time (ps)' is not warned about even if x_unit=None, because the
+    label text carries the intent.  Only fires when the xlabel is absent or
+    contains no unit token in parentheses.
+    """
+    if data.x_unit is not None:
+        return False
+    xl = data.xlabel.lower()
+    if not xl:
+        return False
+    return not any(f"({u})" in xl for u in ("ps", "ns", "us", "µs", "μs"))
 
 
 def _has_enough_data(data: Optional["XVGData"]) -> bool:
@@ -153,21 +168,20 @@ def _last20(vals: list[float]) -> list[float]:
 
 def _analyze_rmsd(data: "XVGData") -> dict:
     """Return dict of RMSD statistics for the last 20% window."""
-    vals  = data.series[0].values
-    times = data.time_ps
-    n     = min(len(vals), len(times))
-    vals  = vals[:n]
-    times = times[:n]
+    vals     = data.series[0].values
+    times_ns = data.times_ns()
+    n        = min(len(vals), len(times_ns))
+    vals     = vals[:n]
+    times_ns = times_ns[:n]
 
     last_vals  = _last20(vals)
-    last_times = _last20(times)
+    last_times = _last20(times_ns)
 
     mean_last = _mean(last_vals)
     std_last  = _std(last_vals)
-    last_ns   = [t / 1000.0 for t in last_times]
-    drift     = _linear_slope(last_ns, last_vals)   # nm/ns
+    drift     = _linear_slope(last_times, last_vals)   # nm/ns
     max_rmsd  = max(vals) if vals else 0.0
-    total_ns  = times[-1] / 1000.0 if times else 0.0
+    total_ns  = times_ns[-1] if times_ns else 0.0
 
     return {
         "mean_last20": mean_last,
@@ -180,20 +194,19 @@ def _analyze_rmsd(data: "XVGData") -> dict:
 
 def _analyze_energy(data: "XVGData") -> dict:
     """Return dict of energy statistics for the full trajectory."""
-    vals  = data.series[0].values
-    times = data.time_ps
-    n     = min(len(vals), len(times))
-    vals  = vals[:n]
-    times = times[:n]
+    vals     = data.series[0].values
+    times_ns = data.times_ns()
+    n        = min(len(vals), len(times_ns))
+    vals     = vals[:n]
+    times_ns = times_ns[:n]
 
-    mean_val   = _mean(vals)
-    std_val    = _std(vals)
-    times_ns   = [t / 1000.0 for t in times]
-    drift      = _linear_slope(times_ns, vals)
+    mean_val  = _mean(vals)
+    std_val   = _std(vals)
+    drift     = _linear_slope(times_ns, vals)
 
-    pct_std  = abs(std_val  / mean_val * 100) if abs(mean_val) > 1e-6 else 0.0
-    pct_drift = abs(drift   / mean_val * 100) if abs(mean_val) > 1e-6 else 0.0
-    total_ns  = times[-1] / 1000.0 if times else 0.0
+    pct_std   = abs(std_val  / mean_val * 100) if abs(mean_val) > 1e-6 else 0.0
+    pct_drift = abs(drift    / mean_val * 100) if abs(mean_val) > 1e-6 else 0.0
+    total_ns  = times_ns[-1] if times_ns else 0.0
 
     return {
         "mean":       mean_val,
@@ -236,6 +249,18 @@ def classify_run(
     warnings:        list[str] = []
     recommendations: list[str] = []
     metrics:         dict      = {}
+
+    # Warn when a time unit could not be determined from the XVG header.
+    _unit_labels = [
+        ("RMSD", rmsd_data), ("energy", energy_data),
+        ("pressure", pressure_data), ("temperature", temperature_data),
+    ]
+    for _lbl, _d in _unit_labels:
+        if _d is not None and _unit_undeclared(_d):
+            warnings.append(
+                f"X-axis unit not declared in {_lbl} XVG "
+                f"({_d.source.name}); assumed ps for time conversion."
+            )
 
     rmsd_ok   = _has_enough_data(rmsd_data)
     energy_ok = _has_enough_data(energy_data)
@@ -487,7 +512,7 @@ def _classify_with_context(
         if data is None or not data.series or not data.time_ps:
             return
         vals  = data.series[0].values
-        times = [t / 1000.0 for t in data.time_ps]
+        times = data.times_ns()
         n = min(len(vals), len(times))
         if n < 5:
             return

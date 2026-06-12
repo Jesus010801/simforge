@@ -320,3 +320,107 @@ class TestOutputMethods:
         report = classify_run()
         d = report.as_dict()
         assert isinstance(d["quality"], str)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# XVG time-unit handling
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _make_xvg_with_unit(
+    values: list[float],
+    x_values: list[float],
+    x_unit: "str | None",
+    xlabel: "str | None" = None,
+) -> XVGData:
+    """Build XVGData with explicit x-axis values and unit declaration.
+
+    xlabel=None → auto-generate from x_unit; xlabel="" → no label at all.
+    """
+    if xlabel is None:
+        xlabel = f"Time ({x_unit})" if x_unit else ""
+    return XVGData(
+        title   = "RMSD",
+        xlabel  = xlabel,
+        ylabel  = "RMSD (nm)",
+        time_ps = x_values,
+        series  = [XVGSeries(name="Backbone", values=values)],
+        source  = Path("test.xvg"),
+        x_unit  = x_unit,
+    )
+
+
+def _flat_values(n: int = 200, value: float = 0.15) -> list[float]:
+    import random
+    rng = random.Random(7)
+    return [value + rng.gauss(0, 0.005) for _ in range(n)]
+
+
+class TestXVGUnitHandling:
+    """Requirement: x-axis unit read from XVG header; conversions applied correctly."""
+
+    def test_100_ps_is_insufficient_data(self):
+        """100 ps = 0.1 ns → below 1 ns threshold → INSUFFICIENT_DATA."""
+        x = [i * 1.0 for i in range(101)]   # 0..100 ps
+        data = _make_xvg_with_unit(_flat_values(101), x, x_unit="ps")
+        report = classify_run(rmsd_data=data)
+        assert report.quality == RunQuality.INSUFFICIENT_DATA
+
+    def test_100_ns_passes_duration_threshold(self):
+        """100 ns is well above 1 ns threshold → not INSUFFICIENT_DATA."""
+        x = [i * 1.0 for i in range(101)]   # 0..100 ns
+        data = _make_xvg_with_unit(_flat_values(101), x, x_unit="ns")
+        report = classify_run(rmsd_data=data)
+        assert report.quality != RunQuality.INSUFFICIENT_DATA
+
+    def test_0_1_us_passes_duration_threshold(self):
+        """0.1 µs = 100 ns → well above 1 ns threshold → not INSUFFICIENT_DATA."""
+        x = [i * 0.001 for i in range(101)]   # 0..0.1 µs
+        data = _make_xvg_with_unit(_flat_values(101), x, x_unit="us")
+        report = classify_run(rmsd_data=data)
+        assert report.quality != RunQuality.INSUFFICIENT_DATA
+
+    def test_ns_unit_total_ns_metric_correct(self):
+        """When x_unit=ns, rmsd_total_ns metric should equal the last x value."""
+        x = [float(i) for i in range(101)]   # 0..100 ns
+        data = _make_xvg_with_unit(_flat_values(101), x, x_unit="ns")
+        report = classify_run(rmsd_data=data)
+        assert report.metrics.get("rmsd_total_ns") == pytest.approx(100.0, abs=0.1)
+
+    def test_ps_unit_total_ns_metric_correct(self):
+        """When x_unit=ps, 1000 ps → rmsd_total_ns = 1.0."""
+        x = [i * 10.0 for i in range(101)]   # 0..1000 ps
+        data = _make_xvg_with_unit(_flat_values(101), x, x_unit="ps")
+        report = classify_run(rmsd_data=data)
+        assert report.metrics.get("rmsd_total_ns") == pytest.approx(1.0, abs=0.05)
+
+    def test_missing_unit_assumes_ps_warns(self):
+        """No unit declared (x_unit=None) + undeclared xlabel → warning emitted."""
+        x = [i * 10.0 for i in range(101)]   # 0..1000 (assumed ps)
+        data = _make_xvg_with_unit(
+            _flat_values(101), x,
+            x_unit=None,
+            xlabel="Time",   # non-empty but no unit in parens → triggers warning
+        )
+        report = classify_run(rmsd_data=data)
+        unit_warnings = [w for w in report.warnings if "assumed ps" in w.lower()]
+        assert len(unit_warnings) >= 1
+
+    def test_missing_unit_no_warning_when_xlabel_empty(self):
+        """No xlabel at all → no unit warning (can't know intent, silently assume ps)."""
+        x = [i * 10.0 for i in range(101)]   # 0..1000 ps
+        data = _make_xvg_with_unit(
+            _flat_values(101), x,
+            x_unit=None,
+            xlabel="",
+        )
+        report = classify_run(rmsd_data=data)
+        unit_warnings = [w for w in report.warnings if "assumed ps" in w.lower()]
+        assert len(unit_warnings) == 0
+
+    def test_no_warning_when_unit_declared(self):
+        """Explicit x_unit set → no unit assumption warning."""
+        x = [float(i) for i in range(101)]
+        data = _make_xvg_with_unit(_flat_values(101), x, x_unit="ns")
+        report = classify_run(rmsd_data=data)
+        unit_warnings = [w for w in report.warnings if "assumed ps" in w.lower()]
+        assert len(unit_warnings) == 0
