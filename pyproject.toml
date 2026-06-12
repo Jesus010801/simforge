@@ -35,4 +35,11 @@ include = [
     "validators*",
     "workflows*",
     "adapters*",
+    "ligand*",
+    "utils*",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "rdkit: tests that require RDKit (run in rdkit_env conda environment)",
 ]

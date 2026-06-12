@@ -24,6 +24,14 @@ cli     = typer.Typer(
     add_completion=True,
 )
 
+# ── Ligand sub-app ────────────────────────────────────────────────────────────
+_ligand_app = typer.Typer(
+    name="ligand",
+    help="Ligand preparation and parameterization utilities.",
+    no_args_is_help=True,
+)
+cli.add_typer(_ligand_app)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Compile helpers
@@ -2925,6 +2933,182 @@ def annotate_structure(
         mt = ann.membrane_topology
         app.print(f"  EC: {mt.extracellular_regions}  IC: {mt.intracellular_regions}  "
                   f"TM: {mt.tm_segment_count()} segmentos")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ligand commands
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_RDKIT_MISSING_MSG = (
+    "LigParGen export requires RDKit. "
+    "Activate the rdkit_env environment or install RDKit.\n"
+    "  conda activate rdkit_env\n"
+    "  # or: conda install -c conda-forge rdkit"
+)
+
+_RMSD_WARN_THRESHOLD = 0.05  # Å — mirrors export._RMSD_WARN_THRESHOLD
+
+
+@_ligand_app.command("export-ligpargen")
+def export_ligpargen_cmd(
+    input_file: Path = typer.Argument(
+        ...,
+        help="Input ligand file (.sdf, .mol, .pdb).",
+        exists=False,  # validated manually for a cleaner error message
+    ),
+    output_dir: Path = typer.Option(
+        Path("ligpargen_export"),
+        "--output-dir", "-o",
+        help="Directory to write output files (default: ./ligpargen_export).",
+    ),
+    mol_name: str = typer.Option(
+        "LIG",
+        "--mol-name",
+        help="4-char GROMACS-compatible molecule name (default: LIG).",
+    ),
+    smiles: bool = typer.Option(
+        False,
+        "--smiles",
+        help=(
+            "Export canonical SMILES (.smi + metadata + charge advisory). "
+            "Also available alongside --legacy output."
+        ),
+    ),
+    legacy: bool = typer.Option(
+        False,
+        "--legacy/--no-legacy",
+        help=(
+            "Write the experimentally validated legacy PDB (ATOM records + CONECT). "
+            "Also writes companion SMILES, metadata JSON, and charge advisory."
+        ),
+    ),
+) -> None:
+    """Export a ligand for LigParGen parameterization.
+
+    --legacy produces a PDB that has been experimentally accepted by the
+    LigParGen web server, plus companion files in the output directory:
+
+    \b
+        LIG_ligpargen_legacy.pdb   ← upload to LigParGen
+        LIG_ligpargen.smi          ← canonical SMILES companion
+        LIG_meta.json              ← metadata including formal charge
+        LIG_charge.txt             ← charge advisory (ALWAYS check this)
+
+    --smiles exports canonical SMILES and is also accepted by LigParGen.
+
+    IMPORTANT — formal charge:
+    The reported formal charge must match the charge you select in LigParGen.
+    A charge mismatch (e.g. submitting charge=0 for a +1 molecule) is the
+    most common cause of failed or incorrect parameterization.
+
+    Examples:
+
+        simforge ligand export-ligpargen E20.pdb --legacy   # validated PDB
+        simforge ligand export-ligpargen E20.pdb --smiles   # SMILES mode
+    """
+    if not input_file.exists():
+        app.print(f"[red]Error:[/red] Input file not found: {input_file}")
+        raise typer.Exit(1)
+
+    from ligand import export as _lex
+
+    if smiles:
+        fmt_label = "SMILES (.smi)"
+    elif legacy:
+        fmt_label = "legacy PDB (ATOM records) — experimentally validated"
+    else:
+        fmt_label = "modern PDB (HETATM records)"
+
+    app.print(Panel(
+        f"[bold cyan]LigParGen Export[/bold cyan]  "
+        f"[dim]{input_file.name}[/dim]  →  [dim]{fmt_label}[/dim]",
+        border_style="cyan", padding=(0, 2),
+    ))
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if smiles:
+            result = _lex.export_for_ligpargen_smiles(
+                path=input_file,
+                output_dir=output_dir,
+                mol_name=mol_name,
+            )
+        elif legacy:
+            result = _lex.export_for_ligpargen_legacy(
+                path=input_file,
+                output_dir=output_dir,
+                mol_name=mol_name,
+            )
+        else:
+            result = _lex.export_for_ligpargen(
+                path=input_file,
+                output_dir=output_dir,
+                mol_name=mol_name,
+            )
+    except ImportError:
+        app.print(f"[red]Error:[/red] {_RDKIT_MISSING_MSG}")
+        raise typer.Exit(1)
+
+    if not result.success:
+        app.print(f"\n  [red]✗  Export failed:[/red] {result.error}")
+        raise typer.Exit(1)
+
+    # ── Success output ────────────────────────────────────────────────────────
+    app.print(f"\n  [green]✓[/green]  [bold]Exported:[/bold]  {result.exported_path}")
+    app.print(f"     Molecule name:  [bold]{result.molecule_name}[/bold]")
+
+    # ── Charge display (shown for all modes when available) ───────────────────
+    if result.formal_charge is not None:
+        from ligand.export import _charge_label as _clabel
+        clabel = _clabel(result.formal_charge)
+        app.print(f"     Formal charge:  [bold]{clabel}[/bold]")
+        app.print(f"     LigParGen charge: [bold]{clabel}[/bold]")
+
+    if smiles:
+        app.print(f"     SMILES:         [bold]{result.smiles}[/bold]")
+        app.print(f"     Heavy atoms:    {result.atom_count}")
+        meta_path = output_dir / f"{result.molecule_name}_meta.json"
+        charge_path = output_dir / f"{result.molecule_name}_charge.txt"
+        if meta_path.exists():
+            app.print(f"     Metadata:       {meta_path}")
+        if charge_path.exists():
+            app.print(f"     Charge file:    {charge_path}")
+    else:
+        app.print(f"     Atom count:     {result.atom_count}  (including explicit H)")
+        app.print(f"     Format:         {fmt_label}")
+
+        if result.heavy_atom_rmsd is not None:
+            rmsd_str = f"{result.heavy_atom_rmsd:.4f} Å"
+            if result.heavy_atom_rmsd > _RMSD_WARN_THRESHOLD:
+                app.print(
+                    f"\n  [yellow]⚠[/yellow]  Heavy-atom coordinate RMSD: [yellow]{rmsd_str}[/yellow]"
+                    f"  (> {_RMSD_WARN_THRESHOLD} Å — coordinates may have shifted "
+                    f"during hydrogen addition; verify in PyMOL or Avogadro)"
+                )
+            else:
+                app.print(f"     Heavy-atom RMSD: {rmsd_str}  [dim](within tolerance)[/dim]")
+
+        if legacy:
+            name = result.molecule_name
+            app.print(f"\n  [dim]Companion files written:[/dim]")
+            app.print(f"     {output_dir / f'{name}_ligpargen.smi'}")
+            app.print(f"     {output_dir / f'{name}_meta.json'}")
+            app.print(f"     {output_dir / f'{name}_charge.txt'}")
+
+    # ── Charge warning ────────────────────────────────────────────────────────
+    if result.formal_charge is not None and result.formal_charge != 0:
+        from ligand.export import _charge_label as _clabel
+        clabel = _clabel(result.formal_charge)
+        app.print(Panel(
+            f"[bold]WARNING[/bold]\n"
+            f"This molecule carries a formal charge of [bold]{clabel}[/bold].\n"
+            f"In LigParGen select charge [bold]{clabel}[/bold] instead of 0.",
+            border_style="yellow", padding=(0, 2),
+        ))
+
+    app.print(f"\n  [dim]Next step:[/dim] submit [bold]{result.exported_path.name}[/bold] "
+              f"to https://zarbi.chem.yale.edu/ligpargen/\n")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
