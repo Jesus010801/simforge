@@ -33,22 +33,40 @@ class TrajectoryManifest:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _LABEL_RULES: list[tuple[list[str], str]] = [
-    # (keywords to search in name/title, label)
-    (["rmsd"],                        "rmsd"),
-    (["rmsf"],                        "rmsf"),
-    (["potential energy", "epot", "potential_energy"], "potential_energy"),
-    (["energy"],                      "potential_energy"),
-    (["temperature"],                 "temperature"),
-    (["pressure"],                    "pressure"),
-    (["gyrate", "radius of gyration", "radius_of_gyration"], "gyration"),
-    (["density"],                     "density"),
-    (["hbnum", "hydrogen bond", "hydrogen_bond"], "hydrogen_bonds"),
-    (["distance"],                    "distance"),
+    # (substrings to search in stem/title, canonical label)
+    # Order matters: first match wins; longer/more-specific patterns listed first.
+    (["rmsd"],                                                        "rmsd"),
+    (["rmsf"],                                                        "rmsf"),
+    (["potential energy", "epot", "potential_energy"],                "potential_energy"),
+    (["energy"],                                                      "potential_energy"),
+    (["temperature"],                                                 "temperature"),
+    (["pressure"],                                                    "pressure"),
+    (["sasa", "solvent accessible", "solvent_accessible", "solvacc"], "sasa"),
+    (["gyrate", "gyration", "radius of gyration", "radius_of_gyration"], "gyration"),
+    (["density"],                                                     "density"),
+    (["hbnum", "hydrogen bond", "hydrogen_bond", "hbond", "hbonds"], "hydrogen_bonds"),
+    (["distance"],                                                    "distance"),
+]
+
+# Short prefixes checked against the file stem only — kept separate because
+# single letters / two-letter strings are unsafe as general substrings
+# (e.g. "rg" appears inside "energy"; "hb" inside "inhibit").
+# These only fire when no _LABEL_RULES rule matched first.
+_PREFIX_RULES: list[tuple[str, str]] = [
+    ("hb",  "hydrogen_bonds"),  # hb_.xvg, hb-1.xvg, hbnum.xvg, …
+    ("rg",  "gyration"),        # rg.xvg, rg_prot.xvg, rg-.xvg, …
 ]
 
 
 def _label_xvg(path: Path, title: str) -> str:
-    """Determine a semantic label for an XVG file from its name and title."""
+    """Determine a semantic label for an XVG file from its stem and title.
+
+    Matching order:
+      1. Substring rules (_LABEL_RULES) — checked in declaration order.
+      2. Stem-prefix rules (_PREFIX_RULES) — only for short tokens that would
+         produce false positives as general substrings.
+      3. Fallback: the raw file stem.
+    """
     name_lower  = path.stem.lower()
     title_lower = title.lower()
 
@@ -56,6 +74,10 @@ def _label_xvg(path: Path, title: str) -> str:
         for kw in keywords:
             if kw in name_lower or kw in title_lower:
                 return label
+
+    for prefix, label in _PREFIX_RULES:
+        if name_lower.startswith(prefix):
+            return label
 
     # Fallback: use the file stem as-is
     return path.stem
