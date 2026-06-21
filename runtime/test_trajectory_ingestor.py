@@ -207,3 +207,155 @@ class TestLoadXvgFiles:
         data = load_xvg_files(manifest)
         for v in data.values():
             assert isinstance(v, XVGData)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TestNameTolerantDiscovery — real-world GROMACS naming patterns
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestNameTolerantDiscovery:
+    """Filenames that are common in practice but were not matched by the
+    original _LABEL_RULES (hb_, rg, sasa) or need regression coverage
+    (rmsd-aldosa, rmsd-ligand, rmsf)."""
+
+    # ── RMSD variants ─────────────────────────────────────────────────────────
+
+    def test_rmsd_aldosa_labeled_rmsd(self, tmp_path):
+        _write_xvg(tmp_path / "rmsd-aldosa.xvg", title="RMSD")
+        manifest = discover_trajectory(tmp_path)
+        assert "rmsd" in manifest.xvg_files
+        assert manifest.xvg_files["rmsd"].name == "rmsd-aldosa.xvg"
+
+    def test_rmsd_ligand_labeled_rmsd(self, tmp_path):
+        _write_xvg(tmp_path / "rmsd-ligand.xvg", title="RMSD")
+        manifest = discover_trajectory(tmp_path)
+        assert "rmsd" in manifest.xvg_files
+
+    def test_two_rmsd_files_both_handled(self, tmp_path):
+        """Both rmsd-*.xvg files map to 'rmsd'; dedup keeps the larger one."""
+        _write_xvg(tmp_path / "rmsd-aldosa.xvg", title="RMSD", n_points=50)
+        _write_xvg(tmp_path / "rmsd-ligand.xvg", title="RMSD", n_points=100)
+        manifest = discover_trajectory(tmp_path)
+        assert "rmsd" in manifest.xvg_files
+        # Larger file (more points) wins
+        assert manifest.xvg_files["rmsd"].name == "rmsd-ligand.xvg"
+
+    def test_rmsd_protein_labeled_rmsd(self, tmp_path):
+        _write_xvg(tmp_path / "rmsd-protein.xvg", title="RMSD")
+        manifest = discover_trajectory(tmp_path)
+        assert manifest.xvg_files.get("rmsd") is not None
+
+    def test_rmsd_underscore_labeled_rmsd(self, tmp_path):
+        _write_xvg(tmp_path / "rmsd_backbone.xvg", title="RMSD")
+        manifest = discover_trajectory(tmp_path)
+        assert "rmsd" in manifest.xvg_files
+
+    # ── Hydrogen bonds — hb prefix ────────────────────────────────────────────
+
+    def test_hb_underscore_labeled_hydrogen_bonds(self, tmp_path):
+        """hb_.xvg is the real-world filename that triggered this fix."""
+        _write_xvg(tmp_path / "hb_.xvg", title="Number of Hydrogen Bonds")
+        manifest = discover_trajectory(tmp_path)
+        assert manifest.xvg_files.get("hydrogen_bonds") is not None
+        assert manifest.xvg_files["hydrogen_bonds"].name == "hb_.xvg"
+
+    def test_hbond_labeled_hydrogen_bonds(self, tmp_path):
+        _write_xvg(tmp_path / "hbond.xvg")
+        manifest = discover_trajectory(tmp_path)
+        assert "hydrogen_bonds" in manifest.xvg_files
+
+    def test_hbonds_labeled_hydrogen_bonds(self, tmp_path):
+        _write_xvg(tmp_path / "hbonds.xvg")
+        manifest = discover_trajectory(tmp_path)
+        assert "hydrogen_bonds" in manifest.xvg_files
+
+    def test_hb_dash_labeled_hydrogen_bonds(self, tmp_path):
+        _write_xvg(tmp_path / "hb-prot-lig.xvg")
+        manifest = discover_trajectory(tmp_path)
+        assert "hydrogen_bonds" in manifest.xvg_files
+
+    # ── Radius of gyration — rg prefix ───────────────────────────────────────
+
+    def test_rg_labeled_gyration(self, tmp_path):
+        """rg.xvg is the bare GROMACS default output name."""
+        _write_xvg(tmp_path / "rg.xvg", title="Radius of gyration")
+        manifest = discover_trajectory(tmp_path)
+        assert manifest.xvg_files.get("gyration") is not None
+        assert manifest.xvg_files["gyration"].name == "rg.xvg"
+
+    def test_rg_protein_labeled_gyration(self, tmp_path):
+        _write_xvg(tmp_path / "rg_protein.xvg")
+        manifest = discover_trajectory(tmp_path)
+        assert "gyration" in manifest.xvg_files
+
+    def test_rg_does_not_match_energy_file(self, tmp_path):
+        """'rg' is a substring of 'energy' — must NOT mislabel energy files."""
+        _write_xvg(tmp_path / "energy.xvg", title="Potential Energy")
+        manifest = discover_trajectory(tmp_path)
+        assert manifest.xvg_files.get("potential_energy") is not None
+        assert "gyration" not in manifest.xvg_files
+
+    # ── SASA ─────────────────────────────────────────────────────────────────
+
+    def test_sasa_labeled_sasa(self, tmp_path):
+        _write_xvg(tmp_path / "sasa.xvg", title="Solvent Accessible Surface")
+        manifest = discover_trajectory(tmp_path)
+        assert manifest.xvg_files.get("sasa") is not None
+        assert manifest.xvg_files["sasa"].name == "sasa.xvg"
+
+    def test_sasa_no_title_labeled_sasa(self, tmp_path):
+        _write_xvg(tmp_path / "sasa.xvg", title="")
+        manifest = discover_trajectory(tmp_path)
+        assert "sasa" in manifest.xvg_files
+
+    # ── RMSF (regression) ────────────────────────────────────────────────────
+
+    def test_rmsf_labeled_rmsf(self, tmp_path):
+        _write_xvg(tmp_path / "rmsf.xvg", title="RMSF")
+        manifest = discover_trajectory(tmp_path)
+        assert "rmsf" in manifest.xvg_files
+
+    # ── Full set from the real-world report ──────────────────────────────────
+
+    def test_full_set_all_mapped(self, tmp_path):
+        """Exact filenames from the user-reported failure case."""
+        files = {
+            "rmsd-aldosa.xvg":  "RMSD",
+            "rmsd-ligand.xvg":  "RMSD",
+            "rmsf.xvg":         "RMSF",
+            "rg.xvg":           "Radius of gyration",
+            "sasa.xvg":         "Solvent Accessible Surface",
+            "hb_.xvg":          "Number of Hydrogen Bonds",
+        }
+        for fname, title in files.items():
+            _write_xvg(tmp_path / fname, title=title)
+        manifest = discover_trajectory(tmp_path)
+        assert "rmsd"            in manifest.xvg_files
+        assert "rmsf"            in manifest.xvg_files
+        assert "gyration"        in manifest.xvg_files
+        assert "sasa"            in manifest.xvg_files
+        assert "hydrogen_bonds"  in manifest.xvg_files
+        # Both rmsd files present — one kept, one deduped
+        assert len(manifest.xvg_files) == 5  # 6 files → 5 labels (rmsd deduped)
+
+    # ── _label_xvg unit tests ────────────────────────────────────────────────
+
+    def test_label_xvg_hb_underscore(self):
+        from runtime.trajectory_ingestor import _label_xvg
+        assert _label_xvg(Path("hb_.xvg"), "") == "hydrogen_bonds"
+
+    def test_label_xvg_rg(self):
+        from runtime.trajectory_ingestor import _label_xvg
+        assert _label_xvg(Path("rg.xvg"), "") == "gyration"
+
+    def test_label_xvg_sasa(self):
+        from runtime.trajectory_ingestor import _label_xvg
+        assert _label_xvg(Path("sasa.xvg"), "") == "sasa"
+
+    def test_label_xvg_rmsd_aldosa(self):
+        from runtime.trajectory_ingestor import _label_xvg
+        assert _label_xvg(Path("rmsd-aldosa.xvg"), "") == "rmsd"
+
+    def test_label_xvg_energy_not_gyration(self):
+        from runtime.trajectory_ingestor import _label_xvg
+        assert _label_xvg(Path("energy.xvg"), "Potential Energy") == "potential_energy"

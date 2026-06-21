@@ -3141,6 +3141,406 @@ def export_ligpargen_cmd(
               f"to https://zarbi.chem.yale.edu/ligpargen/\n")
 
 
+# ── simforge ligand prepare ───────────────────────────────────────────────────
+
+@_ligand_app.command("prepare")
+def prepare_cmd(
+    complex_pdb: Path = typer.Argument(
+        ...,
+        help="Docked protein–ligand complex PDB file.",
+        exists=False,
+    ),
+    ligand_resname: str = typer.Option(
+        "",
+        "--ligand-resname", "-r",
+        help=(
+            "3-char residue name of the ligand in the complex PDB "
+            "(auto-detected from HETATM records if omitted)."
+        ),
+    ),
+    out_dir: Path = typer.Option(
+        Path("ligand_prepare"),
+        "--out", "-o",
+        help="Directory for output files (default: ./ligand_prepare).",
+    ),
+    hydrogenation_mode: str = typer.Option(
+        "auto",
+        "--hydrogenation",
+        help=(
+            "Hydrogenation backend: auto | rdkit | openbabel | none. "
+            "auto tries RDKit then Open Babel then reports manual_required. "
+            "none skips hydrogenation entirely (blocks if no H present)."
+        ),
+    ),
+) -> None:
+    """Extract a ligand from a docked complex and prepare it for LigParGen.
+
+    Splits the complex PDB into a ligand-only file (ready for LigParGen upload)
+    and a protein-only file (for the subsequent integrate step).  Also writes
+    a ligand_report.yaml with the estimated formal charge and next-step
+    instructions.
+
+    \b
+    Outputs written to --out:
+        ligand_for_ligpargen.pdb  ← upload this to LigParGen
+        protein_only.pdb          ← use with 'simforge ligand integrate'
+        ligand_report.yaml        ← charge estimate and workflow instructions
+
+    Examples:
+
+        simforge ligand prepare docked.pdb
+        simforge ligand prepare docked.pdb --ligand-resname E20 --out prep/
+    """
+    if not complex_pdb.exists():
+        app.print(f"[red]Error:[/red] Complex PDB not found: {complex_pdb}")
+        raise typer.Exit(1)
+
+    from ligand.prepare import detect_ligand_residues, extract_ligand_from_complex
+
+    # ── Auto-detect ligand residue name ──────────────────────────────────────
+    resname = ligand_resname.strip().upper()
+    if not resname:
+        candidates = detect_ligand_residues(complex_pdb)
+        if not candidates:
+            app.print(
+                "[red]Error:[/red] No HETATM ligand residues detected in "
+                f"{complex_pdb.name}. Use --ligand-resname to specify one explicitly."
+            )
+            raise typer.Exit(1)
+        if len(candidates) > 1:
+            app.print(
+                f"[yellow]Multiple ligand residues detected:[/yellow] "
+                f"{', '.join(candidates)}\n"
+                "Use [bold]--ligand-resname[/bold] to select one."
+            )
+            raise typer.Exit(1)
+        resname = candidates[0]
+        app.print(f"  [dim]Auto-detected ligand residue:[/dim] [bold]{resname}[/bold]")
+
+    app.print(Panel(
+        f"[bold cyan]Ligand Prepare[/bold cyan]  "
+        f"[dim]{complex_pdb.name}[/dim]  ·  residue [bold]{resname}[/bold]  →  "
+        f"[dim]{out_dir}[/dim]",
+        border_style="cyan", padding=(0, 2),
+    ))
+
+    result = extract_ligand_from_complex(
+        complex_pdb, resname, out_dir,
+        hydrogenation_mode=hydrogenation_mode,
+    )
+
+    if not result.success:
+        app.print(f"\n  [red]✗  Preparation failed:[/red] {result.error}")
+        raise typer.Exit(1)
+
+    # ── File listing ──────────────────────────────────────────────────────────
+    app.print(f"\n  [green]✓[/green]  [bold]Ligand PDB:[/bold]    {result.ligand_pdb}")
+    if result.hydrogenated_ligand_pdb:
+        app.print(
+            f"  [green]✓[/green]  [bold]Ligand+H PDB:[/bold]  "
+            f"{result.hydrogenated_ligand_pdb}  "
+            f"[dim](protonated — submit this one)[/dim]"
+        )
+    app.print(f"  [green]✓[/green]  [bold]Protein PDB:[/bold]   {result.protein_pdb}")
+    app.print(f"  [green]✓[/green]  [bold]Report:[/bold]        {result.report_path}")
+    app.print(f"\n     Ligand atoms:   {result.ligand_atom_count}")
+    app.print(f"     Protein atoms:  {result.protein_atom_count}")
+
+    # ── Hydrogen status ───────────────────────────────────────────────────────
+    _h_status = result.hydrogenation_status
+    _n_h      = result.n_hydrogen_atoms
+    _n_heavy  = result.n_heavy_atoms
+    _h_suffix = f"  ({_n_h} H atom{'s' if _n_h != 1 else ''}; {_n_heavy} heavy atoms)"
+
+    if _h_status == "complete" and result.hydrogenation_performed:
+        _backend_label = (
+            "RDKit" if result.hydrogenation_backend == "rdkit"
+            else "Open Babel" if result.hydrogenation_backend == "openbabel"
+            else result.hydrogenation_backend
+        )
+        app.print(
+            f"     Hydrogens:      [green]added by {_backend_label}[/green]  →  "
+            f"[bold]{result.hydrogenated_ligand_pdb.name}[/bold]"
+        )
+    elif _h_status == "complete":
+        app.print("     Hydrogens:      [green]complete[/green]" + _h_suffix)
+    elif _h_status == "incomplete":
+        app.print(f"     Hydrogens:      [yellow]incomplete[/yellow]{_h_suffix}")
+    elif _h_status == "missing":
+        app.print("     Hydrogens:      [red]missing[/red]")
+    else:  # "unknown"
+        app.print(f"     Hydrogens:      [yellow]unverified[/yellow]{_h_suffix}")
+    # "manual_required" and "skipped" blocking handled below
+
+    # ── Formal charge ─────────────────────────────────────────────────────────
+    if result.formal_charge is not None:
+        sign = f"+{result.formal_charge}" if result.formal_charge > 0 else str(result.formal_charge)
+        app.print(f"     Formal charge:  [bold]{sign}[/bold]  [dim](estimated by RDKit)[/dim]")
+        if result.formal_charge != 0:
+            app.print(Panel(
+                f"[bold]Charge warning[/bold]\n"
+                f"Formal charge = [bold]{sign}[/bold].  "
+                f"Select charge [bold]{sign}[/bold] in LigParGen, not 0.",
+                border_style="yellow", padding=(0, 2),
+            ))
+    else:
+        app.print(
+            "     Formal charge:  [yellow]unknown[/yellow]"
+            "  [dim](RDKit unavailable — determine manually)[/dim]"
+        )
+
+    # ── Non-hydrogen warnings (charge estimation etc.) ────────────────────────
+    h_warn_keywords = {"hydrogen", "obabel", "openbabel", "proton"}
+    for warn in result.warnings:
+        if not any(kw in warn.lower() for kw in h_warn_keywords):
+            app.print(f"\n  [yellow]⚠[/yellow]  {warn}")
+
+    # ── Blocking hydrogen error ───────────────────────────────────────────────
+    _should_block = (
+        result.hydrogenation_required          # status missing/incomplete, not fixed
+        or result.hydrogenation_backend == "skipped"  # --none was set, status not complete
+    )
+    if _should_block:
+        _st = result.hydrogenation_status
+        if result.hydrogenation_backend == "skipped":
+            if _st == "missing":
+                _block_title = "BLOCKING — ligand has no hydrogen atoms"
+                _reason = (
+                    "Hydrogenation was explicitly skipped (--hydrogenation none) "
+                    "and the ligand has no explicit H atoms. "
+                    "LigParGen requires a fully protonated input."
+                )
+            elif _st == "incomplete":
+                _block_title = "BLOCKING — ligand is incompletely protonated"
+                _reason = (
+                    f"Hydrogenation was explicitly skipped (--hydrogenation none) but "
+                    f"the ligand has only {result.n_hydrogen_atoms} H atom(s) for "
+                    f"{result.n_heavy_atoms} heavy atoms "
+                    f"(ratio {result.n_hydrogen_atoms / max(result.n_heavy_atoms, 1):.2f}). "
+                    f"This is insufficient — LigParGen requires complete protonation."
+                )
+            else:  # "unknown"
+                _block_title = "BLOCKING — ligand hydrogen completeness cannot be verified"
+                _reason = (
+                    "Hydrogenation was explicitly skipped (--hydrogenation none) but "
+                    "hydrogen completeness cannot be proven from this PDB (no bond orders). "
+                    "LigParGen may produce incorrect parameters for an under-protonated ligand."
+                )
+            _fix_hint = (
+                "  Option A  Re-run without --hydrogenation none (uses auto-detection)\n"
+                "  Option B  Install RDKit: conda install -c conda-forge rdkit\n"
+                "  Option C  Install Open Babel: conda install -c conda-forge openbabel\n"
+                "  Option D  Add hydrogens manually in Avogadro, PyMOL, or\n"
+                "             Discovery Studio, then submit the protonated file."
+            )
+        else:
+            _block_title = (
+                "BLOCKING — ligand has no hydrogen atoms"
+                if _st == "missing"
+                else "BLOCKING — ligand is incompletely protonated"
+            )
+            _reason = (
+                "No automatic hydrogenation backend succeeded. "
+                "LigParGen requires a protonated input. "
+                "Do NOT submit ligand_for_ligpargen.pdb without complete hydrogens — "
+                "the resulting force-field parameters will be incorrect."
+            )
+            _fix_hint = (
+                "  Option A  Install RDKit: conda install -c conda-forge rdkit\n"
+                "  Option B  Install Open Babel: conda install -c conda-forge openbabel\n"
+                "  Option C  Add hydrogens manually in Avogadro, PyMOL, or\n"
+                "             Discovery Studio, then submit the protonated file."
+            )
+        app.print(Panel(
+            f"[bold red]{_block_title}[/bold red]\n\n"
+            f"{_reason}\n\n"
+            f"To fix:\n{_fix_hint}",
+            border_style="red", padding=(0, 2),
+        ))
+        raise typer.Exit(1)
+
+    # ── Next steps (only reached when hydrogens are present or were added) ────
+    ligpargen_file = result.recommended_ligpargen_input or result.ligand_pdb
+    charge_hint = (
+        f"  (set charge = {sign})"
+        if result.formal_charge is not None
+        else "  (determine charge manually)"
+    )
+    app.print(
+        f"\n  [dim]Next steps:[/dim]\n"
+        f"    1. Submit [bold]{ligpargen_file.name}[/bold] to LigParGen{charge_hint}\n"
+        f"    2. Download the resulting .itp and .gro files\n"
+        f"    3. Run:\n"
+        f"       simforge ligand integrate \\\n"
+        f"         --protein {result.protein_pdb} \\\n"
+        f"         --ligand-itp <LIGAND>.itp \\\n"
+        f"         --ligand-gro <LIGAND>.gro \\\n"
+        f"         --out system/\n"
+    )
+
+
+# ── simforge ligand integrate ─────────────────────────────────────────────────
+
+@_ligand_app.command("integrate")
+def integrate_cmd(
+    protein: Path = typer.Option(
+        ...,
+        "--protein", "-p",
+        help="Protein-only PDB file (from 'simforge ligand prepare' or manual prep).",
+    ),
+    ligand_itp: Path = typer.Option(
+        ...,
+        "--ligand-itp",
+        help="Ligand topology .itp file from LigParGen.",
+    ),
+    ligand_gro: Path = typer.Option(
+        ...,
+        "--ligand-gro",
+        help="Ligand coordinate .gro file from LigParGen.",
+    ),
+    forcefield: str = typer.Option(
+        "oplsaa",
+        "--forcefield", "--ff",
+        help="GROMACS force field name passed to pdb2gmx (default: oplsaa).",
+    ),
+    water: str = typer.Option(
+        "spce",
+        "--water",
+        help="Water model passed to pdb2gmx (default: spce).",
+    ),
+    out_dir: Path = typer.Option(
+        Path("system"),
+        "--out", "-o",
+        help="Output directory for the assembled system (default: ./system).",
+    ),
+    no_grompp: bool = typer.Option(
+        False,
+        "--no-grompp",
+        help="Skip the optional gmx grompp dry-run validation.",
+    ),
+) -> None:
+    """Assemble a GROMACS-ready protein–ligand system from LigParGen outputs.
+
+    Runs gmx pdb2gmx on the protein, splits the generated topology, merges
+    coordinates, and constructs a clean topol.top with the correct include
+    order required for OPLS-AA ligand parameters.
+
+    GROMACS must be in PATH.
+
+    \b
+    Outputs written to --out:
+        protein.gro             ← from gmx pdb2gmx
+        protein.itp             ← protein topology (extracted from topol.top)
+        ligand_atomtypes.itp    ← [ atomtypes ] block from ligand .itp
+        <ligand>.itp            ← ligand topology without [ atomtypes ]
+        topol.top               ← clean master topology (correct include order)
+        complex.gro             ← merged protein + ligand coordinates
+        assembly_report.yaml    ← validation results and file summary
+
+    Examples:
+
+        simforge ligand integrate \\
+            --protein protein_only.pdb \\
+            --ligand-itp E20.itp \\
+            --ligand-gro E20.gro \\
+            --out system/
+
+        simforge ligand integrate \\
+            --protein protein.pdb \\
+            --ligand-itp LIG.itp --ligand-gro LIG.gro \\
+            --ff oplsaa --water spce --out system/
+    """
+    # ── Input validation ──────────────────────────────────────────────────────
+    missing = [
+        str(p) for p in (protein, ligand_itp, ligand_gro) if not p.exists()
+    ]
+    if missing:
+        for m in missing:
+            app.print(f"[red]Error:[/red] File not found: {m}")
+        raise typer.Exit(1)
+
+    app.print(Panel(
+        f"[bold cyan]Ligand Integrate[/bold cyan]  "
+        f"[dim]{protein.name}[/dim] + [dim]{ligand_itp.name}[/dim] + "
+        f"[dim]{ligand_gro.name}[/dim]  →  [dim]{out_dir}[/dim]",
+        border_style="cyan", padding=(0, 2),
+    ))
+
+    from ligand.integrate import assemble_system
+
+    import time as _time
+    t0 = _time.monotonic()
+
+    result = assemble_system(
+        protein_pdb=protein,
+        ligand_itp=ligand_itp,
+        ligand_gro=ligand_gro,
+        out_dir=out_dir,
+        forcefield=forcefield,
+        water_model=water,
+        run_grompp=not no_grompp,
+    )
+
+    elapsed = _time.monotonic() - t0
+
+    if result.error:
+        app.print(f"\n  [red]✗  Assembly failed:[/red] {result.error}")
+        raise typer.Exit(1)
+
+    if result.pdb2gmx_fallback_used:
+        app.print(
+            "  [yellow]⚠[/yellow]  pdb2gmx failed due to protein hydrogen mismatch; "
+            "retried with [bold]-ignh[/bold] (input hydrogens ignored, "
+            "GROMACS will re-add them from the force-field template)"
+        )
+
+    # ── Output summary ────────────────────────────────────────────────────────
+    if result.success:
+        app.print(f"\n  [green]✓[/green]  Assembly complete  [dim]({elapsed:.1f}s)[/dim]\n")
+    else:
+        app.print(f"\n  [yellow]⚠[/yellow]  Assembly finished with errors  [dim]({elapsed:.1f}s)[/dim]\n")
+
+    app.print(f"  [bold]Outputs[/bold]  →  {out_dir}/")
+    for label, path in [
+        ("protein.gro",           result.protein_gro),
+        ("protein.itp",           result.protein_itp),
+        ("ligand_atomtypes.itp",  result.ligand_atomtypes_itp),
+        (f"{ligand_itp.name}",    result.ligand_itp),
+        ("topol.top",             result.topol_top),
+        ("complex.gro",           result.complex_gro),
+        ("assembly_report.yaml",  result.report_path),
+    ]:
+        if path and Path(path).exists():
+            app.print(f"    [green]✓[/green]  {label}")
+        else:
+            app.print(f"    [red]✗[/red]  {label}  [dim](not created)[/dim]")
+
+    app.print(
+        f"\n     Protein mol:   [bold]{result.protein_mol_name}[/bold]"
+        f"  ({result.protein_atom_count} atoms)"
+    )
+    app.print(
+        f"     Ligand mol:    [bold]{result.ligand_mol_name}[/bold]"
+        f"  ({result.ligand_atom_count} atoms)"
+    )
+    app.print(f"     Complex total: [bold]{result.total_atom_count}[/bold] atoms")
+
+    for warn in result.warnings:
+        app.print(f"\n  [yellow]⚠[/yellow]  {warn}")
+
+    if result.errors:
+        app.print(f"\n  [red]Validation errors ({len(result.errors)}):[/red]")
+        for err in result.errors:
+            app.print(f"    [red]•[/red] {err}")
+        raise typer.Exit(1)
+
+    app.print(
+        f"\n  [dim]Next steps:[/dim]\n"
+        f"    gmx solvate -cp {out_dir}/complex.gro -cs spc216.gro \\\n"
+        f"                -o {out_dir}/solvated.gro -p {out_dir}/topol.top\n"
+    )
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
