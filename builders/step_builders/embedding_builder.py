@@ -68,6 +68,13 @@ class EmbeddingBuilder:
         if topology_dir:
             topol_top = str(Path(_rel(step_dir, topology_dir)) / "topol.top")
 
+        # Resolve inflategro from workspace membrane_assets/ (staged at compile time)
+        membrane_assets_dir = step_dir_map.get("__membrane_assets__")
+        if membrane_assets_dir:
+            inflategro_script = str(
+                Path(_rel(step_dir, membrane_assets_dir)) / "inflategro-Jorge.pl"
+            )
+
         # ── Shrink-loop MDP (position-restrained minimization) ─────────────────
         self._write_minim_mdp(step_dir, temperature_K)
 

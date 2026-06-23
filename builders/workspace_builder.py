@@ -24,6 +24,18 @@ from core.workspace_fingerprint import (
     SIMFORGE_VERSION,
 )
 
+
+def _find_simforge_root() -> Path:
+    p = Path(__file__).parent
+    for _ in range(8):
+        if (p / "adapters").is_dir() and (p / "core").is_dir():
+            return p
+        p = p.parent
+    raise RuntimeError("SimForge project root not found")
+
+
+_PROT_MEMB_FILES = _find_simforge_root() / "docs" / "Prot-Memb_FILES"
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -120,12 +132,29 @@ class WorkspaceBuilder:
         self._stage_inputs(result, inputs_dir)
 
         # ────────────────────────────────────────────────────────────────────
+        # membrane_assets/ — stage bilayer GRO, inflategro, and FF directory
+        # into the workspace so scripts need no external path at runtime.
+        # ────────────────────────────────────────────────────────────────────
+
+        membrane_assets_dir: Path | None = None
+        _needs_membrane = any(
+            step.step_id in ("embed_in_bilayer", "membrane_embedding")
+            for step in result.execution_order
+        )
+        if _needs_membrane:
+            membrane_assets_dir = root / "membrane_assets"
+            membrane_assets_dir.mkdir(exist_ok=True)
+            self._stage_membrane_assets(result, membrane_assets_dir, metadata_dir)
+
+        # ────────────────────────────────────────────────────────────────────
         # Step folders — pass 1: create dirs + build step_dir_map
         # ────────────────────────────────────────────────────────────────────
 
         step_dir_map: dict[str, Path] = {
             "__workspace_root__": root.resolve(),
         }
+        if membrane_assets_dir is not None:
+            step_dir_map["__membrane_assets__"] = membrane_assets_dir.resolve()
 
         for i, step in enumerate(result.execution_order, start=1):
             step_dir = steps_dir / f"{i:02d}_{step.step_id}"
@@ -265,6 +294,91 @@ class WorkspaceBuilder:
     # ────────────────────────────────────────────────────────────────────────
     # Input staging
     # ────────────────────────────────────────────────────────────────────────
+
+    def _stage_membrane_assets(
+        self,
+        result: "CompilationResult",
+        assets_dir: Path,
+        metadata_dir: Path,
+    ) -> None:
+        """
+        Copy dppc*.gro, inflategro-Jorge.pl, and oplsaa_membrane.ff/ from
+        docs/Prot-Memb_FILES/ into workspace/membrane_assets/.
+
+        Raises FileNotFoundError at compile time if any required asset is
+        missing — workspaces must be self-contained before they are shipped.
+        Writes metadata/membrane_assets.json listing every staged item.
+        """
+        # Detect which bilayer file(s) are referenced by step params.
+        bilayer_files: set[str] = set()
+        for step in result.execution_order:
+            bf = step.params.get("bilayer_file")
+            if bf:
+                bilayer_files.add(bf)
+        if not bilayer_files:
+            bilayer_files = {"dppc512_whole.gro"}
+
+        staged: list[dict] = []
+
+        # ── Bilayer GRO files ─────────────────────────────────────────────
+        for bilayer_file in sorted(bilayer_files):
+            src = _PROT_MEMB_FILES / bilayer_file
+            if not src.exists():
+                raise FileNotFoundError(
+                    f"Membrane asset not found: {src}\n"
+                    f"Expected under {_PROT_MEMB_FILES}"
+                )
+            dst = assets_dir / bilayer_file
+            shutil.copy2(src, dst)
+            staged.append({
+                "asset":       bilayer_file,
+                "type":        "file",
+                "source":      str(src),
+                "destination": str(dst),
+                "size_bytes":  src.stat().st_size,
+            })
+
+        # ── inflategro-Jorge.pl ───────────────────────────────────────────
+        inflategro_src = _PROT_MEMB_FILES / "inflategro-Jorge.pl"
+        if not inflategro_src.exists():
+            raise FileNotFoundError(f"Membrane asset not found: {inflategro_src}")
+        inflategro_dst = assets_dir / "inflategro-Jorge.pl"
+        shutil.copy2(inflategro_src, inflategro_dst)
+        staged.append({
+            "asset":       "inflategro-Jorge.pl",
+            "type":        "file",
+            "source":      str(inflategro_src),
+            "destination": str(inflategro_dst),
+            "size_bytes":  inflategro_src.stat().st_size,
+        })
+
+        # ── oplsaa_membrane.ff/ ───────────────────────────────────────────
+        ff_src = _PROT_MEMB_FILES / "oplsaa_membrane.ff"
+        if not ff_src.is_dir():
+            raise FileNotFoundError(f"Membrane asset not found: {ff_src}")
+        ff_dst = assets_dir / "oplsaa_membrane.ff"
+        if ff_dst.exists():
+            shutil.rmtree(ff_dst)
+        shutil.copytree(ff_src, ff_dst)
+        n_ff_files = sum(1 for _ in ff_dst.rglob("*") if _.is_file())
+        staged.append({
+            "asset":       "oplsaa_membrane.ff",
+            "type":        "directory",
+            "source":      str(ff_src),
+            "destination": str(ff_dst),
+            "n_files":     n_ff_files,
+        })
+
+        # ── Write metadata ────────────────────────────────────────────────
+        meta = {
+            "staged_at":  datetime.now().isoformat(timespec="seconds"),
+            "source_dir": str(_PROT_MEMB_FILES),
+            "assets_dir": str(assets_dir),
+            "assets":     staged,
+        }
+        (metadata_dir / "membrane_assets.json").write_text(
+            json.dumps(meta, indent=4)
+        )
 
     def _stage_inputs(
         self,

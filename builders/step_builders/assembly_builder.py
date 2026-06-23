@@ -557,7 +557,7 @@ print(f"[water_gate] {{wv.message}}")
 
         Inputs (resolved from DAG):
             match_box_to_bilayer/protein_boxed.gro
-            <bilayer_file>  (looked up in CWD then Prot-Memb_FILES/)
+            <bilayer_file>  (loaded from workspace membrane_assets/)
 
         Outputs:
             system.gro       — protein + shifted bilayer (foundational artifact)
@@ -572,11 +572,18 @@ print(f"[water_gate] {{wv.message}}")
         match_box_dir = step_dir_map.get("match_box_to_bilayer")
         match_box_ref = _rel(step_dir, match_box_dir) if match_box_dir else "../match_box_to_bilayer"
 
+        membrane_assets_dir = step_dir_map.get("__membrane_assets__")
+        assets_ref = (
+            _rel(step_dir, membrane_assets_dir)
+            if membrane_assets_dir
+            else "../../membrane_assets"
+        )
+
         script = f"""#!/usr/bin/env python3
 # ─── Embed protein in bilayer ─────────────────────────────────────────────────
 # Uses MoveMembAdapter (Python reimpl of MoveMemb.f) to align bilayer midplane
 # with protein Z-centre, then generates strong position restraints.
-# Inputs:  <match_box_to_bilayer>/protein_boxed.gro  +  {bilayer_file}
+# Inputs:  <match_box_to_bilayer>/protein_boxed.gro  +  membrane_assets/{bilayer_file}
 # Outputs: system.gro, strong_posre.itp, overlap_report.json
 import sys, subprocess, json
 from pathlib import Path
@@ -601,15 +608,12 @@ MATCH_BOX_DIR = (SCRIPT_DIR / "{match_box_ref}").resolve()
 BILAYER_FILE  = "{bilayer_file}"
 LIPID_RESNAME = "{lipid_resname}"   # GRO residue name (e.g. "DPP" for DPPC OPLS-AA)
 
-# ── Resolve bilayer GRO ───────────────────────────────────────────────────────
-bilayer_path = Path(BILAYER_FILE)
+# ── Resolve bilayer GRO from workspace membrane_assets ────────────────────────
+ASSETS_DIR   = (SCRIPT_DIR / "{assets_ref}").resolve()
+bilayer_path = ASSETS_DIR / BILAYER_FILE
 if not bilayer_path.exists():
-    candidate = PROJECT_ROOT / "Prot-Memb_FILES" / BILAYER_FILE
-    if candidate.exists():
-        bilayer_path = candidate
-    else:
-        print(f"ERROR: bilayer '{{BILAYER_FILE}}' not found in CWD or Prot-Memb_FILES/", file=sys.stderr)
-        sys.exit(1)
+    print(f"ERROR: bilayer '{{BILAYER_FILE}}' not found in membrane_assets: {{bilayer_path}}", file=sys.stderr)
+    sys.exit(1)
 
 protein_gro = MATCH_BOX_DIR / "protein_boxed.gro"
 gro_out     = SCRIPT_DIR / "system.gro"
