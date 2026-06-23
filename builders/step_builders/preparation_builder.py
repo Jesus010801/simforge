@@ -87,6 +87,22 @@ class PreparationBuilder:
                 expected_outputs.append("strong_posre.itp")
             expected_outputs.append("topology_consistency_report.json")
 
+            # GMXLIB setup so pdb2gmx finds oplsaa_membrane.ff in workspace
+            membrane_assets_dir = step_dir_map.get("__membrane_assets__")
+            assets_ref = (
+                _rel(step_dir, membrane_assets_dir)
+                if membrane_assets_dir
+                else "../../membrane_assets"
+            )
+            gmxlib_lines = [
+                "",
+                "# Point GMXLIB at workspace membrane_assets so pdb2gmx finds oplsaa_membrane.ff",
+                "import os as _os",
+                "_gmx_env = dict(_os.environ)",
+                f'_assets_dir = str((SCRIPT_DIR / "{assets_ref}").resolve())',
+                '_gmx_env["GMXLIB"] = _assets_dir + (_os.pathsep + _gmx_env["GMXLIB"] if "GMXLIB" in _gmx_env else "")',
+            ]
+
             script_lines = [
                 "#!/usr/bin/env python3",
                 f"# ─── generate_topology (membrane, input from {source_step}) ──────────────────",
@@ -105,6 +121,7 @@ class PreparationBuilder:
                 "",
                 "PROJECT_ROOT = _find_root(SCRIPT_DIR)",
                 "sys.path.insert(0, str(PROJECT_ROOT))",
+                *gmxlib_lines,
                 "",
                 "ret = subprocess.run(",
                 '    ["gmx", "pdb2gmx",',
@@ -116,6 +133,7 @@ class PreparationBuilder:
                 '     "-ignh"],',
                 "    cwd=str(SCRIPT_DIR),",
                 "    capture_output=False,",
+                "    env=_gmx_env,",
                 ")",
                 "if ret.returncode != 0:",
                 "    sys.exit(ret.returncode)",
