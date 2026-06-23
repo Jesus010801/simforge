@@ -197,10 +197,28 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         ))
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 3: embed in bilayer (manual — requires MoveMemb Z-displacement)
+        # Step 3: embed in bilayer
+        # TM residues (if annotated) drive the bilayer Z alignment so that
+        # large EC/IC domains do not mis-center the hydrophobic core.
+        # When absent, the adapter falls back to protein Z-centre and emits a
+        # warning in the output report.
         # ─────────────────────────────────────────────────────────────────────
-        bilayer     = mk.bilayer_for_box(12.84, 12.89, lipid)
+        bilayer      = mk.bilayer_for_box(12.84, 12.89, lipid)
         bilayer_file = bilayer.filename if bilayer else "dppc512_whole.gro"
+        embed_params: dict = {
+            "bilayer_file":       bilayer_file,
+            "lipid":              lipid,
+            "lipid_residue_name": lipid_resname,
+        }
+        if tm_residues:
+            embed_params["tm_residues"] = tm_residues  # range string, e.g. "51-75"
+
+        embed_notes = [
+            "MoveMembAdapter (Python) aligns bilayer midplane to TM-region Z-centre — no gfortran required"
+            if tm_residues else
+            "MoveMembAdapter: no TM annotation — falling back to full protein Z-centre; "
+            "add transmembrane_segments to structural_annotation for accurate placement"
+        ]
         plan.steps.append(SimulationStep(
             step_id="embed_in_bilayer",
             title="Embutir proteína en bicapa lipídica",
@@ -209,12 +227,8 @@ class MembraneWorkflowOPLSAA(BasePipeline):
             automation_level=AutomationLevel.AUTOMATED,
             engine="movememb+genrestr",
             depends_on=["match_box_to_bilayer"],
-            params={
-                "bilayer_file":       bilayer_file,
-                "lipid":              lipid,
-                "lipid_residue_name": lipid_resname,   # GRO resname (e.g. "DPP" for DPPC OPLS-AA)
-            },
-            notes=["MoveMembAdapter (Python) aligns bilayer Z-midplane to protein Z-centre — no gfortran required"],
+            params=embed_params,
+            notes=embed_notes,
         ))
 
         # ─────────────────────────────────────────────────────────────────────

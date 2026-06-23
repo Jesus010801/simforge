@@ -8,21 +8,32 @@ scripted workflows.
 
 This adapter reimplements the algorithm directly in Python:
   1. compute_z_shift(): reads protein + bilayer GRO, returns the nm shift
-     needed to align bilayer midplane with protein Z-centre.
+     needed to align bilayer midplane with the protein alignment Z-centre.
   2. run(): applies the shift, combines protein + bilayer into one GRO.
+
+TM-aware alignment (Phase 2):
+  When tm_residues is provided, the bilayer midplane is aligned to the
+  Z-centre of CA atoms in those residues rather than the full protein
+  Z-extent centre.  This is critical for proteins with large EC/IC
+  domains — using the full extent would mis-position the hydrophobic core.
 
 No gfortran or MoveMemb.f required.
 
 Guaranteed metadata keys on success:
-    z_shift_nm        float  shift applied to all bilayer atoms (+ = upward)
-    protein_z_min     float  protein Z minimum (nm)
-    protein_z_max     float  protein Z maximum (nm)
-    bilayer_z_min     float  original bilayer Z minimum (nm)
-    bilayer_z_max     float  original bilayer Z maximum (nm)
-    overlap_before_nm float  Z overlap before shift (negative means gap)
-    atoms_protein     int    protein atom count
-    atoms_bilayer     int    bilayer atom count
-    atoms_total       int    combined atom count
+    z_shift_nm          float       shift applied to all bilayer atoms (+ = upward)
+    protein_z_min       float       protein Z minimum (nm)
+    protein_z_max       float       protein Z maximum (nm)
+    protein_center_z    float       (z_min + z_max) / 2 (nm)
+    tm_center_z         float|None  mean Z of TM CA atoms (nm); None if no TM annotation
+    bilayer_midplane_z  float       original bilayer midplane Z (nm)
+    bilayer_z_min       float       original bilayer Z minimum (nm)
+    bilayer_z_max       float       original bilayer Z maximum (nm)
+    alignment_method    str         "tm_center" | "protein_center_fallback"
+    tm_annotation_used  bool        True when TM CA atoms were found and used
+    overlap_before_nm   float       Z overlap before shift (negative means gap)
+    atoms_protein       int         protein atom count
+    atoms_bilayer       int         bilayer atom count
+    atoms_total         int         combined atom count
 """
 
 from __future__ import annotations
@@ -73,6 +84,35 @@ def _renumber_atoms(atom_lines: list[str], start: int = 1) -> list[str]:
 def _z_extents(atom_lines: list[str]) -> tuple[float, float]:
     zs = [_atom_z(l) for l in atom_lines]
     return min(zs), max(zs)
+
+
+def _tm_ca_center_z(
+    atom_lines:     list[str],
+    tm_residue_set: set[int],
+) -> float | None:
+    """
+    Return the mean Z of CA atoms belonging to TM residues.
+
+    GRO fixed-width columns:
+        [0:5]   residue number
+        [5:10]  residue name
+        [10:15] atom name
+        [36:44] Z coordinate (nm)
+
+    Returns None if no matching CA atoms are found (empty TM set, or
+    the GRO lacks backbone atoms — e.g. coarse-grained models).
+    """
+    zs: list[float] = []
+    for line in atom_lines:
+        try:
+            resnum = int(line[0:5].strip())
+        except (ValueError, IndexError):
+            continue
+        if resnum not in tm_residue_set:
+            continue
+        if line[10:15].strip() == "CA":
+            zs.append(_atom_z(line))
+    return sum(zs) / len(zs) if zs else None
 
 
 # ── Adapter ───────────────────────────────────────────────────────────────────
@@ -127,23 +167,26 @@ class MoveMembAdapter(ExternalToolAdapter):
 
     def compute_z_shift(
         self,
-        protein_gro:  Path | str,
-        bilayer_gro:  Path | str,
-        clearance_nm: float = 0.0,
+        protein_gro:    Path | str,
+        bilayer_gro:    Path | str,
+        clearance_nm:   float = 0.0,
+        tm_residues:    Optional[set[int]] = None,
     ) -> float:
         """
-        Compute the Z shift needed to centre the bilayer at the protein Z-midpoint.
+        Compute the Z shift needed to align the bilayer midplane with the protein
+        TM-region centre (or full protein Z-centre as a fallback).
 
-        The bilayer midplane is moved to match the protein Z-centre so that
-        the TM region (assumed to span the full protein height in v1) sits
-        in the hydrophobic core of the bilayer.
+        When tm_residues is provided the shift is computed from the mean Z of
+        CA atoms in those residues.  When absent, the full protein Z-extent
+        centre is used (original behaviour, but potentially inaccurate for
+        proteins with large EC/IC domains).
 
         Args:
             protein_gro:  Oriented protein .gro.
             bilayer_gro:  Pre-built bilayer .gro.
-            clearance_nm: Extra gap added above the bilayer top (nm).  Use 0
-                          for TM proteins — the protein should sit inside the
-                          bilayer, not above it.
+            clearance_nm: Extra gap added to the shift (nm); normally 0 for TM.
+            tm_residues:  Set of residue numbers annotated as TM; if None the
+                          full protein Z-centre is used as fallback.
 
         Returns:
             z_shift_nm (positive = bilayer moves upward in Z).
@@ -153,11 +196,15 @@ class MoveMembAdapter(ExternalToolAdapter):
 
         prot_z_min, prot_z_max = _z_extents(prot_lines)
         bil_z_min,  bil_z_max  = _z_extents(bil_lines)
+        bil_z_midplane = (bil_z_min + bil_z_max) / 2.0
 
-        prot_z_centre  = (prot_z_min + prot_z_max) / 2.0
-        bil_z_midplane = (bil_z_min  + bil_z_max)  / 2.0
+        if tm_residues is not None:
+            tm_z = _tm_ca_center_z(prot_lines, tm_residues)
+        else:
+            tm_z = None
 
-        return prot_z_centre - bil_z_midplane + clearance_nm
+        alignment_z = tm_z if tm_z is not None else (prot_z_min + prot_z_max) / 2.0
+        return alignment_z - bil_z_midplane + clearance_nm
 
     # ── run ───────────────────────────────────────────────────────────────────
 
@@ -169,6 +216,7 @@ class MoveMembAdapter(ExternalToolAdapter):
         gro_out:      Path | str,
         z_shift_nm:   Optional[float] = None,
         clearance_nm: float = 0.0,
+        tm_residues:  Optional[set[int]] = None,
     ) -> AdapterResult:
         """
         Shift the bilayer in Z and write a combined protein+bilayer .gro.
@@ -178,13 +226,18 @@ class MoveMembAdapter(ExternalToolAdapter):
         taken from the protein GRO (which should already be sized to match
         the bilayer XY footprint).
 
+        When tm_residues is provided the bilayer is aligned to the mean Z of
+        CA atoms in those residues, not to the full protein Z-extent centre.
+        This is the correct behaviour for proteins with large EC/IC domains.
+
         Args:
             protein_gro:  Oriented + box-sized protein .gro.
             bilayer_gro:  Pre-built equilibrated bilayer .gro.
             gro_out:      Output combined system .gro.
-            z_shift_nm:   Explicit shift (nm).  None = auto-compute via
-                          compute_z_shift().
-            clearance_nm: Passed to compute_z_shift() when z_shift_nm is None.
+            z_shift_nm:   Explicit shift (nm).  None = auto-compute.
+            clearance_nm: Extra gap added to the shift (nm); normally 0.
+            tm_residues:  Set of residue numbers annotated as TM.  When None
+                          the full protein Z-centre is used as fallback.
         """
         started_at = datetime.now()
         self.assert_available()
@@ -207,8 +260,22 @@ class MoveMembAdapter(ExternalToolAdapter):
             prot_z_mid  = (prot_z_min + prot_z_max) / 2.0
             overlap_nm  = min(prot_z_max, bil_z_max) - max(prot_z_min, bil_z_min)
 
+            # ── TM-aware Z-centre computation ─────────────────────────────────
+            tm_center_z: float | None = None
+            if tm_residues is not None:
+                tm_center_z = _tm_ca_center_z(prot_lines, tm_residues)
+
+            if tm_center_z is not None:
+                alignment_z        = tm_center_z
+                alignment_method   = "tm_center"
+                tm_annotation_used = True
+            else:
+                alignment_z        = prot_z_mid
+                alignment_method   = "protein_center_fallback"
+                tm_annotation_used = False
+
             if z_shift_nm is None:
-                z_shift_nm = prot_z_mid - bil_z_mid + clearance_nm
+                z_shift_nm = alignment_z - bil_z_mid + clearance_nm
 
             # Apply shift to bilayer atoms
             shifted_bil = [_shift_atom_z(l, z_shift_nm) for l in bil_lines]
@@ -217,7 +284,7 @@ class MoveMembAdapter(ExternalToolAdapter):
             combined = _renumber_atoms(prot_lines + shifted_bil, start=1)
             n_total  = len(combined)
 
-            title = f"Protein + bilayer (dz={z_shift_nm:+.3f} nm)"
+            title = f"Protein + bilayer (dz={z_shift_nm:+.3f} nm, method={alignment_method})"
             box_str = "  ".join(f"{v:.5f}" for v in prot_box)
             lines   = [title, f"{n_total}", *combined, box_str]
             gro_out.write_text("\n".join(lines) + "\n")
@@ -232,30 +299,46 @@ class MoveMembAdapter(ExternalToolAdapter):
                 stderr=str(exc),
             )
 
+        stdout_lines = [
+            f"Z-shift applied:    {z_shift_nm:+.3f} nm",
+            f"Alignment method:   {alignment_method}",
+        ]
+        if tm_annotation_used and tm_center_z is not None:
+            stdout_lines.append(f"TM center Z:        {tm_center_z:.3f} nm")
+        else:
+            stdout_lines.append(
+                "WARNING: TM annotation absent — bilayer aligned to full protein Z centre"
+            )
+        stdout_lines += [
+            f"Protein Z centre:   {prot_z_mid:.3f} nm  "
+            f"[{prot_z_min:.3f}, {prot_z_max:.3f}]",
+            f"Bilayer midplane:   {bil_z_mid:.3f} nm  "
+            f"[{bil_z_min:.3f}, {bil_z_max:.3f}]",
+            f"Combined atoms:     {n_total}",
+        ]
+
         return self._make_result(
             tool_name=self.tool_name,
             adapter_type=type(self).__name__,
             success=True,
             exit_code=0,
-            stdout=(
-                f"Z-shift applied: {z_shift_nm:+.3f} nm\n"
-                f"Protein Z: [{prot_z_min:.3f}, {prot_z_max:.3f}] nm  "
-                f"centre={prot_z_mid:.3f}\n"
-                f"Bilayer Z (original): [{bil_z_min:.3f}, {bil_z_max:.3f}] nm  "
-                f"midplane={bil_z_mid:.3f}\n"
-                f"Combined atoms: {n_total}"
-            ),
+            stdout="\n".join(stdout_lines),
             started_at=started_at,
             outputs={"gro_out": str(gro_out)},
             metadata={
-                "z_shift_nm":        z_shift_nm,
-                "protein_z_min":     prot_z_min,
-                "protein_z_max":     prot_z_max,
-                "bilayer_z_min":     bil_z_min,
-                "bilayer_z_max":     bil_z_max,
-                "overlap_before_nm": overlap_nm,
-                "atoms_protein":     len(prot_lines),
-                "atoms_bilayer":     len(bil_lines),
-                "atoms_total":       n_total,
+                "z_shift_nm":          z_shift_nm,
+                "protein_z_min":       prot_z_min,
+                "protein_z_max":       prot_z_max,
+                "protein_center_z":    prot_z_mid,
+                "tm_center_z":         tm_center_z,
+                "bilayer_midplane_z":  bil_z_mid,
+                "bilayer_z_min":       bil_z_min,
+                "bilayer_z_max":       bil_z_max,
+                "alignment_method":    alignment_method,
+                "tm_annotation_used":  tm_annotation_used,
+                "overlap_before_nm":   overlap_nm,
+                "atoms_protein":       len(prot_lines),
+                "atoms_bilayer":       len(bil_lines),
+                "atoms_total":         n_total,
             },
         )

@@ -579,10 +579,19 @@ print(f"[water_gate] {{wv.message}}")
             else "../../membrane_assets"
         )
 
+        # ── TM residue set (baked into the generated script at compile time) ──
+        tm_residues_str = p.get("tm_residues")  # e.g. "51-75" or None
+        if tm_residues_str:
+            from core.structural_annotation import residues_in_range
+            tm_set = residues_in_range(tm_residues_str)
+            tm_value = f"set({sorted(tm_set)!r})"
+        else:
+            tm_value = "None"
+
         script = f"""#!/usr/bin/env python3
 # ─── Embed protein in bilayer ─────────────────────────────────────────────────
 # Uses MoveMembAdapter (Python reimpl of MoveMemb.f) to align bilayer midplane
-# with protein Z-centre, then generates strong position restraints.
+# with TM-region Z-centre (or full protein Z-centre as fallback).
 # Inputs:  <match_box_to_bilayer>/protein_boxed.gro  +  membrane_assets/{bilayer_file}
 # Outputs: system.gro, strong_posre.itp, overlap_report.json
 import sys, subprocess, json
@@ -608,6 +617,10 @@ MATCH_BOX_DIR = (SCRIPT_DIR / "{match_box_ref}").resolve()
 BILAYER_FILE  = "{bilayer_file}"
 LIPID_RESNAME = "{lipid_resname}"   # GRO residue name (e.g. "DPP" for DPPC OPLS-AA)
 
+# TM residues baked in at compile time from structural_annotation.
+# None  → adapter falls back to full protein Z-centre (emits warning in report).
+TM_RESIDUES = {tm_value}
+
 # ── Resolve bilayer GRO from workspace membrane_assets ────────────────────────
 ASSETS_DIR   = (SCRIPT_DIR / "{assets_ref}").resolve()
 bilayer_path = ASSETS_DIR / BILAYER_FILE
@@ -622,12 +635,13 @@ if not protein_gro.exists():
     print(f"ERROR: protein_boxed.gro not found at {{protein_gro}}", file=sys.stderr)
     sys.exit(1)
 
-# ── MoveMemb: align bilayer Z-midplane with protein Z-centre ──────────────────
+# ── MoveMemb: align bilayer midplane with TM-region Z-centre ──────────────────
 adapter = MoveMembAdapter()
 result  = adapter.run(
     protein_gro=protein_gro,
     bilayer_gro=bilayer_path,
     gro_out=gro_out,
+    tm_residues=TM_RESIDUES,
 )
 
 if not result.success:
@@ -636,10 +650,6 @@ if not result.success:
 
 print(result.stdout)
 m = result.metadata
-print(f"Z-shift:          {{m['z_shift_nm']:+.4f}} nm")
-print(f"Protein Z:        [{{m['protein_z_min']:.3f}}, {{m['protein_z_max']:.3f}}] nm")
-print(f"Bilayer Z (orig): [{{m['bilayer_z_min']:.3f}}, {{m['bilayer_z_max']:.3f}}] nm")
-print(f"Combined atoms:   {{m['atoms_total']}}")
 
 # ── gmx genrestr — strong position restraints on protein heavy atoms ──────────
 posre_out = SCRIPT_DIR / "strong_posre.itp"
@@ -668,20 +678,36 @@ if ret.returncode != 0:
     sys.exit(1)
 print(f"Output: {{gro_out}}")
 
-# ── Overlap gate: check for protein–lipid clashes ────────────────────────────
+# ── Overlap + alignment gate ──────────────────────────────────────────────────
 ov = validate_no_overlap(gro_out, lipid_residue_name=LIPID_RESNAME)
+
+_align_warnings = []
+if not m["tm_annotation_used"]:
+    _align_warnings.append(
+        "TM annotation absent — bilayer midplane aligned to full protein Z centre "
+        "(suboptimal for proteins with large EC/IC domains). "
+        "Provide transmembrane_segments in structural_annotation for accurate TM placement."
+    )
+
 ov_report = {{
-    "passed":          ov.n_clashes == 0,
-    "n_clashes":       ov.n_clashes,
-    "n_protein_atoms": ov.n_protein_atoms,
-    "n_lipid_atoms":   ov.n_lipid_atoms,
-    "message":         ov.message,
-    "errors":          [] if ov.n_clashes == 0 else [ov.message],
-    "warnings":        [],
-    "confidence":      1.0,
+    "passed":             ov.n_clashes == 0,
+    "n_clashes":          ov.n_clashes,
+    "n_protein_atoms":    ov.n_protein_atoms,
+    "n_lipid_atoms":      ov.n_lipid_atoms,
+    "message":            ov.message,
+    "tm_center_z":        m["tm_center_z"],
+    "protein_center_z":   m["protein_center_z"],
+    "bilayer_midplane_z": m["bilayer_midplane_z"],
+    "alignment_method":   m["alignment_method"],
+    "tm_annotation_used": m["tm_annotation_used"],
+    "errors":             [] if ov.n_clashes == 0 else [ov.message],
+    "warnings":           _align_warnings,
+    "confidence":         1.0,
 }}
 (SCRIPT_DIR / "overlap_report.json").write_text(json.dumps(ov_report, indent=2))
 print(f"[overlap_gate] {{ov.message}}")
+if _align_warnings:
+    print(f"[align_warning] {{_align_warnings[0]}}")
 """
 
         (step_dir / "run_embed.py").write_text(script)
@@ -690,6 +716,12 @@ print(f"[overlap_gate] {{ov.message}}")
             "# ─── embed_in_bilayer (automatic) ──────────────────────────────────\n"
             'python3 "$(dirname "$0")/run_embed.py"\n'
         )
+        meta_params = {
+            "bilayer_file":       bilayer_file,
+            "lipid":              lipid,
+            "lipid_residue_name": lipid_resname,
+            "tm_residues":        tm_residues_str,
+        }
         (step_dir / "metadata.json").write_text(json.dumps({
             "step_id":          step.step_id,
             "stage":            step.stage.value,
@@ -699,11 +731,7 @@ print(f"[overlap_gate] {{ov.message}}")
             "generated_by":     "AssemblyBuilder",
             "gate":             {"type": "overlap_report"},
             "expected_outputs": ["system.gro", "strong_posre.itp", "overlap_report.json"],
-            "params": {
-                "bilayer_file":       bilayer_file,
-                "lipid":              lipid,
-                "lipid_residue_name": lipid_resname,
-            },
+            "params":           meta_params,
         }, indent=4))
 
     # ── build_membrane ────────────────────────────────────────────────────────
