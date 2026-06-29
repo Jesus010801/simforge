@@ -43,3 +43,31 @@ mdout.mdp
 .aider*
 .antigravitycli/
 __pycache__/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local run artifacts
+simforge_runs/
+*.log
+
+# Local test/system files
+bilayer_x
+bilayer_y:
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local run artifacts
+simforge_runs/
+*.log
+
+# Local molecular/test artifacts
+bilayer_x
+bilayer_y:
+GLP-1_R.pdb
+configs/GLP-1_R.pdb
