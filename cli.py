@@ -3541,6 +3541,83 @@ def integrate_cmd(
     )
 
 
+# ── Membrane sub-app ──────────────────────────────────────────────────────────
+_membrane_app = typer.Typer(
+    name="membrane",
+    help="Membrane-associated simulation utilities.",
+    no_args_is_help=True,
+)
+cli.add_typer(_membrane_app)
+
+
+@_membrane_app.command(name="inspect-mask")
+def inspect_mask(
+    workspace_path: Path = typer.Argument(..., help="Path to workspace directory."),
+):
+    """
+    Inspect the TM-aware lipid exclusion mask report for the workspace.
+    """
+    import json
+    import sys
+    from rich.panel import Panel
+    from rich.table import Table
+    from rich import box
+
+    # Look for the reports inside steps/03_embed_in_bilayer/
+    embed_dir = workspace_path / "steps" / "03_embed_in_bilayer"
+    report_file = embed_dir / "tm_lipid_classification_report.json"
+    mask_file = embed_dir / "tm_mask_report.json"
+
+    if not report_file.exists():
+        app.print(f"[red]Error: Lipid classification report not found at {report_file}[/red]")
+        sys.exit(1)
+
+    try:
+        report = json.loads(report_file.read_text())
+        mask = json.loads(mask_file.read_text()) if mask_file.exists() else {}
+    except Exception as e:
+        app.print(f"[red]Error parsing reports: {e}[/red]")
+        sys.exit(1)
+
+    app.print(Panel(
+        f"[bold]TM-Aware Exclusion Mask Inspection Report[/bold]\n"
+        f"Workspace: {workspace_path}\n"
+        f"Status: {'[green]PASSED[/green]' if report.get('validation_passed') else '[red]FAILED[/red]'} (Policy: {report.get('tm_mask_policy')})",
+        title="SimForge Membrane Gate", border_style="cyan"
+    ))
+
+    # Print TM Z coordinates and centroid if mask exists
+    if mask:
+        app.print(f"[bold cyan]TM Domain Reference Geometry:[/bold cyan]")
+        app.print(f"  Z-range: {mask.get('tm_z_min')} to {mask.get('tm_z_max')} nm (thickness: {round(mask.get('tm_z_max', 0) - mask.get('tm_z_min', 0), 2)} nm)")
+        app.print(f"  Centroid: {mask.get('tm_centroid')}")
+        app.print(f"  TM CA atoms count: {mask.get('n_tm_atoms')}")
+        app.print("")
+
+    # Table of classifications
+    counts = report.get("counts", {})
+    table = Table(title="Lipid Classifications", box=box.ROUNDED)
+    table.add_column("Category", style="bold")
+    table.add_column("Count", justify="right", style="cyan")
+    table.add_column("Validation Status", style="green")
+
+    table.add_row("Bulk Lipids", str(counts.get("bulk_lipid", 0)), "Allowed")
+
+    surface_overlap = counts.get("tm_surface_overlap", 0)
+    surface_status = "[red]Suspicious (Overlap)[/red]" if surface_overlap > 0 else "None"
+    table.add_row("TM Surface Overlaps", str(surface_overlap), surface_status)
+
+    cavity_trapped = counts.get("tm_cavity_trapped", 0)
+    cavity_status = "[red]Suspicious (Trapped)[/red]" if cavity_trapped > 0 else "None"
+    table.add_row("TM Cavity Trapped", str(cavity_trapped), cavity_status)
+
+    soluble_adj = counts.get("soluble_domain_adjacent", 0)
+    table.add_row("Soluble Domain Adjacent", str(soluble_adj), "Allowed (Ignored)")
+
+    table.add_row("Total Checked", str(report.get("total_lipids_checked", 0)), "")
+    app.print(table)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
