@@ -131,7 +131,8 @@ def extract_ligand_from_complex(
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    protein_lines: list[str] = []
+    protein_lines: list[str] = []  # ATOM, non-ligand HETATM, and TER records
+    protein_atom_count: int = 0   # only ATOM/HETATM (not TER)
     ligand_lines: list[str] = []
     all_conect: list[str] = []
     warnings: list[str] = []
@@ -142,11 +143,17 @@ def extract_ligand_from_complex(
 
         if record == "ATOM":
             protein_lines.append(line)
+            protein_atom_count += 1
         elif record == "HETATM":
             if resname == ligand_resname:
                 ligand_lines.append(line)
             else:
                 protein_lines.append(line)
+                protein_atom_count += 1
+        elif record == "TER":
+            # Preserve TER records so pdb2gmx can recognise chain boundaries
+            # in multichain proteins/dimers.
+            protein_lines.append(line)
         elif record == "CONECT":
             all_conect.append(line)
 
@@ -176,7 +183,11 @@ def extract_ligand_from_complex(
 
     # ── Write protein PDB ─────────────────────────────────────────────────────
     prot_pdb = out_dir / "protein_only.pdb"
-    prot_pdb.write_text("\n".join(protein_lines) + "\nTER\nEND\n")
+    # If the source PDB already has TER records (multichain), preserve them as-is.
+    # Otherwise append a TER so pdb2gmx correctly terminates the single chain.
+    has_ter = any(l[:6].rstrip() == "TER" for l in protein_lines)
+    end_suffix = "\nEND\n" if has_ter else "\nTER\nEND\n"
+    prot_pdb.write_text("\n".join(protein_lines) + end_suffix)
 
     # ── Hydrogen completeness assessment ──────────────────────────────────────
     n_h_atoms = _count_h_atoms(ligand_lines)
@@ -262,7 +273,7 @@ def extract_ligand_from_complex(
     report_data = _build_report(
         ligand_resname=ligand_resname,
         ligand_atom_count=len(ligand_lines),
-        protein_atom_count=len(protein_lines),
+        protein_atom_count=protein_atom_count,
         formal_charge=formal_charge,
         charge_estimated=charge_estimated,
         has_hydrogens=has_h,
@@ -290,7 +301,7 @@ def extract_ligand_from_complex(
         report_path=report_path,
         ligand_resname=ligand_resname,
         ligand_atom_count=len(ligand_lines),
-        protein_atom_count=len(protein_lines),
+        protein_atom_count=protein_atom_count,
         formal_charge=formal_charge,
         charge_estimated=charge_estimated,
         has_hydrogens=has_h,
