@@ -3,6 +3,8 @@ Protein–ligand GROMACS system assembly from LigParGen outputs.
 
 Given a prepared protein PDB and LigParGen-generated .itp/.gro files, this
 module builds a complete GROMACS-ready system without manual topology editing.
+Multichain proteins (dimers, etc.) are fully supported: the [ molecules ]
+section produced by pdb2gmx is treated as the authoritative source of truth.
 
 Steps performed by assemble_system():
   1. gmx pdb2gmx on protein → protein.gro, raw topol.top, posre.itp
@@ -22,7 +24,8 @@ Public API:
   Pdb2gmxMeta                              — dataclass with both-attempt metadata
   extract_atomtypes_section(itp_text)      -> tuple[str, str]
   remove_atomtypes_from_itp(itp_path, out_path) -> None
-  split_topol_top(...)                     -> tuple[str, str]
+  parse_molecules_section(topol_path)      -> list[tuple[str, int]]
+  split_topol_top(...)                     -> tuple[list[tuple[str, int]], str]
   generate_topol_top(...)                  -> Path
   merge_gro_files(...)                     -> int
   validate_system(...)                     -> list[str]
@@ -70,7 +73,8 @@ class AssemblyResult:
     topol_top: Optional[Path] = None
     complex_gro: Optional[Path] = None
     report_path: Optional[Path] = None
-    protein_mol_name: str = ""
+    protein_molecules: list[dict] = field(default_factory=list)  # [{name, count}, ...]
+    protein_mol_name: str = ""  # first chain name, for backwards compatibility
     ligand_mol_name: str = ""
     protein_atom_count: int = 0
     ligand_atom_count: int = 0
@@ -129,21 +133,53 @@ def remove_atomtypes_from_itp(
 
 # ── topol.top splitting ───────────────────────────────────────────────────────
 
+def parse_molecules_section(topol_path: str | Path) -> list[tuple[str, int]]:
+    """
+    Parse the [ molecules ] section from a pdb2gmx-generated topol.top.
+
+    Returns list of (molecule_name, count) tuples in order.  For a fresh
+    pdb2gmx run (no solvation), this contains only the protein chain entries,
+    e.g. [("Protein_chain_A", 1), ("Protein_chain_B", 1)] for a dimer.
+    Returns an empty list when no [ molecules ] section is found.
+    """
+    lines = Path(topol_path).read_text().splitlines()
+    in_molecules = False
+    entries: list[tuple[str, int]] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("[") and not stripped.startswith(";"):
+            section = stripped.strip("[]").strip().lower()
+            in_molecules = section == "molecules"
+            continue
+        if in_molecules:
+            if not stripped or stripped.startswith(";"):
+                continue
+            parts = stripped.split()
+            if len(parts) >= 2:
+                try:
+                    entries.append((parts[0], int(parts[1])))
+                except ValueError:
+                    pass
+    return entries
+
+
 def split_topol_top(
     topol_path: str | Path,
     out_dir: str | Path,
     protein_itp_name: str = "protein.itp",
-) -> tuple[str, str]:
+) -> tuple[list[tuple[str, int]], str]:
     """
     Read a pdb2gmx-generated topol.top and extract the protein topology.
 
     Writes ``protein_itp_name`` to ``out_dir`` containing all [ section ]
-    blocks that belong to the protein (from [ moleculetype ] up to, but not
-    including, the first water/ions .ff/ include).
+    blocks that belong to the protein (from the first [ moleculetype ] up to,
+    but not including, the first water/ions .ff/ include).  For multichain
+    proteins, all chain topologies are included in a single protein.itp.
 
     Returns:
-        (protein_mol_name, water_ions_block)
-        - protein_mol_name: molecule name from [ moleculetype ]
+        (protein_molecules, water_ions_block)
+        - protein_molecules: list of (mol_name, count) from pdb2gmx [ molecules ]
+          — for a dimer: [("Protein_chain_A", 1), ("Protein_chain_B", 1)]
         - water_ions_block: raw text from the water include to just before
           [ system ] — inserted verbatim into the new topol.top
 
@@ -192,9 +228,9 @@ def split_topol_top(
             "Cannot determine where the protein topology ends."
         )
 
-    # Protein topology body: from [ moleculetype ] to just before water include
+    # Protein topology body: from first [ moleculetype ] to just before water include
+    # For multichain proteins this spans all chain topologies in order.
     protein_lines = lines[first_mol_idx:water_include_idx]
-    protein_mol_name = _mol_name_from_lines(protein_lines)
 
     # Water+ions block: from water include to just before [ system ]
     water_end = system_idx if system_idx is not None else len(lines)
@@ -203,7 +239,14 @@ def split_topol_top(
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / protein_itp_name).write_text("".join(protein_lines))
 
-    return protein_mol_name, water_ions_block
+    # Use [ molecules ] as the authoritative source for which protein molecules exist.
+    protein_molecules = parse_molecules_section(topol_path)
+    if not protein_molecules:
+        # Fallback when [ molecules ] is absent: derive from first [ moleculetype ]
+        mol_name = _mol_name_from_lines(protein_lines)
+        protein_molecules = [(mol_name, 1)]
+
+    return protein_molecules, water_ions_block
 
 
 def _is_section(line: str) -> bool:
@@ -239,12 +282,17 @@ def generate_topol_top(
     protein_itp_name: str,
     ligand_itp_name: str,
     ligand_atomtypes_itp_name: str,
-    protein_mol_name: str,
+    protein_molecules: list[tuple[str, int]],
     ligand_mol_name: str,
     water_ions_block: str = "",
 ) -> Path:
     """
     Write a clean master topol.top with the correct GROMACS include order.
+
+    ``protein_molecules`` is a list of (molecule_name, count) tuples exactly
+    as produced by pdb2gmx's [ molecules ] section.  For a monomer pass
+    [("Protein_chain_A", 1)]; for a dimer pass
+    [("Protein_chain_A", 1), ("Protein_chain_B", 1)].
 
     Include order:
       1. #include "ff/forcefield.itp"
@@ -283,6 +331,9 @@ def generate_topol_top(
             f'#include "{ff_dir}/ions.itp"'
         )
 
+    mol_entries = [f"{name}           {count}" for name, count in protein_molecules]
+    mol_entries.append(f"{ligand_mol_name}            1")
+
     sections = [
         "; Generated by SimForge ligand integrate",
         "",
@@ -305,9 +356,7 @@ def generate_topol_top(
         "",
         "[ molecules ]",
         "; Compound        #mols",
-        f"{protein_mol_name}           1",
-        f"{ligand_mol_name}            1",
-    ]
+    ] + mol_entries
 
     top_path = out_dir / "topol.top"
     top_path.write_text("\n".join(sections) + "\n")
@@ -643,11 +692,13 @@ def assemble_system(
 
     # 2. Split topol.top → protein.itp ────────────────────────────────────────
     try:
-        protein_mol_name, water_ions_block = split_topol_top(
+        protein_molecules_list, water_ions_block = split_topol_top(
             raw_top, out_dir, protein_itp_name
         )
     except ValueError as exc:
         return AssemblyResult(success=False, error=str(exc))
+
+    protein_mol_name = protein_molecules_list[0][0] if protein_molecules_list else "Protein"
 
     protein_itp_path = out_dir / protein_itp_name
 
@@ -678,7 +729,7 @@ def assemble_system(
         protein_itp_name=protein_itp_name,
         ligand_itp_name=ligand_itp.name,
         ligand_atomtypes_itp_name="ligand_atomtypes.itp",
-        protein_mol_name=protein_mol_name,
+        protein_molecules=protein_molecules_list,
         ligand_mol_name=ligand_mol_name,
         water_ions_block=water_ions_block,
     )
@@ -710,9 +761,12 @@ def assemble_system(
 
     # 9. Report ───────────────────────────────────────────────────────────────
     _meta = pdb2gmx_meta  # may be None if pdb2gmx was never reached (shouldn't happen here)
+    prot_mols_dicts = [{"name": n, "count": c} for n, c in protein_molecules_list]
     report_data = {
         "success": not errors,
-        "protein_mol_name": protein_mol_name,
+        "protein_molecules": prot_mols_dicts,
+        "ligand_molecule": {"name": ligand_mol_name, "count": 1},
+        "protein_mol_name": protein_mol_name,  # backwards compat: first chain name
         "ligand_mol_name": ligand_mol_name,
         "protein_atom_count": prot_gro.atom_count,
         "ligand_atom_count": lig_gro_parsed.atom_count,
@@ -750,6 +804,7 @@ def assemble_system(
         topol_top=topol_top_path,
         complex_gro=complex_gro_path,
         report_path=report_path,
+        protein_molecules=prot_mols_dicts,
         protein_mol_name=protein_mol_name,
         ligand_mol_name=ligand_mol_name,
         protein_atom_count=prot_gro.atom_count,
