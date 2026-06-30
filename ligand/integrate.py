@@ -3,8 +3,17 @@ Protein–ligand GROMACS system assembly from LigParGen outputs.
 
 Given a prepared protein PDB and LigParGen-generated .itp/.gro files, this
 module builds a complete GROMACS-ready system without manual topology editing.
-Multichain proteins (dimers, etc.) are fully supported: the [ molecules ]
-section produced by pdb2gmx is treated as the authoritative source of truth.
+Multichain proteins (dimers, etc.) are fully supported in two modes:
+
+  Embedded topology mode (monomer / inline multichain):
+    pdb2gmx embeds all [ moleculetype ] blocks directly in topol.top.
+    SimForge extracts them into protein.itp and generates a new master top.
+
+  Master topology injection mode (pdb2gmx split-chain output):
+    pdb2gmx writes per-chain topologies to topol_Protein_chain_A.itp, etc.
+    topol.top itself has no inline [ moleculetype ].  SimForge detects this
+    and patches the existing topol.top in-place with ligand includes and
+    molecule entries, leaving per-chain files untouched.
 
 Steps performed by assemble_system():
   1. gmx pdb2gmx on protein → protein.gro, raw topol.top, posre.itp
@@ -12,29 +21,34 @@ Steps performed by assemble_system():
      1b. On failure, inspect output: if GROMACS diagnoses a hydrogen/protonation
          mismatch (e.g. "Option -ignh will ignore all hydrogens in the input"),
          retry with -ignh. Any other failure is fatal immediately.
-  2. Split topol.top → protein.itp (protein topology body extracted)
-  3. Extract [ atomtypes ] block from ligand .itp → ligand_atomtypes.itp
-  4. Write cleaned ligand .itp (atomtypes removed) to out_dir
-  5. Generate master topol.top with correct include order
-  6. Merge protein.gro + ligand.gro → complex.gro
-  7. Validate the assembled system
-  8. Write assembly_report.yaml
+  2. Detect topology mode (embedded vs master_injection).
+  3-4. Extract [ atomtypes ] block from ligand .itp → ligand_atomtypes.itp
+  5. Write cleaned ligand .itp (atomtypes removed) to out_dir.
+  6. Assemble final topol.top (mode-dependent):
+       embedded:          split protein into protein.itp → generate new topol.top
+       master_injection:  inject ligand includes/molecules into existing topol.top
+  7. Merge protein.gro + ligand.gro → complex.gro
+  8. Validate the assembled system
+  9. Write assembly_report.yaml
 
 Public API:
-  Pdb2gmxMeta                              — dataclass with both-attempt metadata
-  extract_atomtypes_section(itp_text)      -> tuple[str, str]
-  remove_atomtypes_from_itp(itp_path, out_path) -> None
-  parse_molecules_section(topol_path)      -> list[tuple[str, int]]
-  split_topol_top(...)                     -> tuple[list[tuple[str, int]], str]
-  generate_topol_top(...)                  -> Path
-  merge_gro_files(...)                     -> int
-  validate_system(...)                     -> list[str]
-  run_pdb2gmx(protein_pdb, out_dir, ...)   -> tuple[Path, Path, Path, Pdb2gmxMeta]
-  assemble_system(...)                     -> AssemblyResult
+  Pdb2gmxMeta                                  — dataclass with both-attempt metadata
+  extract_atomtypes_section(itp_text)          -> tuple[str, str]
+  remove_atomtypes_from_itp(itp_path, out)     -> None
+  parse_molecules_section(topol_path)          -> list[tuple[str, int]]
+  detect_chain_itp_includes(topol_path)        -> list[str]
+  inject_ligand_into_master_topol(...)         -> None
+  split_topol_top(...)                         -> tuple[list[tuple[str, int]], str]
+  generate_topol_top(...)                      -> Path
+  merge_gro_files(...)                         -> int
+  validate_system(...)                         -> list[str]
+  run_pdb2gmx(protein_pdb, out_dir, ...)       -> tuple[Path, Path, Path, Pdb2gmxMeta]
+  assemble_system(...)                         -> AssemblyResult
 """
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
@@ -45,6 +59,16 @@ import yaml
 
 from utils.gro_parser import GroAtom, GroFile, parse_gro, write_gro
 from utils.itp_parser import parse_itp
+
+# Regex for extracting the filename from an #include "..." or #include '...' line.
+_INCLUDE_RE = re.compile(r'#include\s+["\'](.+?)["\']')
+
+# Molecule names that indicate solvent or ions in the [ molecules ] section.
+_SOLVENT_ION_NAMES: frozenset[str] = frozenset({
+    "SOL", "HOH", "WAT", "TIP3", "SPC",
+    "NA", "CL", "K", "MG", "CA", "ZN", "FE", "MN", "CU",
+    "NA+", "CL-", "ION",
+})
 
 
 # ── pdb2gmx metadata ─────────────────────────────────────────────────────────
@@ -67,12 +91,14 @@ class Pdb2gmxMeta:
 class AssemblyResult:
     success: bool
     protein_gro: Optional[Path] = None
-    protein_itp: Optional[Path] = None
+    protein_itp: Optional[Path] = None  # None in master_injection mode
     ligand_atomtypes_itp: Optional[Path] = None
     ligand_itp: Optional[Path] = None
     topol_top: Optional[Path] = None
     complex_gro: Optional[Path] = None
     report_path: Optional[Path] = None
+    topology_mode: str = "embedded"  # "embedded" | "master_injection"
+    protein_topology_includes: list[str] = field(default_factory=list)
     protein_molecules: list[dict] = field(default_factory=list)  # [{name, count}, ...]
     protein_mol_name: str = ""  # first chain name, for backwards compatibility
     ligand_mol_name: str = ""
@@ -161,6 +187,132 @@ def parse_molecules_section(topol_path: str | Path) -> list[tuple[str, int]]:
                 except ValueError:
                     pass
     return entries
+
+
+def detect_chain_itp_includes(topol_path: str | Path) -> list[str]:
+    """
+    Find per-chain ITP filenames referenced in a pdb2gmx master topol.top.
+
+    Returns an ordered list of basenames such as
+    ``['topol_Protein_chain_A.itp', 'topol_Protein_chain_B.itp']``.
+    Returns an empty list for embedded (inline moleculetype) topologies.
+
+    Detection criterion: an ``#include`` whose quoted filename starts with
+    ``topol_``, ends with ``.itp``, and contains no directory separator.
+    """
+    found: list[str] = []
+    for line in Path(topol_path).read_text().splitlines():
+        s = line.strip()
+        if not s.startswith("#include"):
+            continue
+        m = _INCLUDE_RE.match(s)
+        if m:
+            fname = m.group(1)
+            if "/" not in fname and fname.startswith("topol_") and fname.endswith(".itp"):
+                found.append(fname)
+    return found
+
+
+def inject_ligand_into_master_topol(
+    topol_path: str | Path,
+    ligand_itp_name: str,
+    ligand_atomtypes_itp_name: str,
+    ligand_mol_name: str,
+) -> None:
+    """
+    Patch a pdb2gmx master topol.top in-place to include the ligand.
+
+    Three modifications are applied:
+
+    1. Insert ``#include "<ligand_atomtypes_itp_name>"`` on the line
+       immediately after the forcefield ``#include``.
+    2. Insert ``#include "<ligand_itp_name>"`` on the line immediately after
+       the last per-chain topology include (files matching ``topol_*.itp``).
+    3. Append the ligand molecule entry to the ``[ molecules ]`` section,
+       after all protein entries and before any solvent/ion entries.
+
+    Raises:
+        ValueError if the forcefield include or a per-chain include are not
+        found (indicates this is not a valid master-mode topol.top).
+    """
+    topol_path = Path(topol_path)
+    orig_lines = topol_path.read_text().splitlines()
+
+    ff_idx: Optional[int] = None
+    last_chain_idx: Optional[int] = None
+    last_protein_mol_idx: Optional[int] = None
+    first_solvent_mol_idx: Optional[int] = None
+    in_molecules = False
+
+    for i, line in enumerate(orig_lines):
+        s = line.strip()
+
+        if s.startswith("[") and not s.startswith(";"):
+            in_molecules = s.strip("[]").strip().lower() == "molecules"
+
+        if in_molecules and s and not s.startswith(";") and not s.startswith("["):
+            parts = s.split()
+            if len(parts) >= 2:
+                try:
+                    int(parts[1])
+                    name = parts[0]
+                    if name.upper() in _SOLVENT_ION_NAMES:
+                        if first_solvent_mol_idx is None:
+                            first_solvent_mol_idx = i
+                    else:
+                        last_protein_mol_idx = i
+                except ValueError:
+                    pass
+
+        if not s.startswith("#include"):
+            continue
+        m = _INCLUDE_RE.match(s)
+        if not m:
+            continue
+        fname = m.group(1)
+        if "forcefield.itp" in fname:
+            ff_idx = i
+        elif "/" not in fname and fname.startswith("topol_") and fname.endswith(".itp"):
+            last_chain_idx = i
+
+    if ff_idx is None:
+        raise ValueError(
+            "No forcefield #include found in topol.top — "
+            "cannot determine where to insert ligand atomtypes."
+        )
+    if last_chain_idx is None:
+        raise ValueError(
+            "No topol_*.itp per-chain #include found — "
+            "this does not appear to be a pdb2gmx master topology."
+        )
+
+    # Determine molecule insertion index (in orig_lines coordinates).
+    if first_solvent_mol_idx is not None:
+        mol_insert_before = first_solvent_mol_idx   # insert before first solvent
+    elif last_protein_mol_idx is not None:
+        mol_insert_before = last_protein_mol_idx + 1  # insert after last protein
+    else:
+        mol_insert_before = len(orig_lines)            # append
+
+    # Build the modified file in a single streaming pass.
+    new_lines: list[str] = []
+    for i, line in enumerate(orig_lines):
+        new_lines.append(line)
+        if i == ff_idx:
+            new_lines.append(f'#include "{ligand_atomtypes_itp_name}"')
+        if i == last_chain_idx:
+            new_lines.append(f'#include "{ligand_itp_name}"')
+
+    # Adjust mol_insert_before for lines inserted before it.
+    shifts = int(ff_idx < mol_insert_before) + int(last_chain_idx < mol_insert_before)
+    adjusted_mol_idx = mol_insert_before + shifts
+
+    lig_entry = f"{ligand_mol_name}            1"
+    new_lines = (
+        new_lines[:adjusted_mol_idx] + [lig_entry] + new_lines[adjusted_mol_idx:]
+    )
+
+    topol_path.write_text("\n".join(new_lines) + "\n")
 
 
 def split_topol_top(
@@ -670,12 +822,19 @@ def assemble_system(
     """
     Full protein–ligand GROMACS system assembly.
 
+    Supports embedded topology mode (inline moleculetype) and master topology
+    injection mode (per-chain topol_*.itp files).  All paths are resolved to
+    absolute before subprocess invocation so relative paths work correctly
+    regardless of the current working directory.
+
     All intermediate and final files are written to ``out_dir``.
     GROMACS must be in PATH (required for pdb2gmx in step 1).
     """
-    out_dir = Path(out_dir)
-    ligand_itp = Path(ligand_itp)
-    ligand_gro = Path(ligand_gro)
+    # Resolve to absolute paths so pdb2gmx (run with cwd=out_dir) finds them.
+    out_dir = Path(out_dir).resolve()
+    ligand_itp = Path(ligand_itp).resolve()
+    ligand_gro = Path(ligand_gro).resolve()
+    protein_pdb = Path(protein_pdb).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
     warnings: list[str] = []
@@ -690,17 +849,9 @@ def assemble_system(
     except RuntimeError as exc:
         return AssemblyResult(success=False, error=str(exc))
 
-    # 2. Split topol.top → protein.itp ────────────────────────────────────────
-    try:
-        protein_molecules_list, water_ions_block = split_topol_top(
-            raw_top, out_dir, protein_itp_name
-        )
-    except ValueError as exc:
-        return AssemblyResult(success=False, error=str(exc))
-
-    protein_mol_name = protein_molecules_list[0][0] if protein_molecules_list else "Protein"
-
-    protein_itp_path = out_dir / protein_itp_name
+    # 2. Detect topology mode ─────────────────────────────────────────────────
+    chain_itp_includes = detect_chain_itp_includes(raw_top)
+    topology_mode = "master_injection" if chain_itp_includes else "embedded"
 
     # 3-4. Extract ligand [ atomtypes ] ───────────────────────────────────────
     itp_text = ligand_itp.read_text()
@@ -721,18 +872,47 @@ def assemble_system(
     ligand_itp_out = out_dir / ligand_itp.name
     remove_atomtypes_from_itp(ligand_itp, ligand_itp_out)
 
-    # 6. Generate master topol.top ────────────────────────────────────────────
-    topol_top_path = generate_topol_top(
-        out_dir=out_dir,
-        forcefield=forcefield,
-        water_model=water_model,
-        protein_itp_name=protein_itp_name,
-        ligand_itp_name=ligand_itp.name,
-        ligand_atomtypes_itp_name="ligand_atomtypes.itp",
-        protein_molecules=protein_molecules_list,
-        ligand_mol_name=ligand_mol_name,
-        water_ions_block=water_ions_block,
-    )
+    # 6. Assemble final topol.top (mode-dependent) ────────────────────────────
+    protein_itp_path: Optional[Path] = None
+
+    if topology_mode == "master_injection":
+        # pdb2gmx wrote per-chain topol_*.itp files; patch existing topol.top.
+        protein_molecules_list = parse_molecules_section(raw_top)
+        try:
+            inject_ligand_into_master_topol(
+                raw_top,
+                ligand_itp_name=ligand_itp.name,
+                ligand_atomtypes_itp_name="ligand_atomtypes.itp",
+                ligand_mol_name=ligand_mol_name,
+            )
+        except ValueError as exc:
+            return AssemblyResult(success=False, error=str(exc))
+        topol_top_path = raw_top
+
+    else:
+        # Embedded mode: extract protein.itp and generate a fresh topol.top.
+        try:
+            protein_molecules_list, water_ions_block = split_topol_top(
+                raw_top, out_dir, protein_itp_name
+            )
+        except ValueError as exc:
+            return AssemblyResult(success=False, error=str(exc))
+
+        protein_itp_path = out_dir / protein_itp_name
+
+        topol_top_path = generate_topol_top(
+            out_dir=out_dir,
+            forcefield=forcefield,
+            water_model=water_model,
+            protein_itp_name=protein_itp_name,
+            ligand_itp_name=ligand_itp.name,
+            ligand_atomtypes_itp_name="ligand_atomtypes.itp",
+            protein_molecules=protein_molecules_list,
+            ligand_mol_name=ligand_mol_name,
+            water_ions_block=water_ions_block,
+        )
+
+    protein_mol_name = protein_molecules_list[0][0] if protein_molecules_list else "Protein"
 
     # 7. Merge GRO files ──────────────────────────────────────────────────────
     complex_gro_path = out_dir / "complex.gro"
@@ -760,13 +940,15 @@ def assemble_system(
     errors.extend(validation_errs)
 
     # 9. Report ───────────────────────────────────────────────────────────────
-    _meta = pdb2gmx_meta  # may be None if pdb2gmx was never reached (shouldn't happen here)
+    _meta = pdb2gmx_meta
     prot_mols_dicts = [{"name": n, "count": c} for n, c in protein_molecules_list]
     report_data = {
         "success": not errors,
+        "topology_mode": topology_mode,
+        "protein_topology_includes": chain_itp_includes,
         "protein_molecules": prot_mols_dicts,
         "ligand_molecule": {"name": ligand_mol_name, "count": 1},
-        "protein_mol_name": protein_mol_name,  # backwards compat: first chain name
+        "protein_mol_name": protein_mol_name,
         "ligand_mol_name": ligand_mol_name,
         "protein_atom_count": prot_gro.atom_count,
         "ligand_atom_count": lig_gro_parsed.atom_count,
@@ -780,7 +962,7 @@ def assemble_system(
         "pdb2gmx_final_exit_code": _meta.final_exit_code if _meta else None,
         "outputs": {
             "protein_gro": str(protein_gro),
-            "protein_itp": str(protein_itp_path),
+            "protein_itp": str(protein_itp_path) if protein_itp_path else None,
             "ligand_atomtypes_itp": str(atomtypes_path),
             "ligand_itp": str(ligand_itp_out),
             "topol_top": str(topol_top_path),
@@ -804,6 +986,8 @@ def assemble_system(
         topol_top=topol_top_path,
         complex_gro=complex_gro_path,
         report_path=report_path,
+        topology_mode=topology_mode,
+        protein_topology_includes=chain_itp_includes,
         protein_molecules=prot_mols_dicts,
         protein_mol_name=protein_mol_name,
         ligand_mol_name=ligand_mol_name,
