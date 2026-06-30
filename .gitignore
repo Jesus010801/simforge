@@ -71,3 +71,8 @@ bilayer_x
 bilayer_y:
 GLP-1_R.pdb
 configs/GLP-1_R.pdb
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
