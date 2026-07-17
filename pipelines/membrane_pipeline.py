@@ -6,19 +6,21 @@ Captura fielmente el workflow experto de tutorial_membrana.txt sin
 generalización prematura.  Cada step refleja una decisión científica
 real; los parámetros físicos vienen de core/membrane_knowledge.py.
 
-DAG generado:
-    orient_protein          PREPARATION   AUTOMATED (with structural_annotation) / GUIDED (without)
-    match_box_to_bilayer    ASSEMBLY      AUTOMATED (MatchBoxBuilder — box_match_report gate)
-    embed_in_bilayer        ASSEMBLY      AUTOMATED (MoveMembAdapter Python — no gfortran)
-    generate_topology       PREPARATION   AUTO   (pdb2gmx oplsaa_membrane.ff)
-    membrane_embedding      MEMBRANE_EMBEDDING AUTO  (shrink loop)
-    solvate_membrane        ASSEMBLY      AUTO
-    clean_water             ASSEMBLY      AUTOMATED (WaterDeletorAdapter Python)
-    add_ions                ASSEMBLY      AUTO
-    energy_minimization     MINIMIZATION  AUTO   (-DPOSRES -DSTRONG_POSRES)
-    equilibration           EQUILIBRATION AUTO   (semiisotropic, Berendsen NPT)
-    production_md           PRODUCTION    AUTO   (NH+PR, dt=0.001, semiisotropic)
-    analysis_*              ANALYSIS      AUTO
+DAG generado (Phase 11 topology architecture):
+    generate_protein_topology  PREPARATION   AUTO   (pdb2gmx on original protein PDB only)
+    orient_protein             PREPARATION   AUTOMATED (with structural_annotation) / GUIDED (without)
+    match_box_to_bilayer       ASSEMBLY      AUTOMATED (MatchBoxBuilder — box_match_report gate)
+    embed_in_bilayer           ASSEMBLY      AUTOMATED (MoveMembAdapter Python — no gfortran)
+    generate_topology          PREPARATION   AUTO   (assemble embed-time topology from components)
+    membrane_embedding         MEMBRANE_EMBEDDING AUTO  (shrink loop)
+    assemble_system_topology   ASSEMBLY      AUTO   (final topol.top, counts from converged.gro)
+    solvate_membrane           ASSEMBLY      AUTO
+    clean_water                ASSEMBLY      AUTOMATED (WaterDeletorAdapter Python)
+    add_ions                   ASSEMBLY      AUTO
+    energy_minimization        MINIMIZATION  AUTO   (-DPOSRES -DSTRONG_POSRES)
+    equilibration              EQUILIBRATION AUTO   (semiisotropic, Berendsen NPT)
+    production_md              PRODUCTION    AUTO   (NH+PR, dt=0.001, semiisotropic)
+    analysis_*                 ANALYSIS      AUTO
 
 NO generalizar antes de que este pipeline funcione end-to-end con DPPC.
 """
@@ -70,6 +72,89 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         inflate_f = mk.inflation_factor("single_pass_tm")
         defaults  = mk.MEMBRANE_EQUILIBRATION_DEFAULTS
 
+        # ── Embedding config (user-overridable) ───────────────────────────────
+        _mem_cfg = (getattr(state, "config", None) or {}).get("membrane", {})
+        embed_cfg = _mem_cfg.get("embedding", {})
+        # Default pinned to the original protmemfiles tutorial's one-shot overlap-
+        # removal cutoff (docs/Prot-Memb_FILES/tutorial_membrana.txt:36 — cutoff
+        # arg "14" -> 1.4 nm). A previous default of 0.14 nm was 10x too small and
+        # left protein-clashing lipids unremoved — see
+        # docs/audits/simforge_vs_protmemfiles_audit.md.
+        lipid_exclusion_cutoff_nm  = float(embed_cfg.get("lipid_exclusion_cutoff_nm", 1.4))
+        # Shrink-loop (per-iteration deflate) overlap cutoff. The original
+        # protmemfiles method applies the overlap-removal cutoff exactly once
+        # (docs/Prot-Memb_FILES/tutorial_membrana.txt:36), then runs every
+        # subsequent shrink-loop deflate call with cutoff=0
+        # (docs/Prot-Memb_FILES/ScriptCamilo-Jorge.sh:18,38 and
+        # run_inflategro.sh:41,48 — literal cutoff argument "0"). Reusing the
+        # nonzero one-shot cutoff on every deflate iteration causes the loop to
+        # keep deleting newly-compressed annular lipids as the box shrinks,
+        # producing a lipid-free void around the receptor even though the
+        # global APL converges — see docs/audits/ for the GLP-1R evidence
+        # (478 -> 400 DPP over 29 iterations, entirely inside the loop).
+        shrink_loop_cutoff_nm      = float(embed_cfg.get("shrink_loop_cutoff_nm", 0.0))
+        trapped_lipid_policy       = embed_cfg.get("trapped_lipid_policy", "warn")
+        annular_repair_enabled     = bool(embed_cfg.get("annular_repair_enabled", False))
+        annular_repair_allow_insertion = bool(embed_cfg.get("annular_repair_allow_insertion", False))
+        pre_exclude_trapped_lipids = bool(embed_cfg.get("pre_exclude_trapped_lipids", True))
+        max_pre_excluded_lipids    = int(embed_cfg.get("max_pre_excluded_lipids", 50))
+        save_embedding_iterations  = embed_cfg.get("save_embedding_iterations", "final_only")
+        save_embedding_iteration_stride = int(
+            embed_cfg.get("save_embedding_iteration_stride", 5)
+        )
+        quality_diagnostics        = bool(embed_cfg.get("quality_diagnostics", True))
+        quality_analysis_region    = embed_cfg.get("quality_analysis_region", "tm_footprint")
+        quality_footprint_margin   = float(embed_cfg.get("quality_footprint_margin_nm", 0.5))
+        tm_mask_validation         = bool(embed_cfg.get("tm_mask_validation", True))
+        tm_mask_policy             = str(embed_cfg.get("tm_mask_policy", "warn"))
+        tm_aware_exclusion         = bool(embed_cfg.get("tm_aware_exclusion", False))
+        tm_aware_exclusion_policy  = str(embed_cfg.get("tm_aware_exclusion_policy", "apply" if tm_aware_exclusion else "off"))
+        if not tm_aware_exclusion:
+            tm_aware_exclusion_policy = "off"
+        tm_aware_max_removed       = int(embed_cfg.get("tm_aware_max_removed_lipids", 50))
+
+        # ── Phase 9B: Optimizer config (passed through from embed_cfg) ─────────
+        optimizer_enabled          = embed_cfg.get("optimizer_enabled")   # None → builder auto-detects
+        optimizer_policy           = embed_cfg.get("optimizer_policy")
+        optimizer_max_candidates   = embed_cfg.get("optimizer_max_candidates")
+        optimizer_z_shifts         = embed_cfg.get("optimizer_z_shift_offsets_nm")
+        optimizer_mask_paddings    = embed_cfg.get("optimizer_mask_padding_nm")
+        optimizer_min_improvement  = embed_cfg.get("optimizer_min_score_improvement")
+        optimizer_run_minimization = embed_cfg.get("optimizer_run_candidate_minimization")
+        optimizer_excl_safety      = embed_cfg.get("optimizer_exclusion_safety_limit")
+
+        # ── Backend & Quality gates config ────────────────────────────────────
+        backend = embed_cfg.get("backend", "inflategro")
+        if backend not in ("inflategro", "tm_aware"):
+            raise ValueError(
+                f"Invalid membrane.embedding.backend: '{backend}'. "
+                "Allowed values: 'inflategro', 'tm_aware'."
+            )
+
+        quality_gates = embed_cfg.get("quality_gates", {})
+        max_void_fraction_local = float(quality_gates.get("max_void_fraction_local", 0.25))
+        max_void_area_local_nm2 = float(quality_gates.get("max_void_area_local_nm2", 1.0))
+        min_tm_burial_score = float(quality_gates.get("min_tm_burial_score", 0.80))
+        max_trapped_lipids = int(quality_gates.get("max_trapped_lipids", 0))
+        max_soluble_domain_core_atoms = int(quality_gates.get("max_soluble_domain_core_atoms", 10))
+
+        if backend == "tm_aware":
+            tm_aware_exclusion = True
+            tm_aware_exclusion_policy = "strict_apply"
+            tm_mask_validation = True
+            tm_mask_policy = "strict"
+
+        # ── Phase 10A: Interface builder (lipid refill) config ────────────────
+        _iface_b_cfg = embed_cfg.get("interface_builder", {})
+        iface_builder_enabled      = bool(_iface_b_cfg.get("enabled", False))
+        iface_builder_policy       = str( _iface_b_cfg.get("policy", "warn"))
+        iface_builder_max_inserted = int( _iface_b_cfg.get("max_inserted_lipids", 40))
+        iface_builder_max_per_cl   = int( _iface_b_cfg.get("max_lipids_per_gap_cluster", 4))
+        iface_builder_target_dist  = float(_iface_b_cfg.get("target_contact_distance_nm", 0.45))
+        iface_builder_prot_clash   = float(_iface_b_cfg.get("protein_clash_cutoff_nm", 0.20))
+        iface_builder_lip_clash    = float(_iface_b_cfg.get("lipid_clash_cutoff_nm", 0.18))
+        iface_builder_seed         = int(  _iface_b_cfg.get("deterministic_seed", 17))
+
         # ── Production duration ────────────────────────────────────────────────
         if state.environment.duration_ns is not None:
             prod_ns = state.environment.duration_ns
@@ -95,6 +180,36 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         )
         prot_id   = protein.id   if protein else "protein_1"
         prot_file = protein.file if protein else "protein.pdb"
+
+        # ─────────────────────────────────────────────────────────────────────
+        # Step 0: generate protein topology (pdb2gmx on original protein PDB)
+        # Phase 11: pdb2gmx MUST run on the original PDB (chain/TER/terminus
+        # semantics preserved).  It must NEVER run on embed_in_bilayer/system.gro
+        # (mixed protein-lipid GRO loses those semantics → OXT terminus error).
+        # ─────────────────────────────────────────────────────────────────────
+        plan.steps.append(SimulationStep(
+            step_id="generate_protein_topology",
+            title="Generar topología proteína (pdb2gmx sobre PDB original)",
+            stage=StepStage.PREPARATION,
+            step_type=StepType.AUTOMATIC,
+            automation_level=AutomationLevel.AUTOMATED,
+            engine="gromacs:pdb2gmx_protein",
+            target_components=[prot_id],
+            params={
+                "source_file": prot_file,
+                "forcefield":  "opls-aa-membrane",
+                "water_model": "none",
+                "note": (
+                    "pdb2gmx runs ONLY on the original protein PDB.\n"
+                    "NEVER on embed_in_bilayer/system.gro — that file is mixed "
+                    "protein+lipid and loses chain/TER/terminus semantics."
+                ),
+            },
+            notes=[
+                "Phase 11: pdb2gmx on original protein PDB only",
+                "Outputs: protein_processed.gro, topol.top, posre.itp, protein_topology_manifest.json",
+            ],
+        ))
 
         # ─────────────────────────────────────────────────────────────────────
         # Step 1: orient protein
@@ -137,6 +252,19 @@ class MembraneWorkflowOPLSAA(BasePipeline):
 
         has_orient = bool(ec_residues and ic_residues)
 
+        # ── Registration config (Phase 8A) ────────────────────────────────────
+        # Must come after tm_residues/ec_residues/ic_residues are resolved above.
+        reg_cfg = _mem_cfg.get("registration", {})
+        has_tm_annotation = bool(tm_residues)
+        adaptive_registration_default = has_tm_annotation and backend == "tm_aware"
+        adaptive_registration   = bool(reg_cfg.get("adaptive", adaptive_registration_default))
+        reg_search_min          = float(reg_cfg.get("search_min_nm",       -1.5))
+        reg_search_max          = float(reg_cfg.get("search_max_nm",        1.5))
+        reg_search_step         = float(reg_cfg.get("search_step_nm",       0.1))
+        reg_policy              = str(reg_cfg.get("policy", "warn"))
+        reg_max_allowed_shift   = float(reg_cfg.get("max_allowed_shift_nm", 1.5))
+        reg_hc_half_thickness   = float(reg_cfg.get("hydrophobic_half_thickness_nm", 1.25))
+
         orient_step_type = StepType.AUTOMATIC if has_orient else StepType.MANUAL
         orient_params: dict = {"source_file": prot_file}
 
@@ -165,6 +293,7 @@ class MembraneWorkflowOPLSAA(BasePipeline):
                 AutomationLevel.AUTOMATED if has_orient else AutomationLevel.GUIDED
             ),
             engine="gromacs:editconf+orient",
+            target_components=[prot_id],
             params=orient_params,
             notes=(
                 ["Rotation computed from EC/IC Cα centres of mass via structural_annotation"]
@@ -174,9 +303,44 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         ))
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 2: match box to bilayer (automated — MatchBoxBuilder computes
-        # bounding box from protein_oriented.gro and recommends dimensions)
+        # Bilayer selection — authoritative for XY box dimensions (Phase 3).
+        # Computed here so both match_box_to_bilayer and embed_in_bilayer
+        # receive the same bilayer_file.
         # ─────────────────────────────────────────────────────────────────────
+        bilayer      = mk.bilayer_for_box(12.84, 12.89, lipid)
+        bilayer_file = bilayer.filename if bilayer else "dppc512_whole.gro"
+
+        # ─────────────────────────────────────────────────────────────────────
+        # Step 2: match box to bilayer (automated — MatchBoxBuilder computes
+        # bounding box from protein_oriented.gro; selected bilayer GRO is
+        # authoritative for XY box dimensions; Z remains protein-aware)
+        # ─────────────────────────────────────────────────────────────────────
+        match_box_params: dict = {
+            "lipid":        lipid,
+            "bilayer_file": bilayer_file,   # baked into helper for XY authority
+            # Phase 8A: adaptive membrane registration
+            "adaptive_registration":          adaptive_registration,
+            "reg_search_min_nm":              reg_search_min,
+            "reg_search_max_nm":              reg_search_max,
+            "reg_search_step_nm":             reg_search_step,
+            "reg_policy":                     reg_policy,
+            "reg_max_allowed_shift_nm":       reg_max_allowed_shift,
+            "reg_hydrophobic_half_thickness_nm": reg_hc_half_thickness,
+        }
+        # Bake structural annotation into registration helper for TM/EC/IC scoring
+        if tm_residues:
+            match_box_params["tm_residues"] = tm_residues
+        if ec_residues:
+            match_box_params["ec_residues"] = ec_residues
+        if ic_residues:
+            match_box_params["ic_residues"] = ic_residues
+
+        reg_note = (
+            f"Phase 8A: adaptive membrane registration enabled "
+            f"(search {reg_search_min:+.1f}→{reg_search_max:+.1f} nm, step {reg_search_step} nm)"
+            if adaptive_registration else
+            "Phase 8A: adaptive membrane registration disabled (no TM annotation or user override)"
+        )
         plan.steps.append(SimulationStep(
             step_id="match_box_to_bilayer",
             title="Calcular y validar caja de bicapa",
@@ -185,14 +349,15 @@ class MembraneWorkflowOPLSAA(BasePipeline):
             automation_level=AutomationLevel.AUTOMATED,
             engine="gromacs:box_match",
             depends_on=["orient_protein"],
-            params={
-                "lipid": lipid,
-            },
+            params=match_box_params,
             notes=[
                 "Reads protein_oriented.gro → computes protein bounding box",
-                "Recommends XY = footprint + 2×padding, Z = bilayer + protein + 2×solvent",
+                f"XY = selected bilayer ({bilayer_file}) box XY — bilayer is authoritative",
+                "Z = bilayer_thickness + protein_Z + 2×solvent_padding (protein-aware)",
                 f"Lipid: {lipid} — parameters from core/bilayer_geometry.py",
+                "Validates protein fits in bilayer with ≥1 nm periodic-image margin",
                 "Produces box_match_report.json (gate) + protein_boxed.gro",
+                reg_note,
             ],
         ))
 
@@ -203,15 +368,31 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         # When absent, the adapter falls back to protein Z-centre and emits a
         # warning in the output report.
         # ─────────────────────────────────────────────────────────────────────
-        bilayer      = mk.bilayer_for_box(12.84, 12.89, lipid)
-        bilayer_file = bilayer.filename if bilayer else "dppc512_whole.gro"
         embed_params: dict = {
-            "bilayer_file":       bilayer_file,
-            "lipid":              lipid,
-            "lipid_residue_name": lipid_resname,
+            "bilayer_file":              bilayer_file,
+            "lipid":                     lipid,
+            "lipid_residue_name":        lipid_resname,
+            "pre_exclude_trapped_lipids": pre_exclude_trapped_lipids,
+            "max_pre_excluded_lipids":    max_pre_excluded_lipids,
+            "tm_mask_validation":         tm_mask_validation,
+            "tm_mask_policy":             tm_mask_policy,
+            "tm_aware_exclusion":         tm_aware_exclusion,
+            "tm_aware_exclusion_policy":  tm_aware_exclusion_policy,
+            "tm_aware_max_removed_lipids": tm_aware_max_removed,
         }
         if tm_residues:
             embed_params["tm_residues"] = tm_residues  # range string, e.g. "51-75"
+
+        # Phase 10A: always forward interface_builder params so the builder can
+        # bake them into run_interface_refill.py
+        embed_params["iface_builder_enabled"]    = iface_builder_enabled
+        embed_params["iface_builder_policy"]     = iface_builder_policy
+        embed_params["iface_builder_max_inserted"]  = iface_builder_max_inserted
+        embed_params["iface_builder_max_per_cluster"] = iface_builder_max_per_cl
+        embed_params["iface_builder_target_dist"]    = iface_builder_target_dist
+        embed_params["iface_builder_prot_clash"]     = iface_builder_prot_clash
+        embed_params["iface_builder_lip_clash"]      = iface_builder_lip_clash
+        embed_params["iface_builder_seed"]           = iface_builder_seed
 
         embed_notes = [
             "MoveMembAdapter (Python) aligns bilayer midplane to TM-region Z-centre — no gfortran required"
@@ -232,55 +413,121 @@ class MembraneWorkflowOPLSAA(BasePipeline):
         ))
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 4: generate topology (pdb2gmx with oplsaa_membrane.ff)
+        # Step 4: membrane embedding shrink loop / TM-aware embedding (meta-step)
+        #
+        # Depends on embed_in_bilayer and generate_protein_topology.
+        # assemble_system_topology is NOT a dependency — it runs AFTER embedding.
+        # At runtime the embedding step calls run_assemble_system.py with
+        # embed_in_bilayer/system.gro to build a bootstrap topology for grompp.
         # ─────────────────────────────────────────────────────────────────────
+        embedding_title = (
+            f"TM-aware embedding & relaxation ({lipid})"
+            if backend == "tm_aware"
+            else f"Shrink loop — convergencia APL ({lipid}, target ≤ {apl_target + mk.APL_CONVERGENCE_TOLERANCE:.0f} Å²)"
+        )
+        embedding_engine = (
+            "gromacs:tm_aware_embedding"
+            if backend == "tm_aware"
+            else "gromacs+perl:inflategro"
+        )
+        embedding_params = {
+            "lipid":               lipid,
+            "lipid_residue_name":  lipid_resname,
+            "forcefield":          ff,
+            "water_model":         wm,
+            "temperature_K":       T,
+            "apl_target_ang2":     apl_target,
+            "apl_tolerance_ang2":  mk.APL_CONVERGENCE_TOLERANCE,
+            "inflate_factor":      inflate_f,
+            "deflate_factor":      mk.SHRINK_DEFLATION_FACTOR,
+            "max_iterations":      mk.SHRINK_MAX_ITERATIONS,
+            "gridsize":            5,
+            "cutoff":              lipid_exclusion_cutoff_nm,
+            "shrink_loop_cutoff_nm": shrink_loop_cutoff_nm,
+            "trapped_lipid_policy": trapped_lipid_policy,
+            "annular_repair_enabled": annular_repair_enabled,
+            "annular_repair_allow_insertion": annular_repair_allow_insertion,
+            "inflategro_script":   "inflategro-Jorge.pl",
+            "input_gro":           "../embed_in_bilayer/system.gro",
+            "topol_top":           "bootstrap_topol.top",  # generated at runtime by run_assemble_system.py
+            # Iteration snapshot config
+            "save_embedding_iterations":       save_embedding_iterations,
+            "save_embedding_iteration_stride": save_embedding_iteration_stride,
+            # Post-convergence quality diagnostics
+            "quality_diagnostics":       quality_diagnostics,
+            "quality_analysis_region":   quality_analysis_region,
+            "quality_footprint_margin_nm": quality_footprint_margin,
+            # Backend & Quality gates config
+            "backend":                       backend,
+            "max_void_fraction_local":       max_void_fraction_local,
+            "max_void_area_local_nm2":       max_void_area_local_nm2,
+            "min_tm_burial_score":           min_tm_burial_score,
+            "max_trapped_lipids":            max_trapped_lipids,
+            "max_soluble_domain_core_atoms": max_soluble_domain_core_atoms,
+            "tm_aware_max_removed_lipids":   tm_aware_max_removed,
+        }
+        if tm_residues:
+            embedding_params["tm_residues"] = tm_residues
+
+        # Phase 9B: only forward optimizer params when explicitly set in YAML
+        if optimizer_enabled is not None:
+            embedding_params["optimizer_enabled"] = optimizer_enabled
+        if optimizer_policy is not None:
+            embedding_params["optimizer_policy"] = optimizer_policy
+        if optimizer_max_candidates is not None:
+            embedding_params["optimizer_max_candidates"] = optimizer_max_candidates
+        if optimizer_z_shifts is not None:
+            embedding_params["optimizer_z_shift_offsets_nm"] = optimizer_z_shifts
+        if optimizer_mask_paddings is not None:
+            embedding_params["optimizer_mask_padding_nm"] = optimizer_mask_paddings
+        if optimizer_min_improvement is not None:
+            embedding_params["optimizer_min_score_improvement"] = optimizer_min_improvement
+        if optimizer_run_minimization is not None:
+            embedding_params["optimizer_run_candidate_minimization"] = optimizer_run_minimization
+        if optimizer_excl_safety is not None:
+            embedding_params["optimizer_exclusion_safety_limit"] = optimizer_excl_safety
+
         plan.steps.append(SimulationStep(
-            step_id="generate_topology",
-            title="Generar topología (OPLS-AA membrana)",
-            stage=StepStage.PREPARATION,
+            step_id="membrane_embedding",
+            title=embedding_title,
+            stage=StepStage.MEMBRANE_EMBEDDING,
             step_type=StepType.AUTOMATIC,
-            engine="gromacs:pdb2gmx",
-            depends_on=["embed_in_bilayer"],
-            target_components=[prot_id],
-            params={
-                "source_file": "system.gro",
-                "source_step": "embed_in_bilayer",   # input = embed_in_bilayer/system.gro
-                "forcefield":  "opls-aa-membrane",   # → _FF_GROMACS_NAME → oplsaa_membrane
-                "water_model": wm,
-                "note": (
-                    "Requires oplsaa_membrane.ff in working directory or GMXLIB path.\n"
-                    "Copy Prot-Memb_FILES/oplsaa_membrane.ff to the step directory."
-                ),
-            },
+            engine=embedding_engine,
+            blocking=True,
+            depends_on=["embed_in_bilayer", "generate_protein_topology"],
+            params=embedding_params,
         ))
 
         # ─────────────────────────────────────────────────────────────────────
-        # Step 5: membrane embedding shrink loop (meta-step — fully automatic)
+        # Step 5: assemble_system_topology (post-embedding)
+        #
+        # Runs AFTER membrane_embedding so final molecule counts derive from
+        # membrane_embedding/converged.gro — the authoritative post-shrink
+        # coordinate file evaluated by Phase 9A.
+        #
+        # Assembles topol.top from:
+        #   - generate_protein_topology/ (protein, pdb2gmx on original PDB)
+        #   - pdb2gmx on lipids_only.gro (lipid moleculetype; safe)
+        #   - membrane_embedding/converged.gro (final molecule counts)
         # ─────────────────────────────────────────────────────────────────────
         plan.steps.append(SimulationStep(
-            step_id="membrane_embedding",
-            title=f"Shrink loop — convergencia APL ({lipid}, target ≤ {apl_target + mk.APL_CONVERGENCE_TOLERANCE:.0f} Å²)",
-            stage=StepStage.MEMBRANE_EMBEDDING,
+            step_id="assemble_system_topology",
+            title="Ensamblar topología final del sistema (post-embedding)",
+            stage=StepStage.ASSEMBLY,
             step_type=StepType.AUTOMATIC,
-            engine="gromacs+perl:inflategro",
-            blocking=True,
-            depends_on=["embed_in_bilayer", "generate_topology"],
+            automation_level=AutomationLevel.AUTOMATED,
+            engine="topology:assemble_system",
+            depends_on=["membrane_embedding", "generate_protein_topology"],
+            target_components=[prot_id],
             params={
-                "lipid":               lipid,
-                "lipid_residue_name":  lipid_resname,
-                "forcefield":          ff,
-                "temperature_K":       T,
-                "apl_target_ang2":     apl_target,
-                "apl_tolerance_ang2":  mk.APL_CONVERGENCE_TOLERANCE,
-                "inflate_factor":      inflate_f,
-                "deflate_factor":      mk.SHRINK_DEFLATION_FACTOR,
-                "max_iterations":      mk.SHRINK_MAX_ITERATIONS,
-                "gridsize":            5,
-                "cutoff":              0.0,
-                "inflategro_script":   "inflategro-Jorge.pl",
-                "input_gro":           "../embed_in_bilayer/system.gro",
-                "topol_top":           "../generate_topology/topol.top",
+                "forcefield":   "opls-aa-membrane",
+                "water_model":  wm,
             },
+            notes=[
+                "Runs AFTER membrane_embedding — final counts from converged.gro",
+                "pdb2gmx only on lipids_only.gro (safe: lipid-only input)",
+                "Outputs: topol.top (authoritative) + topology_assembly_report.json",
+            ],
         ))
 
         # ─────────────────────────────────────────────────────────────────────
@@ -292,12 +539,12 @@ class MembraneWorkflowOPLSAA(BasePipeline):
             stage=StepStage.ASSEMBLY,
             step_type=StepType.AUTOMATIC,
             engine="gromacs:solvate",
-            depends_on=["membrane_embedding"],
+            depends_on=["assemble_system_topology"],
             params={
                 "water_model": wm,
                 "water_gro":   "spc216.gro",
                 "input_gro":   "../membrane_embedding/converged.gro",
-                "topol_top":   "../generate_topology/topol.top",
+                "topol_top":   "../assemble_system_topology/topol.top",
             },
         ))
 
