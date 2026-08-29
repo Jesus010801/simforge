@@ -2355,21 +2355,69 @@ def _show_temporal_events(synthesis) -> None:
     ))
 
 
-@cli.command()
-def study(
-    path:   Path          = typer.Argument(Path("."), help="Directory containing XVG files (default: current directory)."),
-    output: Optional[str] = typer.Option(None, "--output", "-o", help="Write JSON summary to file."),
-    report: Optional[str] = typer.Option(None, "--report", "-r", help="Export Markdown report to file."),
-):
-    """Analyze a multi-system comparative MD study: auto-discovers systems, replicas,
-    and observables, computes aggregate statistics, detects outliers, and produces
-    a comparative summary.
+# ── Study-campaign sub-app (simforge study inspect|analyze|analyses) ─────────
+# `study` predates these as a flat command taking a positional <path>, so — like
+# `analyze md` — we keep it flat and intercept the sub-command tokens.
+_study_campaign_app = typer.Typer(name="study", no_args_is_help=True)
+from analysis.campaign.cli import (  # noqa: E402
+    study_analyses_fn as _study_analyses_fn,
+    study_analyze_fn as _study_analyze_fn,
+    study_inspect_fn as _study_inspect_fn,
+)
+_study_campaign_app.command(name="inspect")(_study_inspect_fn)
+_study_campaign_app.command(name="analyze")(_study_analyze_fn)
+_study_campaign_app.command(name="analyses")(_study_analyses_fn)
+_STUDY_SUBCOMMANDS = {"inspect", "analyze", "analyses"}
 
-    Expected filename convention:
-      SYSTEM-REPLICAobservable.xvg    e.g.  AA-A1rmsd_protein.xvg
-      SYSTEM-REPLICA_observable.xvg   e.g.  LP-A4_rmsd-ligand.xvg
+
+def _dispatch_study_campaign(sub: str, extra: list[str]) -> None:
+    """Forward `simforge study <sub> ...` to analysis.campaign.cli."""
+    cmd = typer.main.get_command(_study_campaign_app)
+    try:
+        cmd.main(args=[sub, *extra], prog_name="simforge study", standalone_mode=True)
+    except SystemExit as exc:  # click calls sys.exit; re-raise as typer.Exit
+        raise typer.Exit(int(exc.code) if exc.code is not None else 0)
+
+
+@cli.command(context_settings={
+    "allow_extra_args": True, "ignore_unknown_options": True,
+    "help_option_names": [],  # handled manually so `study <sub> --help` reaches the sub-app
+})
+def study(
+    ctx:    typer.Context,
+    path:   str           = typer.Argument(".", help="Study directory, or one of: inspect | analyze | analyses."),
+    output: Optional[str] = typer.Option(None, "--output", "-o", help="Write JSON summary to file (legacy XVG mode)."),
+    report: Optional[str] = typer.Option(None, "--report", "-r", help="Export Markdown report to file (legacy XVG mode)."),
+):
+    """Comparative MD study analysis.
+
+    \b
+    Trajectory-first campaign layer (discovers systems from trajectories/topologies):
+      simforge study inspect  <dir>            discover + validate, no analysis
+      simforge study analyze  <dir> --analysis rmsd-receptor
+      simforge study analyses                  list registered analyses
+
+    \b
+    Legacy XVG comparative mode (filename-convention driven):
+      simforge study <dir>
+      Expected: SYSTEM-REPLICAobservable.xvg   e.g. AA-A1rmsd_protein.xvg
     """
+    if path in _STUDY_SUBCOMMANDS:
+        extra = list(ctx.args)
+        if output:
+            extra += ["--output", output]
+        if report:
+            app.print("[yellow]note:[/yellow] --report is not used by "
+                      f"`study {path}`; ignoring.")
+        _dispatch_study_campaign(path, extra)
+        return
+
+    if path in ("--help", "-h") or "--help" in ctx.args or "-h" in ctx.args:
+        app.print(ctx.get_help())
+        raise typer.Exit(0)
+
     from runtime.study_analyzer import parse_study
+    path = Path(path)
 
     if not path.exists():
         app.print(f"[red]Error:[/red] Path not found: {path}")
