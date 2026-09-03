@@ -313,6 +313,113 @@ _SIGNAL_PATTERNS: list[_Signal] = [
         explanation = "El step excedió el límite de tiempo configurado.",
     ),
 
+    # ── Position restraint atom index out of bounds ──────────────────────────
+    _Signal(
+        category    = ErrorCategory.TOPOLOGY_POSITION_RESTRAINT_INDEX_ERROR,
+        severity    = ErrorSeverity.FATAL,
+        patterns    = [
+            r"TOPOLOGY_POSITION_RESTRAINT_INDEX_ERROR",
+            r"Atom index.*in position_restraints out of bounds",
+            r"position_restraints.*out of bounds",
+        ],
+        confidence  = 0.99,
+        explanation = (
+            "A [ position_restraints ] file contains an atom index that exceeds the local atom count\n"
+            "of its moleculetype. This happens when global system atom indices are written instead of\n"
+            "local moleculetype indices (1-based, starting from 1 for each chain).\n"
+            "Fix: split strong_posre.itp into per-chain files (strong_posre_Protein_chain_A.itp, …)\n"
+            "and write only local indices parsed from each chain's [ atoms ] section.\n"
+            "Retrying will not fix this — the restraint generator must be corrected."
+        ),
+    ),
+
+    # ── Undefined moleculetype in topology [ molecules ] ─────────────────────
+    _Signal(
+        category    = ErrorCategory.TOPOLOGY_UNDEFINED_MOLECULETYPE_ERROR,
+        severity    = ErrorSeverity.FATAL,
+        patterns    = [
+            r"TOPOLOGY_UNDEFINED_MOLECULETYPE_ERROR",
+            r"No such moleculetype",
+            r"\[ molecules \] contains .* but no included \[ moleculetype \]",
+        ],
+        confidence  = 0.99,
+        explanation = (
+            "GROMACS could not find a [ moleculetype ] definition for an entry in [ molecules ].\n"
+            "Common causes:\n"
+            "  1. Multichain protein: pdb2gmx generates 'Protein_chain_A 1', 'Protein_chain_B 1', etc.,\n"
+            "     but SimForge wrote 'Protein 1' (stale hardcoded entry).\n"
+            "  2. Lipid topology: pdb2gmx generated 'DPP 1' (one combined DPP moleculetype) but\n"
+            "     SimForge wrote 'DPP 478' (GRO residue count — wrong for pdb2gmx-assembled ITPs).\n"
+            "Fix: use molecule_entries from protein_topology_manifest.json for protein entries;\n"
+            "extract [ molecules ] from lipid_topol.top for lipid entries.\n"
+            "Retrying will not fix this — the topology assembler code must be corrected."
+        ),
+    ),
+
+    # ── Duplicate [ defaults ] in expanded topology ───────────────────────────
+    _Signal(
+        category    = ErrorCategory.TOPOLOGY_DUPLICATE_DEFAULTS_ERROR,
+        severity    = ErrorSeverity.FATAL,
+        patterns    = [
+            r"TOPOLOGY_DUPLICATE_DEFAULTS_ERROR",
+            r"Found a second defaults directive",
+            r"expanded topology has \d+ \[ defaults \] section",
+        ],
+        confidence  = 0.99,
+        explanation = (
+            "GROMACS found more than one [ defaults ] section in the expanded topology.\n"
+            "Cause: forcefield.itp is included more than once. Most common source:\n"
+            "pdb2gmx writes an absolute path for the FF include "
+            "(e.g. #include \"/abs/.../oplsaa_membrane.ff/forcefield.itp\"), which\n"
+            "_walk_includes resolves locally and stores in molecule_itps. The\n"
+            "assembler then adds a second canonical FF include on top of it.\n"
+            "Fix: _walk_includes now skips .ff/ paths; assembler guards the loop;\n"
+            "_clean_topology strips [ defaults ] from lipid sub-includes. Retrying\n"
+            "will not help — this is a deterministic code-level bug."
+        ),
+    ),
+
+    # ── Topology include resolution failure ───────────────────────────────────
+    _Signal(
+        category    = ErrorCategory.TOPOLOGY_INCLUDE_RESOLUTION_ERROR,
+        severity    = ErrorSeverity.FATAL,
+        patterns    = [
+            r"broken topology includes",
+            r"Cannot resolve .* \(in .*\.top\)",
+            r"Cannot resolve .* \(in .*\.itp\)",
+            r"TOPOLOGY INCLUDE ERROR",
+        ],
+        confidence  = 0.99,
+        explanation = (
+            "Topology include path resolution failed.\n"
+            "Cause: the assembled topol.top contains a #include path that cannot be\n"
+            "resolved — typically caused by an absolute path from the manifest being\n"
+            "naively concatenated with a relative prefix.\n"
+            "Fix: the topology assembler must normalize all include paths using\n"
+            "os.path.relpath(abs_path, topology_dir) regardless of whether the\n"
+            "manifest entry is absolute or relative."
+        ),
+    ),
+
+    # ── OXT/terminus mismatch — pdb2gmx run on embedded/mixed GRO ───────────
+    _Signal(
+        category    = ErrorCategory.TOPOLOGY_PREPROCESSING_ERROR,
+        severity    = ErrorSeverity.FATAL,
+        patterns    = [
+            r"Atom OXT in residue .* was not found in rtp entry",
+            r"was not found in rtp entry .* with \d+ atoms",
+        ],
+        confidence  = 0.97,
+        explanation = (
+            "OXT/terminus mismatch detected in topology preprocessing.\n"
+            "Cause: pdb2gmx was run on an embedded GRO file where chain/TER "
+            "semantics are lost — the C-terminal residue cannot be identified correctly.\n"
+            "Fix: run pdb2gmx only on the original protein PDB "
+            "(generate_protein_topology step), then build the combined topology "
+            "with assemble_system_topology."
+        ),
+    ),
+
     # ── Salida con error sin categoría ────────────────────────────────────────
     _Signal(
         category    = ErrorCategory.NONZERO_EXIT,
@@ -601,6 +708,189 @@ def _plan_poor_equilibration(diag: DiagnosisResult, step_dir: Path) -> Remediati
     )
 
 
+def _plan_artifact_validation(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """exit=0 but expected outputs missing — non-retryable, needs topology audit."""
+    return RemediationPlan(
+        step_id        = diag.step_id,
+        diagnosis      = diag,
+        actions        = [RemediationAction(
+            action_type  = ActionType.LOG_ONLY,
+            description  = "Fatal: pdb2gmx exited 0 but required output files are missing",
+            rationale    = (
+                "GROMACS succeeded but the expected artifact is absent. "
+                "For multichain proteins, pdb2gmx generates chain-specific files "
+                "(topol_Protein_chain_A.itp / posre_Protein_chain_A.itp) instead of "
+                "a literal posre.itp. SimForge must validate the include graph "
+                "dynamically, not assume fixed filenames."
+            ),
+            confidence   = 1.0,
+            is_reversible = True,
+        )],
+        is_applicable  = False,
+        requires_human = True,
+        max_retries    = 0,
+        strategy       = "No retry — inspect expected_outputs in metadata.json",
+        expected_outcome = (
+            "Remove literal posre.itp from expected_outputs; use "
+            "protein_topology_manifest.json to discover chain topology files."
+        ),
+    )
+
+
+def _plan_topology_position_restraint_index(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """[ position_restraints ] atom index exceeds local moleculetype atom count — non-retryable."""
+    return RemediationPlan(
+        step_id        = diag.step_id,
+        diagnosis      = diag,
+        actions        = [RemediationAction(
+            action_type  = ActionType.LOG_ONLY,
+            description  = "Fatal: [ position_restraints ] contains atom index out of bounds for moleculetype",
+            rationale    = (
+                "GROMACS found an atom index in a [ position_restraints ] section that exceeds "
+                "the local atom count of the enclosing moleculetype. "
+                "This means global system atom indices were written instead of per-chain local indices. "
+                "Fix: split strong_posre.itp into per-chain files (strong_posre_Protein_chain_A.itp, …) "
+                "and write only local 1-based indices from each chain's [ atoms ] section. "
+                "Retrying will not help — the restraint generator must produce local indices."
+            ),
+            confidence   = 1.0,
+            is_reversible = True,
+        )],
+        is_applicable  = False,
+        requires_human = True,
+        max_retries    = 0,
+        strategy       = "No retry — restraint generator must use local [ atoms ] indices per chain",
+        expected_outcome = (
+            "Per-chain strong_posre_Protein_chain_X.itp files with local indices will pass grompp "
+            "without 'Atom index out of bounds'. "
+            "The pre-grompp validator TOPOLOGY_POSITION_RESTRAINT_INDEX_ERROR will catch violations early."
+        ),
+    )
+
+
+def _plan_topology_undefined_moleculetype(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """[ molecules ] entry has no [ moleculetype ] definition — non-retryable assembler bug."""
+    return RemediationPlan(
+        step_id        = diag.step_id,
+        diagnosis      = diag,
+        actions        = [RemediationAction(
+            action_type  = ActionType.LOG_ONLY,
+            description  = "Fatal: [ molecules ] entry has no matching [ moleculetype ] definition",
+            rationale    = (
+                "GROMACS cannot find a moleculetype for one or more entries in [ molecules ]. "
+                "Common causes: (1) multichain protein — pdb2gmx generates 'Protein_chain_A 1' etc. "
+                "but SimForge wrote 'Protein 1'; (2) lipid — pdb2gmx generated 'DPP 1' (combined "
+                "topology covering all lipids) but SimForge counted GRO residues and wrote 'DPP 478'. "
+                "Retrying will not help — the topology assembler must use pdb2gmx-authoritative entries."
+            ),
+            confidence   = 1.0,
+            is_reversible = True,
+        )],
+        is_applicable  = False,
+        requires_human = True,
+        max_retries    = 0,
+        strategy       = "No retry — topology assembler must use molecule_entries from manifest and lipid [ molecules ] from pdb2gmx",
+        expected_outcome = (
+            "Use molecule_entries from protein_topology_manifest.json (not hardcoded 'Protein 1'). "
+            "Use [ molecules ] from lipid_topol.top (not GRO residue count). "
+            "The _validate_moleculetypes check will catch mismatches before grompp is called."
+        ),
+    )
+
+
+def _plan_topology_duplicate_defaults(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """Duplicate [ defaults ] in expanded topology — non-retryable FF double-include bug."""
+    return RemediationPlan(
+        step_id        = diag.step_id,
+        diagnosis      = diag,
+        actions        = [RemediationAction(
+            action_type  = ActionType.LOG_ONLY,
+            description  = "Fatal: forcefield.itp included more than once in assembled topology",
+            rationale    = (
+                "GROMACS found a second [ defaults ] section, meaning forcefield.itp "
+                "was expanded twice. Root cause: pdb2gmx writes the FF include as an "
+                "absolute path (e.g. #include \"/abs/.../forcefield.itp\"). "
+                "_walk_includes resolves this absolute path and places it in molecule_itps "
+                "alongside chain .itp files. The assembler then adds its own canonical FF "
+                "include at the top, creating a duplicate. "
+                "The fix requires updating _walk_includes to classify .ff/ paths as FF "
+                "includes and guarding the molecule_itps loop in assemble_system_topology. "
+                "Retrying will not fix this."
+            ),
+            confidence   = 1.0,
+            is_reversible = True,
+        )],
+        is_applicable  = False,
+        requires_human = True,
+        max_retries    = 0,
+        strategy       = "No retry — topology assembler code must be fixed",
+        expected_outcome = (
+            "The assembled topol.top must have exactly one #include for forcefield.itp. "
+            "Ensure _walk_includes skips .ff/ paths and the molecule_itps loop filters "
+            "out any entry with '.ff/' in its path."
+        ),
+    )
+
+
+def _plan_topology_include_resolution(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """Broken #include path in assembled topology — non-retryable path normalization bug."""
+    return RemediationPlan(
+        step_id        = diag.step_id,
+        diagnosis      = diag,
+        actions        = [RemediationAction(
+            action_type  = ActionType.LOG_ONLY,
+            description  = "Fatal: topology include path cannot be resolved",
+            rationale    = (
+                "The assembled topol.top has a #include path that GROMACS cannot "
+                "find. Typical cause: the protein_topology_manifest.json stores "
+                "absolute paths, which are then naively concatenated with a "
+                "relative prefix like '../01_generate_protein_topology/'. "
+                "Retrying will not fix this — the assembler code must normalize "
+                "every include via Path.resolve() + os.path.relpath()."
+            ),
+            confidence   = 1.0,
+            is_reversible = True,
+        )],
+        is_applicable  = False,
+        requires_human = True,
+        max_retries    = 0,
+        strategy       = "No retry — topology assembler path normalization must be fixed in code",
+        expected_outcome = (
+            "All includes in topol.top must be valid relative paths from the "
+            "topology file's directory. Never concatenate a relative prefix with "
+            "an absolute path from the manifest."
+        ),
+    )
+
+
+def _plan_topology_preprocessing(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
+    """OXT/terminus mismatch — deterministic preprocessing error, non-retryable."""
+    return RemediationPlan(
+        step_id        = diag.step_id,
+        diagnosis      = diag,
+        actions        = [RemediationAction(
+            action_type  = ActionType.LOG_ONLY,
+            description  = "Fatal: OXT/terminus mismatch — pdb2gmx run on mixed/embedded GRO",
+            rationale    = (
+                "This error is deterministic and cannot be fixed by retrying. "
+                "pdb2gmx must run only on the original protein PDB "
+                "(inputs/protein_1.pdb via generate_protein_topology), not on "
+                "embed_in_bilayer/system.gro. Regenerate the workspace."
+            ),
+            confidence   = 1.0,
+            is_reversible = True,
+        )],
+        is_applicable  = False,
+        requires_human = True,
+        max_retries    = 0,
+        strategy       = "No retry — Phase 11 topology architecture required",
+        expected_outcome = (
+            "Use generate_protein_topology (pdb2gmx on protein PDB) + "
+            "assemble_system_topology to build the correct combined topology."
+        ),
+    )
+
+
 def _plan_missing_parameter(diag: DiagnosisResult, step_dir: Path) -> RemediationPlan:
     """Parámetro FF faltante → fatal, no se puede remediar automáticamente."""
     return RemediationPlan(
@@ -721,6 +1011,12 @@ def _plan_generic_retry(diag: DiagnosisResult, step_dir: Path) -> RemediationPla
 
 # Tabla de dispatch: categoría → función de planificación
 _PLANNERS: dict[ErrorCategory, Callable] = {
+    ErrorCategory.ARTIFACT_VALIDATION_ERROR:               _plan_artifact_validation,
+    ErrorCategory.TOPOLOGY_POSITION_RESTRAINT_INDEX_ERROR: _plan_topology_position_restraint_index,
+    ErrorCategory.TOPOLOGY_UNDEFINED_MOLECULETYPE_ERROR:   _plan_topology_undefined_moleculetype,
+    ErrorCategory.TOPOLOGY_DUPLICATE_DEFAULTS_ERROR:       _plan_topology_duplicate_defaults,
+    ErrorCategory.TOPOLOGY_INCLUDE_RESOLUTION_ERROR:  _plan_topology_include_resolution,
+    ErrorCategory.TOPOLOGY_PREPROCESSING_ERROR:       _plan_topology_preprocessing,
     ErrorCategory.LINCS_WARNING:       _plan_lincs,
     ErrorCategory.LINCS_FATAL:         _plan_lincs,
     ErrorCategory.NAN_ENERGY:          _plan_nan_energy,

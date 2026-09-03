@@ -44,6 +44,7 @@ mdout.mdp
 *.cpt
 *.gro
 *.top
+*.itp
 *.ndx
 
 # ── Large / machine-local structures that must never be committed ───────────

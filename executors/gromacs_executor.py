@@ -447,8 +447,13 @@ class GROMACSExecutor(ShellExecutor):
         self,
         workspace_path: str | Path,
         dry_run: bool = True,
+        resume_prior_steps: set[str] | None = None,
     ):
-        super().__init__(workspace_path, dry_run)
+        super().__init__(
+            workspace_path,
+            dry_run,
+            resume_prior_steps=resume_prior_steps,
+        )
         self._log_parser   = GROMACSLogParser()
         self._diagnostics: dict[str, GROMACSStepDiagnostic] = {}
 
