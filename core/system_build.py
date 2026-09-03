@@ -262,6 +262,19 @@ def build_system(
         validation={"readiness": vreport.readiness, "ok": vreport.ok,
                     "checks": [c.to_dict() for c in vreport.checks]},
     )
+
+    # ── reproducibility advisory: was this built from an uncommitted tree? ──
+    git = (provenance.get("environment") or {}).get("git") or {}
+    if git.get("dirty"):
+        advisory = (
+            "SimForge source tree has uncommitted changes "
+            f"(commit {git.get('commit', '?')[:12]}, branch {git.get('branch', '?')}); "
+            "this system is recorded as non-clean / research-development provenance"
+        )
+        provenance["reproducibility"] = {"clean_source_tree": False, "advisory": advisory}
+        outcome.warnings.append(advisory)
+    else:
+        provenance["reproducibility"] = {"clean_source_tree": True}
     outcome.provenance = provenance
 
     (out_dir / "provenance.json").write_text(json.dumps(provenance, indent=2, default=str))

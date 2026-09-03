@@ -87,6 +87,28 @@ def _make_preparam_system(tmp_path):
     return p
 
 
+def test_build_records_dirty_source_tree_advisory(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "core.system_build.build_provenance",
+        lambda **kw: {"environment": {"git": {"dirty": True, "commit": "abc123def456",
+                                              "branch": "wip"}}, "warnings": []},
+    )
+    spec = load_system_spec(_make_preparam_system(tmp_path))
+    outcome = build_system(spec, tmp_path / "built", run_grompp=False)
+    assert outcome.provenance["reproducibility"]["clean_source_tree"] is False
+    assert any("uncommitted changes" in w for w in outcome.warnings)
+
+
+def test_build_records_clean_source_tree(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "core.system_build.build_provenance",
+        lambda **kw: {"environment": {"git": {"dirty": False}}, "warnings": []},
+    )
+    spec = load_system_spec(_make_preparam_system(tmp_path))
+    outcome = build_system(spec, tmp_path / "built", run_grompp=False)
+    assert outcome.provenance["reproducibility"] == {"clean_source_tree": True}
+
+
 def test_build_preparameterized_protein_plus_two_components(tmp_path):
     spec_path = _make_preparam_system(tmp_path)
     spec = load_system_spec(spec_path)
