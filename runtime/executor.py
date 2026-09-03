@@ -97,8 +97,9 @@ class RuntimeExecutor(BaseExecutor):
         dry_run:        bool     = True,
         bus:            EventBus | None = None,
         metrics_interval_s: int = 15,
+        resume_prior_steps: set[str] | None = None,
     ) -> None:
-        super().__init__(workspace_path, dry_run)
+        super().__init__(workspace_path, dry_run, resume_prior_steps=resume_prior_steps)
         wp = Path(workspace_path)
 
         self._bus      = bus or EventBus()
@@ -138,6 +139,8 @@ class RuntimeExecutor(BaseExecutor):
 
     def _should_skip(self, record: StepExecutionRecord) -> bool:
         """True when the step's cache is valid and all artifacts are on disk."""
+        if super()._should_skip(record):
+            return True
         if record.step_id not in self._cached_steps:
             return False
         # Emit a structured event so subscribers (journal, tests) can observe it.

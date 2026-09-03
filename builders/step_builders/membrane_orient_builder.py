@@ -382,7 +382,7 @@ class MembraneOrientBuilder:
             orientation.get("extracellular_residues")
             and orientation.get("intracellular_residues")
         ):
-            self._build_automatic(step, step_dir, orientation)
+            self._build_automatic(step, step_dir, orientation, step_dir_map)
         else:
             self._build_manual_readme(step, step_dir)
 
@@ -390,9 +390,10 @@ class MembraneOrientBuilder:
 
     def _build_automatic(
         self,
-        step:        SimulationStep,
-        step_dir:    Path,
-        orientation: dict,
+        step:         SimulationStep,
+        step_dir:     Path,
+        orientation:  dict,
+        step_dir_map: dict = {},
     ) -> None:
         from core.structural_annotation import residues_in_range
 
@@ -401,7 +402,24 @@ class MembraneOrientBuilder:
         tm_resids_raw  = orientation.get("tm_segments")
         tm_resids      = residues_in_range(tm_resids_raw) if tm_resids_raw else set()
         ec_target_side = orientation.get("extracellular_side", "+z")
-        source_file    = step.params.get("source_file", "protein.pdb")
+
+        # Prefer protein_processed.gro from generate_protein_topology (has hydrogens added by
+        # pdb2gmx, so atom count matches the protein topology used in bootstrap/grompp).
+        # Fall back to original PDB from inputs/ if the topology step is not in the DAG.
+        from builders.step_builders._utils import rel as _rel
+        prot_top_dir = step_dir_map.get("generate_protein_topology")
+        raw_source   = step.params.get("source_file", "protein.pdb")
+        if prot_top_dir is not None:
+            source_file = f"{_rel(step_dir, prot_top_dir)}/protein_processed.gro"
+        else:
+            workspace_root = step_dir_map.get("__workspace_root__")
+            comp_id        = step.target_components[0] if step.target_components else None
+            if workspace_root and comp_id:
+                inputs_dir  = Path(workspace_root) / "inputs"
+                ext         = Path(raw_source).suffix or ".pdb"
+                source_file = f"{_rel(step_dir, inputs_dir)}/{comp_id}{ext}"
+            else:
+                source_file = raw_source
 
         # orient_helper.py — standalone, no SimForge imports at runtime.
         # str.replace() so Python f-string braces in the template survive.

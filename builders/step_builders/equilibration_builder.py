@@ -83,6 +83,16 @@ class EquilibrationBuilder:
         )
         topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../add_ions"
 
+        # posre.itp and strong_posre.itp live in generate_topology/.
+        # topol.top uses bare #include paths resolved relative to topol.top's
+        # directory, so we copy them there (not to the working directory).
+        gentopo_dir = step_dir_map.get("generate_topology")
+        gentopo_ref = _rel(step_dir, gentopo_dir) if gentopo_dir else "../generate_topology"
+        _posre_copy = (
+            f"cp \"{gentopo_ref}/posre.itp\" \"$TOPOL_DIR/\" 2>/dev/null || true\n"
+            f"cp \"{gentopo_ref}/strong_posre.itp\" \"$TOPOL_DIR/\" 2>/dev/null || true\n\n"
+        )
+
         # ── NVT MDP ──────────────────────────────────────────────────────────
 
         nvt_mdp = (
@@ -136,6 +146,7 @@ class EquilibrationBuilder:
             f"# ─── NVT equilibration ───────────────────────────────────────────────────────\n"
             f"EM_DIR=\"{em_ref}\"\n"
             f"TOPOL_DIR=\"{topol_ref}\"\n\n"
+            f"{_posre_copy}"
             f"gmx grompp \\\n"
             f"    -f nvt.mdp \\\n"
             f"    -c \"$EM_DIR/em.gro\" \\\n"
@@ -150,6 +161,7 @@ class EquilibrationBuilder:
             f"#!/bin/bash\n"
             f"# ─── NPT equilibration ───────────────────────────────────────────────────────\n"
             f"TOPOL_DIR=\"{topol_ref}\"\n\n"
+            f"{_posre_copy}"
             f"gmx grompp \\\n"
             f"    -f npt.mdp \\\n"
             f"    -c nvt.gro \\\n"

@@ -53,8 +53,8 @@ def test_correct_pipeline_selected(membrane_result):
 
 
 def test_step_count(membrane_result):
-    # 11 base steps + 1 analysis_rmsd = 12
-    assert len(membrane_result.plan.steps) == 12
+    # 12 base steps (including generate_protein_topology + assemble_system_topology) + 1 analysis_rmsd = 13
+    assert len(membrane_result.plan.steps) == 13
 
 
 def test_step_stages(membrane_result):
@@ -87,85 +87,115 @@ def test_embed_in_bilayer_is_automated(membrane_result):
 # ── MDP parameter verification ────────────────────────────────────────────────
 
 @pytest.fixture(scope="session")
-def workspace(membrane_result):
-    runs_dir = Path("simforge_runs/protein-membrane")
-    if not runs_dir.exists():
-        pytest.skip("Workspace not materialized — run compile first")
-    return runs_dir
+def workspace(membrane_result, tmp_path_factory):
+    """Build a fresh workspace for MDP inspection (avoids hardcoded step numbers)."""
+    from builders.workspace_builder import WorkspaceBuilder
+    ws = tmp_path_factory.mktemp("benchmark_ws")
+    WorkspaceBuilder().build(membrane_result, workspace_path=ws)
+    return ws
+
+
+def _find_step(ws: Path, name: str) -> Path:
+    """Find step directory by name pattern (ignores numeric prefix)."""
+    matches = [d for d in (ws / "steps").iterdir() if name in d.name]
+    if not matches:
+        pytest.skip(f"Step directory matching '{name}' not found")
+    return matches[0]
 
 
 def test_nvt_mdp_gen_vel(workspace):
-    mdp = (workspace / "steps/10_equilibration/nvt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "nvt.mdp").read_text()
     assert "gen_vel                 = yes" in mdp
 
 
 def test_nvt_mdp_tc_grps_system(workspace):
-    mdp = (workspace / "steps/10_equilibration/nvt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "nvt.mdp").read_text()
     assert "tc-grps                 = system" in mdp
 
 
 def test_nvt_mdp_rcoulomb_12(workspace):
-    mdp = (workspace / "steps/10_equilibration/nvt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "nvt.mdp").read_text()
     assert "rcoulomb                = 1.2" in mdp
 
 
 def test_nvt_mdp_dispcorr(workspace):
-    mdp = (workspace / "steps/10_equilibration/nvt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "nvt.mdp").read_text()
     assert "DispCorr                = EnerPres" in mdp
 
 
 def test_npt_mdp_continuation(workspace):
-    mdp = (workspace / "steps/10_equilibration/npt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "npt.mdp").read_text()
     assert "continuation            = yes" in mdp
 
 
 def test_npt_mdp_berendsen(workspace):
-    mdp = (workspace / "steps/10_equilibration/npt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "npt.mdp").read_text()
     assert "pcoupl                  = Berendsen" in mdp
 
 
 def test_npt_mdp_semiisotropic(workspace):
-    mdp = (workspace / "steps/10_equilibration/npt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "npt.mdp").read_text()
     assert "pcoupltype              = semiisotropic" in mdp
 
 
 def test_npt_mdp_ref_p_half(workspace):
-    mdp = (workspace / "steps/10_equilibration/npt.mdp").read_text()
+    eq_dir = _find_step(workspace, "equilibration")
+    mdp = (eq_dir / "npt.mdp").read_text()
     assert "ref_p                   = 0.5  0.5" in mdp
 
 
 def test_production_dt_001(workspace):
-    mdp = (workspace / "steps/11_production_md/md.mdp").read_text()
+    prod_dir = _find_step(workspace, "production_md")
+    mdp = (prod_dir / "md.mdp").read_text()
     assert "dt                      = 0.001" in mdp, "OPLS-AA lipid stability requires dt=0.001"
 
 
 def test_production_nose_hoover(workspace):
-    mdp = (workspace / "steps/11_production_md/md.mdp").read_text()
+    prod_dir = _find_step(workspace, "production_md")
+    mdp = (prod_dir / "md.mdp").read_text()
     assert "tcoupl                  = Nose-Hoover" in mdp
 
 
 def test_production_parrinello_rahman(workspace):
-    mdp = (workspace / "steps/11_production_md/md.mdp").read_text()
+    prod_dir = _find_step(workspace, "production_md")
+    mdp = (prod_dir / "md.mdp").read_text()
     assert "pcoupl                  = Parrinello-Rahman" in mdp
 
 
 def test_production_semiisotropic(workspace):
-    mdp = (workspace / "steps/11_production_md/md.mdp").read_text()
+    prod_dir = _find_step(workspace, "production_md")
+    mdp = (prod_dir / "md.mdp").read_text()
     assert "pcoupltype              = semiisotropic" in mdp
 
 
 def test_production_ref_p_1_bar(workspace):
-    mdp = (workspace / "steps/11_production_md/md.mdp").read_text()
+    prod_dir = _find_step(workspace, "production_md")
+    mdp = (prod_dir / "md.mdp").read_text()
     assert "ref_p                   = 1.0  1.0" in mdp
 
 
 def test_production_dispcorr(workspace):
-    mdp = (workspace / "steps/11_production_md/md.mdp").read_text()
+    prod_dir = _find_step(workspace, "production_md")
+    mdp = (prod_dir / "md.mdp").read_text()
     assert "DispCorr                = EnerPres" in mdp
 
 
 def test_generate_topology_uses_oplsaa_membrane(workspace):
-    script = (workspace / "steps/04_generate_topology/run.sh").read_text()
+    # Step 4 is now assemble_system_topology (pre-embedding); protein topology
+    # is generated in generate_protein_topology (step 1).
+    prot_top_dir = next(
+        (workspace / "steps").glob("*_generate_protein_topology"), None
+    )
+    if prot_top_dir is None:
+        pytest.skip("generate_protein_topology step not found")
+    script = (prot_top_dir / "run_protein_topology.py").read_text()
     assert "oplsaa_membrane" in script
 
 

@@ -28,6 +28,9 @@ class EventType(str, Enum):
     CACHE_MISS            = "CACHE_MISS"
     METRICS_SNAPSHOT      = "METRICS_SNAPSHOT"
     PERFORMANCE           = "PERFORMANCE"           # ns/day parsed from mdrun
+    RESUME_STARTED        = "RESUME_STARTED"
+    RESUME_VALIDATED      = "RESUME_VALIDATED"
+    RESUME_SKIPPED_STEP   = "RESUME_SKIPPED_STEP"
 
 
 class EventSeverity(str, Enum):

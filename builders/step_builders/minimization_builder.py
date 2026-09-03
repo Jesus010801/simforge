@@ -77,15 +77,30 @@ class MinimizationBuilder:
         )
         topol_ref = _rel(step_dir, topol_dir) if topol_dir else "../add_ions"
 
+        # posre.itp and strong_posre.itp live in generate_topology/.
+        # topol.top uses bare #include paths resolved relative to topol.top's
+        # directory, so we copy them there (not to the working directory).
+        gentopo_dir = step_dir_map.get("generate_topology")
+        gentopo_ref = _rel(step_dir, gentopo_dir) if gentopo_dir else "../generate_topology"
+        posre_block = (
+            f'# Copy restraint ITP files next to topol.top so grompp can resolve #include paths\n'
+            f'cp "{gentopo_ref}/posre.itp" "$TOPOL_DIR/" 2>/dev/null || true\n'
+            f'cp "{gentopo_ref}/strong_posre.itp" "$TOPOL_DIR/" 2>/dev/null || true\n'
+        )
+
+        # -r flag is required when em.mdp uses -DPOSRES/-DSTRONG_POSRES
+        posres_r_line = '    -r "$IONS_DIR/aaions.gro" \\\n' if define else ''
+
         run_script = f"""#!/bin/bash
 # ─── Energy minimization ─────────────────────────────────────────────────────
 IONS_DIR="{ions_ref}"
 TOPOL_DIR="{topol_ref}"
 
+{posre_block}
 gmx grompp \\
     -f em.mdp \\
     -c "$IONS_DIR/aaions.gro" \\
-    -p "$TOPOL_DIR/topol.top" \\
+{posres_r_line}    -p "$TOPOL_DIR/topol.top" \\
     -o em.tpr \\
     -maxwarn 1
 

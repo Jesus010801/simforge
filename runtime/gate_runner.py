@@ -36,6 +36,7 @@ GATE_LABELS: dict[str, str] = {
     "topology_consistency": "Topology consistency",
     "apl_report":           "APL convergence",
     "water_report":         "Water cleanup",
+    "tm_aware_report":      "TM-aware quality",
 }
 
 
@@ -62,6 +63,9 @@ def run_gate(gate_type: str, step_dir: Path) -> GateResult | None:
     elif gate_type == "water_report":
         from runtime.water_gate import evaluate_water_gate
         return evaluate_water_gate(step_dir)
+    elif gate_type == "tm_aware_report":
+        from runtime.tm_aware_gate import evaluate_tm_aware_gate
+        return evaluate_tm_aware_gate(step_dir)
     return None
 
 

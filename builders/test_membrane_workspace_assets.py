@@ -131,16 +131,17 @@ def test_shrink_loop_inflategro_in_membrane_assets(membrane_workspace):
 
 
 def test_topology_script_sets_gmxlib(membrane_workspace):
-    """generate_topology must set GMXLIB so pdb2gmx finds oplsaa_membrane.ff."""
-    topo_dir = _find_step_dir(membrane_workspace, "generate_topology")
-    assert topo_dir is not None, "generate_topology step directory not found"
-    script = (topo_dir / "run_topology.py").read_text()
+    """generate_protein_topology must set GMXLIB so pdb2gmx finds oplsaa_membrane.ff."""
+    topo_dir = _find_step_dir(membrane_workspace, "generate_protein_topology")
+    assert topo_dir is not None, "generate_protein_topology step directory not found"
+    script = (topo_dir / "run_protein_topology.py").read_text()
     assert "GMXLIB" in script
     assert "membrane_assets" in script
 
 
 def test_topology_script_passes_env_to_pdb2gmx(membrane_workspace):
     """pdb2gmx subprocess call must include env=_gmx_env."""
-    topo_dir = _find_step_dir(membrane_workspace, "generate_topology")
-    script = (topo_dir / "run_topology.py").read_text()
+    topo_dir = _find_step_dir(membrane_workspace, "generate_protein_topology")
+    assert topo_dir is not None, "generate_protein_topology step directory not found"
+    script = (topo_dir / "run_protein_topology.py").read_text()
     assert "env=_gmx_env" in script

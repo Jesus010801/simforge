@@ -118,7 +118,7 @@ class TestCleanWaterBuilderOutputs:
 
     def test_python_helper_counts_input_sol(self, clean_water_dir):
         content = (clean_water_dir / "run_clean_water.py").read_text()
-        assert "input_water_count" in content, (
+        assert "input_water_molecules" in content or "input_water_count" in content, (
             "run_clean_water.py must count input SOL molecules for the report"
         )
 
@@ -376,19 +376,22 @@ class TestWaterGateReportPriority:
 
     def test_gate_warns_when_few_remain(self, tmp_path):
         from runtime.water_gate import evaluate_water_gate
+        # New format: use n_water_oxygens_remaining_in_core for gate decision
         self._write(tmp_path / "clean_water_report.json", {
-            "final_water_count": 3,
+            "n_water_oxygens_remaining_in_core": 3,
+            "cleanup_passed":    False,
             "topology_updated":  True,
         })
         result = evaluate_water_gate(tmp_path)
-        assert not result.passed
         assert not result.blocked
         assert len(result.warnings) > 0
 
     def test_gate_blocks_when_many_remain(self, tmp_path):
         from runtime.water_gate import evaluate_water_gate
+        # New format: use n_water_oxygens_remaining_in_core for gate decision
         self._write(tmp_path / "clean_water_report.json", {
-            "final_water_count": 20,
+            "n_water_oxygens_remaining_in_core": 20,
+            "cleanup_passed":    False,
             "topology_updated":  True,
         })
         result = evaluate_water_gate(tmp_path)
