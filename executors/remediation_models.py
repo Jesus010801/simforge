@@ -47,9 +47,27 @@ class ErrorCategory(str, Enum):
     ATOM_TYPE_MISMATCH  = "atom_type_mismatch"  # tipo de átomo no reconocido
     CHARGE_IMBALANCE    = "charge_imbalance"    # carga total ≠ 0 en sistema
 
+    # GROMACS — topología preprocessing
+    TOPOLOGY_PREPROCESSING_ERROR = "topology_preprocessing_error"  # pdb2gmx on mixed/embedded GRO
+
+    # Topology include resolution
+    TOPOLOGY_INCLUDE_RESOLUTION_ERROR = "topology_include_resolution_error"  # broken #include path in topology
+
+    # Topology duplicate defaults
+    TOPOLOGY_DUPLICATE_DEFAULTS_ERROR = "topology_duplicate_defaults_error"  # forcefield.itp included >1 time
+
+    # Topology undefined moleculetype
+    TOPOLOGY_UNDEFINED_MOLECULETYPE_ERROR = "topology_undefined_moleculetype_error"  # [ molecules ] name has no [ moleculetype ] definition
+
+    # Topology position restraint index out of bounds
+    TOPOLOGY_POSITION_RESTRAINT_INDEX_ERROR = "topology_position_restraint_index_error"  # [ position_restraints ] atom index exceeds local moleculetype atom count
+
     # GROMACS — I/O
     MISSING_INPUT_FILE  = "missing_input_file"  # archivo de entrada no encontrado
     CORRUPT_CHECKPOINT  = "corrupt_checkpoint"  # .cpt corrupto
+
+    # Artifact / output validation
+    ARTIFACT_VALIDATION_ERROR = "artifact_validation_error"  # exit=0 but expected outputs missing
 
     # Ejecución general
     INTERACTIVE_BLOCK   = "interactive_block"   # proceso bloqueado esperando input TTY

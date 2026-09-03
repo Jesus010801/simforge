@@ -83,6 +83,7 @@ class StepExecutionRecord(BaseModel):
 
     # ── Diagnóstico de ejecución ──────────────────────────────────────────────
     error_message:   Optional[str] = None
+    execution_reason: Optional[str] = None
     retry_count:     int           = 0
 
     # ── Archivos generados ────────────────────────────────────────────────────

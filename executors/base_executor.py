@@ -67,9 +67,11 @@ class BaseExecutor(ABC):
         self,
         workspace_path: str | Path,
         dry_run: bool = True,
+        resume_prior_steps: set[str] | None = None,
     ):
         self.workspace_path = Path(workspace_path)
         self.dry_run        = dry_run
+        self.resume_prior_steps = set(resume_prior_steps or ())
         self.state: WorkspaceExecutionState | None = None
 
     # ── API pública ───────────────────────────────────────────────────────────
@@ -80,6 +82,10 @@ class BaseExecutor(ABC):
         Retorna el estado final de ejecución.
         """
         self.state = self._initialize_state()
+        for record in self.state.steps:
+            if record.step_id in self.resume_prior_steps:
+                record.status = StepStatus.DONE
+                record.execution_reason = "skipped_due_to_resume"
         self._log(f"Executor iniciado — dry_run={self.dry_run}")
         self._log(f"Workspace: {self.workspace_path}")
 
@@ -252,7 +258,7 @@ class BaseExecutor(ABC):
         Called after _is_blocked(), so dependency failures are already handled.
         Override in subclasses that implement caching (e.g. RuntimeExecutor).
         """
-        return False
+        return record.step_id in self.resume_prior_steps
 
     def _post_run_hook(self) -> None:
         """Called once in the finally block of run(), after state is saved.
