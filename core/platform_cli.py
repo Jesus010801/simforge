@@ -189,6 +189,14 @@ def build_fn(
 
     _render_build_summary(outcome, verbose=verbose)
 
+    repro = (outcome.provenance or {}).get("reproducibility") or {}
+    if repro.get("clean_source_tree") is False:
+        app.print(Panel(
+            f"[yellow]⚠ {repro.get('advisory', 'source tree is not clean')}[/yellow]\n"
+            "[dim]Commit SimForge before a build you intend to be reproducible.[/dim]",
+            border_style="yellow", title="Reproducibility advisory", padding=(0, 2),
+        ))
+
     if outcome.errors:
         app.print(Panel(
             "[red]Validation errors:[/red]\n" + "\n".join(f"  • {e}" for e in outcome.errors),
