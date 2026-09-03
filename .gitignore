@@ -1,33 +1,42 @@
-# Python
+# ── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*$py.class
 *.pyo
-*.egg-info/
 *.egg
-dist/
+*.egg-info/
 build/
+dist/
+*.whl
+*.tar.gz
+.coverage
+.pytest_cache/
 
-# Virtual environments
+# ── Virtual environments ────────────────────────────────────────────────────
 venv/
 .venv/
 env/
 
-# Packaging
-*.whl
-*.tar.gz
-
-# Editors
+# ── Editors ─────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *~
 
-# Testing
-.pytest_cache/
-.coverage
+# ── Agent / tooling scratch ─────────────────────────────────────────────────
+.aider*
+.antigravitycli/
+.claude/settings.local.json
+graphify-out/
 
-# SimForge runtime artifacts
+# ── SimForge runtime artifacts (generated runs) ─────────────────────────────
 simforge_runs/
+*.log
+mdout.mdp
+
+# ── GROMACS / molecular files ───────────────────────────────────────────────
+# Blanket-ignored because build/run output litters the tree with these.
+# Committed fixtures, examples and demo inputs are re-included below.
 *.tpr
 *.xtc
 *.edr
@@ -35,44 +44,28 @@ simforge_runs/
 *.cpt
 *.gro
 *.top
-*.itp
 *.ndx
-mdout.mdp
 
-# Aider / Antigravity
-.aider*
-.antigravitycli/
-__pycache__/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Local run artifacts
-simforge_runs/
-*.log
-
-# Local test/system files
-bilayer_x
-bilayer_y:
-
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Local run artifacts
-simforge_runs/
-*.log
-
-# Local molecular/test artifacts
-bilayer_x
-bilayer_y:
+# ── Large / machine-local structures that must never be committed ───────────
 GLP-1_R.pdb
 configs/GLP-1_R.pdb
+configs/hmg.pdb
+bilayer_x
+bilayer_y:
 
-# Python cache
+# ── Internal working notes (kept locally, not published) ────────────────────
+docs/internal/
+docs/FEL/
+docs/audits/
+/phase*_audit.md
+/phase*_failure_audit.md
+/WORKTREE_PENDING_*.txt
+
+# ── Re-include committed inputs (must come AFTER the blanket ignores) ───────
+!tests/fixtures/**
+!examples/**
+!demo/**
+
+# ── ...but never re-include caches under those trees ────────────────────────
 __pycache__/
 *.py[cod]
-*$py.class
