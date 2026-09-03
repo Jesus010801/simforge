@@ -652,6 +652,7 @@ def parse_yaml(path: str | Path) -> SystemState:
     raw = _load_yaml(path)
     try:
         state = SystemState(**raw)
+        state.config = raw
     except Exception as e:
         raise ValueError(f"Error validando YAML:\n{e}")
 

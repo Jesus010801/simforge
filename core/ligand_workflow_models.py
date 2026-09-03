@@ -64,6 +64,10 @@ class LigandPoseRewriteResult(BaseModel):
     atoms_written: int = 0
     rmsd_from_reference: Optional[float] = None
     error: Optional[str] = None
+    # Populated only by LigandPoseRewriter.rewrite_heavy_atom_transfer()
+    hydrogens_reconstructed: bool = False
+    heavy_atom_mapping_method: Optional[str] = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ProteinLigandAssemblyReport(BaseModel):

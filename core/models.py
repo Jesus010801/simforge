@@ -489,6 +489,7 @@ class SystemState(BaseModel):
     environment:           EnvironmentModel  = EnvironmentModel()
     forcefields:           ForcefieldsModel
     simulation_objectives: list[str]         = []
+    config:                dict                  = {}
     # Structural biology knowledge — topology, domains, orientation, evidence.
     # Lives at YAML top-level as `structural_annotation:`, separate from
     # environment config because it represents biological knowledge, not
