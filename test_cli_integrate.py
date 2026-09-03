@@ -17,7 +17,10 @@ from typer.testing import CliRunner
 
 from cli import cli
 
-runner = CliRunner(mix_stderr=False)
+try:  # click >= 8.2 removed the mix_stderr kwarg (stderr is separate by default)
+    runner = CliRunner(mix_stderr=False)
+except TypeError:
+    runner = CliRunner()
 
 _GMX_WHICH = "ligand.integrate.shutil.which"
 _GMX_SUBPROC = "ligand.integrate.subprocess.run"

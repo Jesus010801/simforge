@@ -20,7 +20,10 @@ from typer.testing import CliRunner
 from cli import cli
 from core.ligand_workflow_models import LigandExportResult
 
-runner = CliRunner(mix_stderr=False)
+try:  # click >= 8.2 removed the mix_stderr kwarg (stderr is separate by default)
+    runner = CliRunner(mix_stderr=False)
+except TypeError:
+    runner = CliRunner()
 
 
 # ── Shared mock results ───────────────────────────────────────────────────────

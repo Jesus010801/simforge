@@ -1043,7 +1043,10 @@ class TestStudyCLIPipeline:
 
         sentinel = SynthesisResult()
         with patch("runtime.scientific_synthesis.synthesize_study", return_value=sentinel) as mock_synth:
-            runner = CliRunner(mix_stderr=False)
+            try:
+                runner = CliRunner(mix_stderr=False)
+            except TypeError:  # click >= 8.2 removed mix_stderr
+                runner = CliRunner()
             runner.invoke(cli, ["study", str(two_system_dir)])
 
         assert mock_synth.called, (
