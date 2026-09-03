@@ -1350,7 +1350,10 @@ class TestHydrogenHandling:
 from typer.testing import CliRunner as _CliRunner
 from cli import cli as _cli
 
-_runner = _CliRunner(mix_stderr=False)
+try:  # click >= 8.2 removed the mix_stderr kwarg (stderr is separate by default)
+    _runner = _CliRunner(mix_stderr=False)
+except TypeError:
+    _runner = _CliRunner()
 
 
 class TestPrepareCLI:
