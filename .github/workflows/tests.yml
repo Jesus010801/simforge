@@ -2,7 +2,13 @@ name: tests
 
 on:
   push:
+    branches: [main]
+    tags: ["v*"]
   pull_request:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   core:
@@ -23,21 +29,27 @@ jobs:
         run: pytest -m "not gmx and not rdkit" -q -p no:cacheprovider
 
   gmx-smoke:
-    name: gmx-smoke (py3.12)
+    name: gmx-smoke
     runs-on: ubuntu-latest
-    # Advisory only: the GROMACS package shipped by Ubuntu apt is several major
-    # versions behind what SimForge is validated against (GROMACS 2025.2), so
-    # real-gmx behaviour here can differ from a supported install. Failures are
-    # informational until a newer GROMACS is available in CI.
-    continue-on-error: true
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: conda-incubator/setup-miniconda@v3
         with:
+          miniconda-version: latest
           python-version: "3.12"
-      - name: Install GROMACS
-        run: sudo apt-get update && sudo apt-get install -y gromacs
-      - name: Install
-        run: pip install -e ".[dev]"
-      - name: Run fast real-gmx subset
-        run: pytest -m gmx -q -p no:cacheprovider -k "build or validate or integrate or spec" --maxfail=5
+          channels: conda-forge
+          channel-priority: strict
+      - name: Install GROMACS + SimForge
+        run: |
+          conda install -y gromacs
+          pip install -e ".[dev]"
+      - name: GROMACS version
+        run: gmx --version | head -n 20
+      - name: Real-gmx multi-component regression
+        # The multi-component build path: preparameterized protein + two
+        # independently parameterized components with a colliding atomtype name,
+        # assembled and passed through `gmx grompp -maxwarn 0`.
+        run: pytest -m gmx -q -p no:cacheprovider -k "build or validate or integrate or spec"
