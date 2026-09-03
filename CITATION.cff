@@ -21,6 +21,5 @@ keywords:
   - computational-biology
   - molecular-simulation
 authors:
-  # TODO(maintainer): replace this placeholder with your real name, and add
-  # `orcid:` and `affiliation:` fields before a non-preview release.
-  - name: "SimForge contributors"
+  - given-names: "Jesús"
+    family-names: "Pérez Aguilar"
