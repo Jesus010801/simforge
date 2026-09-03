@@ -1,0 +1,34 @@
+# examples/multicomponent — preparameterized protein + TWO independently
+# parameterized components with a deliberate atomtype-name collision.
+#
+#   simforge build examples/multicomponent/system.yaml --out multi_system
+#   simforge validate-system multi_system
+#   simforge inspect-run  multi_system    # see the atomtype rename map
+#
+# SOFTWARE DEMONSTRATION, not a scientific benchmark. Same 6-residue peptide
+# fragment as protein_ligand_min. MTH (methane) and EOL (methanol) each ship
+# their own [ atomtypes ] block, and BOTH define `opls_800` / `opls_801` — but
+# for different elements. SimForge namespaces the collision per component
+# (MTH_opls_800, EOL_opls_800, ...) and records the full map in provenance.json
+# under `atomtype_renames`. A naive `cat A.itp B.itp` would silently corrupt
+# one of the two molecules.
+system:
+  name: multicomponent_demo
+
+  protein:
+    structure: protein.gro
+    topology: auto
+    restraints: auto
+
+  components:
+    - id: MTH
+      topology: MTH.itp
+      coordinates: MTH.gro
+      role: ligand
+    - id: EOL
+      topology: EOL.itp
+      coordinates: EOL.gro
+      role: cofactor
+
+  forcefield: oplsaa
+  water_model: spce

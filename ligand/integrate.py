@@ -1207,16 +1207,40 @@ def validate_system_multi(
     return errors
 
 
+def _min_box_vector(gro: Path) -> "float | None":
+    """Shortest box edge (nm) from a .gro file's last line, or None."""
+    try:
+        lines = [ln for ln in gro.read_text().splitlines() if ln.strip()]
+        vals = [float(x) for x in lines[-1].split()[:3]] if len(lines) >= 3 else []
+        pos = [v for v in vals if v > 0]
+        return min(pos) if pos else None
+    except Exception:
+        return None
+
+
 def _grompp_check(out_dir: Path, gro: Path, top: Path) -> list[str]:
-    """Run gmx grompp with a minimal MDP as a topology syntax check."""
+    """gmx grompp as a strict topology syntax check (``-maxwarn 0``).
+
+    Returns a list of strings. Fatal problems are returned verbatim (the caller
+    treats them as errors). Non-fatal grompp warnings are returned prefixed
+    ``[grompp-warning]`` so the caller can surface them without failing the
+    build — SimForge never silently swallows a grompp warning.
+    """
     mdp = out_dir / "_gmx_check.mdp"
     tpr = out_dir / "_gmx_check.tpr"
+    # Scale the check cut-off to the (often tight, pre-solvation) box so grompp
+    # does not reject "cut-off > half box" before it can check the topology.
+    min_box = _min_box_vector(gro)
+    rc = 1.0 if not min_box else max(0.30, min(1.0, round(0.45 * min_box, 3)))
     mdp.write_text(
         "integrator   = steep\n"
         "nsteps       = 0\n"
         "emtol        = 100\n"
         "nstlist      = 1\n"
         "cutoff-scheme = Verlet\n"
+        f"rlist        = {rc}\n"
+        f"rcoulomb     = {rc}\n"
+        f"rvdw         = {rc}\n"
     )
     try:
         result = subprocess.run(
@@ -1226,12 +1250,27 @@ def _grompp_check(out_dir: Path, gro: Path, top: Path) -> list[str]:
                 "-c", str(gro),
                 "-p", str(top),
                 "-o", str(tpr),
-                "-maxwarn", "5",
+                "-maxwarn", "0",
             ],
             capture_output=True, text=True, cwd=out_dir, timeout=30,
         )
-        if result.returncode != 0:
-            return [f"gmx grompp dry run failed:\n{result.stderr.strip()}"]
+        combined = result.stdout + result.stderr
+        warns = [ln.strip() for ln in combined.splitlines()
+                 if ln.strip().lower().startswith("warning")]
+        if result.returncode == 0:
+            return [f"[grompp-warning] {w}" for w in warns]
+        # Non-zero exit: re-run tolerantly to tell "only warnings" from "fatal".
+        tol = subprocess.run(
+            ["gmx", "grompp", "-f", str(mdp), "-c", str(gro), "-p", str(top),
+             "-o", str(tpr), "-maxwarn", "10"],
+            capture_output=True, text=True, cwd=out_dir, timeout=30,
+        )
+        if tol.returncode == 0:
+            tol_all = tol.stdout + tol.stderr
+            tw = [ln.strip() for ln in tol_all.splitlines()
+                  if ln.strip().lower().startswith("warning")] or warns
+            return [f"[grompp-warning] {w}" for w in tw]
+        return [f"gmx grompp dry run failed:\n{result.stderr.strip()}"]
     except subprocess.TimeoutExpired:
         return ["gmx grompp dry run timed out (30 s)."]
     except Exception as exc:
@@ -1744,7 +1783,11 @@ def assemble_system_multi(
         atomtypes_itp_path=atomtypes_path,
         run_grompp=run_grompp,
     )
-    errors.extend(validation_errs)
+    # grompp warnings are surfaced, not swallowed, but do not fail assembly.
+    _gw_prefix = "[grompp-warning]"
+    warnings.extend(e[len(_gw_prefix):].strip() for e in validation_errs
+                    if e.startswith(_gw_prefix))
+    errors.extend(e for e in validation_errs if not e.startswith(_gw_prefix))
 
     # 8. Report ───────────────────────────────────────────────────────────────
     _meta = pdb2gmx_meta

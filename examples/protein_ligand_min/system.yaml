@@ -1,0 +1,27 @@
+# examples/protein_ligand_min — minimal preparameterized protein + 1 ligand.
+#
+#   simforge build examples/protein_ligand_min/system.yaml --out example_system
+#   simforge validate-system example_system
+#   simforge inspect-run  example_system
+#
+# SOFTWARE DEMONSTRATION, not a scientific benchmark. The protein is a
+# 6-residue fragment (SER-GLY-PHE-LEU-ARG-ASP) already run through
+# `gmx pdb2gmx` (OPLS-AA / SPC-E); the "ligand" is methane. The point is to
+# exercise the build -> validate -> provenance path end to end from a fresh
+# clone, not to model anything real.
+system:
+  name: protein_ligand_min
+
+  protein:
+    structure: protein.gro          # .gro  -> preparameterized mode (no pdb2gmx)
+    topology: auto                  # -> topol_Protein_chain_A.itp (sibling)
+    restraints: auto                # -> posre_Protein_chain_A.itp
+
+  components:
+    - id: MTH
+      topology: MTH.itp             # self-contained: keeps its own [ atomtypes ]
+      coordinates: MTH.gro          # system-specific pose for THIS system
+      role: ligand
+
+  forcefield: oplsaa
+  water_model: spce
