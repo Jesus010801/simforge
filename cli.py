@@ -20,9 +20,29 @@ from rich.tree import Tree
 app     = Console()
 cli     = typer.Typer(
     name="simforge",
-    help="Molecular simulation workflow compiler.",
+    help="Reproducible construction, validation and provenance for GROMACS "
+         "molecular-simulation systems. Research preview (0.1.0a1).",
     add_completion=True,
 )
+
+__version__ = "0.1.0a1"
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        app.print(f"simforge {__version__}")
+        raise typer.Exit()
+
+
+@cli.callback()
+def _main(
+    version: bool = typer.Option(
+        False, "--version", "-V",
+        help="Show the SimForge version and exit.",
+        callback=_version_callback, is_eager=True,
+    ),
+) -> None:
+    """SimForge — declarative, provenance-tracked GROMACS system construction."""
 
 # ── Ligand sub-app ────────────────────────────────────────────────────────────
 _ligand_app = typer.Typer(
@@ -31,6 +51,28 @@ _ligand_app = typer.Typer(
     no_args_is_help=True,
 )
 cli.add_typer(_ligand_app)
+
+# ── Analyze-MD command (direct registration) ─────────────────────────────────
+# Typer cannot support both `analyze <path>` (positional) and `analyze md`
+# (sub-command) simultaneously: the group callback consumes positional args
+# before sub-command dispatch, so "md" would always be treated as <path>.
+# Solution: keep the legacy `analyze` flat command intact and add a shim
+# that intercepts `path == "md"`.  The `allow_extra_args` context setting
+# lets the remaining args (run_dir, --out, --dry-run) pass through to ctx.args
+# so we can parse and forward them to the MD implementation.
+from analysis.md.cli import analyze_md_fn  # noqa: E402
+
+# ── FEL sub-app ───────────────────────────────────────────────────────────────
+_fel_app = typer.Typer(
+    name="fel",
+    help="Free Energy Landscape analysis from GROMACS XVG observables.",
+    no_args_is_help=True,
+)
+from analysis.fel.cli import fel_run_fn  # noqa: E402
+from analysis.fel.extract_cli import fel_extract_minima_fn  # noqa: E402
+_fel_app.command(name="run")(fel_run_fn)
+_fel_app.command(name="extract-minima")(fel_extract_minima_fn)
+cli.add_typer(_fel_app)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -726,6 +768,8 @@ def _execute_workspace(
     dry_run:       bool,
     executor_type: str,
     no_confirm:    bool = False,
+    from_step:     str | None = None,
+    clean_from:    bool = False,
 ) -> None:
     """Shared execution logic for `run` and `dry-run` commands."""
     if not workspace.exists():
@@ -735,6 +779,10 @@ def _execute_workspace(
     manifest_file = workspace / "metadata" / "execution_manifest.json"
     if not manifest_file.exists():
         app.print(f"[red]Error:[/red] No execution manifest found. Run [cyan]simforge compile[/cyan] first.")
+        raise typer.Exit(1)
+
+    if clean_from and not from_step:
+        app.print("[red]Error:[/red] --clean-from requires --from-step.")
         raise typer.Exit(1)
 
     if dry_run:
@@ -753,12 +801,27 @@ def _execute_workspace(
                 app.print("[dim]Aborted.[/dim]")
                 raise typer.Exit(0)
 
+    resume_prior_steps: set[str] = set()
+    if from_step:
+        from runtime.resume import ResumeValidationError, prepare_resume
+        try:
+            resume_report = prepare_resume(workspace, from_step, clean_from=clean_from)
+        except ResumeValidationError as exc:
+            app.print(f"[red]Resume validation failed:[/red]\n{exc}")
+            raise typer.Exit(1)
+        resume_prior_steps = set(resume_report["skipped_prior_steps"])
+        app.print(
+            f"  [cyan]↻[/cyan] Resume validated from "
+            f"[bold]{resume_report['from_step_dir']}[/bold] — "
+            f"reusing {len(resume_prior_steps)} prior step(s)"
+        )
+
     if executor_type == "gromacs":
         from executors.gromacs_executor import GROMACSExecutor
-        executor = GROMACSExecutor(workspace, dry_run=dry_run)
+        executor = GROMACSExecutor(workspace, dry_run=dry_run, resume_prior_steps=resume_prior_steps)
     else:
         from runtime.executor import RuntimeExecutor
-        executor = RuntimeExecutor(workspace, dry_run=dry_run)
+        executor = RuntimeExecutor(workspace, dry_run=dry_run, resume_prior_steps=resume_prior_steps)
 
     app.print()
 
@@ -862,9 +925,11 @@ def run(
     workspace:     Path = typer.Argument(..., help="Workspace directory to execute."),
     executor_type: str  = typer.Option("shell", "--executor", "-e", help="Executor type: shell | gromacs."),
     no_confirm:    bool = typer.Option(False, "--no-confirm", help="Skip confirmation prompt (for automation)."),
+    from_step:     str | None = typer.Option(None, "--from-step", help="Resume at STEP_ID or its numbered step directory name."),
+    clean_from:    bool = typer.Option(False, "--clean-from", help="Delete declared outputs from the selected step onward before resuming."),
 ):
     """Execute a compiled workspace with real GROMACS commands."""
-    _execute_workspace(workspace, dry_run=False, executor_type=executor_type, no_confirm=no_confirm)
+    _execute_workspace(workspace, dry_run=False, executor_type=executor_type, no_confirm=no_confirm, from_step=from_step, clean_from=clean_from)
 
 
 @cli.command(name="dry-run")
@@ -2006,9 +2071,102 @@ _QUALITY_STYLE = {
 }
 
 
-@cli.command()
+def _dispatch_analyze_md(extra_args: list[str]) -> None:
+    """Forward `simforge analyze md <args>` to the MD discovery implementation.
+
+    Parses a small fixed set of options from the remaining CLI args so we don't
+    need a full Click sub-command group.
+    """
+    run_dir: str | None = None
+    out        = "analysis"
+    dry_run    = False
+    show_help  = False
+    trajectory: str | None = None
+    topology:   str | None = None
+    structure:  str | None = None
+    energy:     str | None = None
+    index:      str | None = None
+    log:        str | None = None
+
+    _str_opts: dict[str, str] = {
+        "--out": "out", "-o": "out",
+        "--trajectory": "trajectory",
+        "--topology":   "topology",
+        "--structure":  "structure",
+        "--energy":     "energy",
+        "--index":      "index",
+        "--log":        "log",
+    }
+
+    i, args = 0, list(extra_args)
+    while i < len(args):
+        a = args[i]
+        if a in ("--help", "-h"):
+            show_help = True; i += 1
+        elif a == "--dry-run":
+            dry_run = True; i += 1
+        elif a in _str_opts and i + 1 < len(args):
+            val = args[i + 1]; i += 2
+            if a in ("--out", "-o"):
+                out = val
+            elif a == "--trajectory":
+                trajectory = val
+            elif a == "--topology":
+                topology = val
+            elif a == "--structure":
+                structure = val
+            elif a == "--energy":
+                energy = val
+            elif a == "--index":
+                index = val
+            elif a == "--log":
+                log = val
+        elif not a.startswith("-") and run_dir is None:
+            run_dir = a; i += 1
+        else:
+            i += 1  # skip unknown
+
+    if show_help:
+        app.print(
+            "Usage: simforge analyze md [OPTIONS] RUN_DIR\n\n"
+            "  Discover GROMACS artifacts in RUN_DIR and plan analysis observables.\n\n"
+            "[bold]Arguments[/bold]\n"
+            "  RUN_DIR  Path to the MD run directory  [required]\n\n"
+            "[bold]Options[/bold]\n"
+            "  --out -o TEXT      Output directory  [default: analysis]\n"
+            "  --dry-run          Plan only — no GROMACS commands executed\n"
+            "  --trajectory TEXT  Override primary trajectory (.xtc/.trr)\n"
+            "  --topology TEXT    Override topology input (.tpr)\n"
+            "  --structure TEXT   Override reference structure (.gro/.pdb)\n"
+            "  --energy TEXT      Override energy file (.edr)\n"
+            "  --index TEXT       Override index file (.ndx)\n"
+            "  --log TEXT         Override primary log file\n"
+            "  --help             Show this message and exit."
+        )
+        return
+
+    if run_dir is None:
+        app.print("[red]Error:[/red] 'analyze md' requires a run directory argument.")
+        app.print("  Usage: simforge analyze md <run_dir> [--out DIR] [--dry-run]")
+        raise typer.Exit(1)
+
+    analyze_md_fn(
+        run_dir=run_dir,
+        out=out,
+        dry_run=dry_run,
+        trajectory=trajectory,
+        topology=topology,
+        structure=structure,
+        energy=energy,
+        index=index,
+        log=log,
+    )
+
+
+@cli.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
 def analyze(
-    path:    str           = typer.Argument(".", help="Path to simulation directory or XVG files (default: current directory)"),
+    ctx:     typer.Context,
+    path:    str           = typer.Argument(".", help="Path to simulation directory or XVG files, or 'md' to invoke MD run discovery (default: current directory)"),
     output:  Optional[str] = typer.Option(None,        "--output",  "-o", help="Output file (default: stdout)"),
     format:  str           = typer.Option("markdown",  "--format",  "-f", help="Output format: markdown|json"),
     context: Optional[str] = typer.Option(None,        "--context", "-c",
@@ -2016,7 +2174,22 @@ def analyze(
              "idr | protein_ligand_complex | multimeric_complex | enzyme | peptide | "
              "membrane_system | flexible_domain_protein"),
 ):
-    """Analyze an existing MD simulation and classify its scientific quality."""
+    """Analyze an existing MD simulation.
+
+    Without sub-command: classify scientific quality from XVG files.
+    With 'md' as PATH: discover GROMACS run and plan analysis observables.
+
+    Examples:
+
+        simforge analyze .
+        simforge analyze /path/to/sim --format json
+        simforge analyze md /path/to/run --out analysis/ --dry-run
+    """
+    # ── Dispatch to MD discovery sub-command ─────────────────────────────────
+    if path == "md":
+        _dispatch_analyze_md(list(ctx.args))
+        return
+
     from runtime.scientific_summary import analyze_trajectory
     import json as _json
 
@@ -3220,13 +3393,25 @@ def prepare_cmd(
             "none skips hydrogenation entirely (blocks if no H present)."
         ),
     ),
+    ligand_reference: Optional[Path] = typer.Option(
+        None,
+        "--ligand-reference",
+        help=(
+            "Optional chemically explicit reference (.sdf/.mol/.pdb) treated as "
+            "the authoritative chemistry source (bonds/orders/charge/stereo) "
+            "for this ligand; this receptor pose still provides coordinates only."
+        ),
+    ),
 ) -> None:
     """Extract a ligand from a docked complex and prepare it for LigParGen.
 
     Splits the complex PDB into a ligand-only file (ready for LigParGen upload)
-    and a protein-only file (for the subsequent integrate step).  Also writes
-    a ligand_report.yaml with the estimated formal charge and next-step
-    instructions.
+    and a protein-only file (for the subsequent integrate step). Ligand atom
+    elements are normalized, connectivity/bond orders are determined from
+    geometry (or from --ligand-reference when given), and hydrogenation is
+    only performed when that chemistry is trustworthy -- see
+    parameterization_status in ligand_report.yaml. A successful hydrogenation
+    call alone does not imply the ligand is ready for LigParGen.
 
     \b
     Outputs written to --out:
@@ -3238,6 +3423,7 @@ def prepare_cmd(
 
         simforge ligand prepare docked.pdb
         simforge ligand prepare docked.pdb --ligand-resname E20 --out prep/
+        simforge ligand prepare docked.pdb --ligand-resname E20 --ligand-reference E20.sdf
     """
     if not complex_pdb.exists():
         app.print(f"[red]Error:[/red] Complex PDB not found: {complex_pdb}")
@@ -3275,6 +3461,7 @@ def prepare_cmd(
     result = extract_ligand_from_complex(
         complex_pdb, resname, out_dir,
         hydrogenation_mode=hydrogenation_mode,
+        chemical_reference=ligand_reference,
     )
 
     if not result.success:
@@ -3320,6 +3507,29 @@ def prepare_cmd(
         app.print(f"     Hydrogens:      [yellow]unverified[/yellow]{_h_suffix}")
     # "manual_required" and "skipped" blocking handled below
 
+    # ── Chemical perception summary ────────────────────────────────────────────
+    def _conf_label(level: str) -> str:
+        color = {"high": "green", "medium": "yellow", "low": "red", "unknown": "dim"}.get(level, "dim")
+        return f"[{color}]{level}[/{color}]"
+
+    if result.element_corrections:
+        app.print(
+            f"     Elements:       [yellow]normalized[/yellow]  "
+            f"({len(result.element_corrections)} correction(s): "
+            + ", ".join(
+                f"{c['atom_name']} {c['original_element']}→{c['corrected_element']}"
+                for c in result.element_corrections
+            ) + ")"
+        )
+    else:
+        app.print(f"     Elements:       {_conf_label(result.element_assignment_confidence)}")
+    app.print(f"     Connectivity:   {_conf_label(result.connectivity_confidence)}")
+    app.print(f"     Bond orders:    {_conf_label(result.bond_order_confidence)}")
+    app.print(
+        f"     Chemical id.:   {result.chemical_identity_method}  "
+        f"({_conf_label(result.chemical_identity_confidence)})"
+    )
+
     # ── Formal charge ─────────────────────────────────────────────────────────
     if result.formal_charge is not None:
         sign = f"+{result.formal_charge}" if result.formal_charge > 0 else str(result.formal_charge)
@@ -3342,6 +3552,26 @@ def prepare_cmd(
     for warn in result.warnings:
         if not any(kw in warn.lower() for kw in h_warn_keywords):
             app.print(f"\n  [yellow]⚠[/yellow]  {warn}")
+
+    # ── Chemical-validation-required panel (hydrogenation succeeded but the
+    # underlying chemistry isn't trustworthy enough for LigParGen) ────────────
+    if result.parameterization_status != "ready_for_ligpargen" and not (
+        result.hydrogenation_required or result.hydrogenation_backend == "skipped"
+    ):
+        app.print(Panel(
+            "[bold red]chemical_validation_required[/bold red]\n\n"
+            "Hydrogenation completed without error, but that alone does not "
+            "mean the chemistry is trustworthy enough for LigParGen. "
+            "Blocked because:\n"
+            + "\n".join(f"  - {r}" for r in result.readiness_block_reasons) +
+            "\n\nTo fix:\n"
+            "  Option A  Provide --ligand-reference <SDF/MOL/PDB> with the "
+            "correct connectivity/bond orders/charge\n"
+            "  Option B  Supply a pose PDB that already retains explicit, "
+            "chemically correct hydrogens",
+            border_style="red", padding=(0, 2),
+        ))
+        raise typer.Exit(1)
 
     # ── Blocking hydrogen error ───────────────────────────────────────────────
     _should_block = (
@@ -3431,20 +3661,51 @@ def prepare_cmd(
 
 @_ligand_app.command("integrate")
 def integrate_cmd(
-    protein: Path = typer.Option(
-        ...,
+    protein: Optional[Path] = typer.Option(
+        None,
         "--protein", "-p",
-        help="Protein-only PDB file (from 'simforge ligand prepare' or manual prep).",
+        help="Raw protein-only PDB file — runs gmx pdb2gmx on it. Mutually "
+        "exclusive with --protein-gro/--protein-topology.",
     ),
-    ligand_itp: Path = typer.Option(
-        ...,
+    protein_gro: Optional[Path] = typer.Option(
+        None,
+        "--protein-gro",
+        help="Already-parameterized protein coordinate .gro (pdb2gmx already "
+        "run upstream) — skips pdb2gmx entirely. Requires --protein-topology. "
+        "Mutually exclusive with --protein.",
+    ),
+    protein_topology: list[str] = typer.Option(
+        [],
+        "--protein-topology",
+        help="A protein chain topology .itp matching --protein-gro. Repeatable "
+        "— pass once per chain, in the same order they appear in the .gro. "
+        "Required together with --protein-gro.",
+    ),
+    protein_posre: list[str] = typer.Option(
+        [],
+        "--protein-posre",
+        help="A position-restraint .itp referenced by one of the "
+        "--protein-topology files. Repeatable, optional — only needed if a "
+        "later -DPOSRES run requires it.",
+    ),
+    ligand_itp: Optional[Path] = typer.Option(
+        None,
         "--ligand-itp",
-        help="Ligand topology .itp file from LigParGen.",
+        help="Ligand topology .itp file from LigParGen (single-ligand shorthand; "
+        "mutually exclusive with --component).",
     ),
-    ligand_gro: Path = typer.Option(
-        ...,
+    ligand_gro: Optional[Path] = typer.Option(
+        None,
         "--ligand-gro",
-        help="Ligand coordinate .gro file from LigParGen.",
+        help="Ligand coordinate .gro file from LigParGen (single-ligand shorthand; "
+        "mutually exclusive with --component).",
+    ),
+    component: list[str] = typer.Option(
+        [],
+        "--component",
+        help="A parameterized non-protein molecule as 'TOPOLOGY.itp:COORDS.gro'. "
+        "Repeatable — pass once per ligand/cofactor/substrate/inhibitor. "
+        "Mutually exclusive with --ligand-itp/--ligand-gro.",
     ),
     forcefield: str = typer.Option(
         "oplsaa",
@@ -3467,23 +3728,50 @@ def integrate_cmd(
         help="Skip the optional gmx grompp dry-run validation.",
     ),
 ) -> None:
-    """Assemble a GROMACS-ready protein–ligand system from LigParGen outputs.
+    """Assemble a GROMACS-ready protein + non-protein-component system.
 
-    Runs gmx pdb2gmx on the protein, splits the generated topology, merges
-    coordinates, and constructs a clean topol.top with the correct include
-    order required for OPLS-AA ligand parameters.
-
-    GROMACS must be in PATH.
+    Two mutually exclusive protein input modes:
 
     \b
-    Outputs written to --out:
-        protein.gro             ← from gmx pdb2gmx
-        protein.itp             ← protein topology (extracted from topol.top)
-        ligand_atomtypes.itp    ← [ atomtypes ] block from ligand .itp
-        <ligand>.itp            ← ligand topology without [ atomtypes ]
-        topol.top               ← clean master topology (correct include order)
-        complex.gro             ← merged protein + ligand coordinates
-        assembly_report.yaml    ← validation results and file summary
+      --protein PDB
+          Raw protein PDB. Runs gmx pdb2gmx, splits the generated topology,
+          and proceeds as before.
+      --protein-gro GRO --protein-topology ITP [--protein-topology ITP ...]
+          An already-parameterized protein (pdb2gmx already run upstream).
+          pdb2gmx is NEVER invoked in this mode. Use this when you already
+          have protein coordinates plus chain topology .itp file(s) from a
+          prior pdb2gmx run — reconstructing a raw PDB from an
+          already-processed .gro does not reliably round-trip through
+          pdb2gmx a second time (post-processing can rename atoms in ways
+          the force field's .rtp templates no longer recognize).
+
+    Supports a single ligand (--ligand-itp/--ligand-gro, the original API)
+    or any number of independently-parameterized non-protein molecules via
+    repeated --component (ligand + cofactor, two competing ligands, ...).
+    When multiple components declare the same local atomtype name with
+    different parameters (a real failure mode of independently-run LigParGen
+    submissions), the conflicting type is namespaced per component rather
+    than silently resolved or rejected outright — see assembly_report.yaml
+    for the exact rename map applied. This works identically regardless of
+    protein input mode.
+
+    GROMACS must be in PATH for the raw-PDB mode.
+
+    \b
+    Outputs written to --out (single-ligand mode):
+        protein.gro                ← from gmx pdb2gmx (or copied verbatim in --protein-gro mode)
+        protein.itp                ← protein topology (embedded-mode only)
+        ligand_atomtypes.itp       ← [ atomtypes ] block from ligand .itp
+        <ligand>.itp               ← ligand topology without [ atomtypes ]
+        topol.top                  ← clean master topology (correct include order)
+        complex.gro                ← merged protein + ligand coordinates
+        assembly_report.yaml       ← validation results and file summary
+
+    \b
+    Outputs written to --out (multi-component mode):
+        component_atomtypes.itp    ← merged/deduplicated/namespaced atomtypes
+        <component>.itp            ← each component's cleaned + renamed topology
+        (protein.gro / topol.top / complex.gro / report as above)
 
     Examples:
 
@@ -3494,40 +3782,153 @@ def integrate_cmd(
             --out system/
 
         simforge ligand integrate \\
-            --protein protein.pdb \\
-            --ligand-itp LIG.itp --ligand-gro LIG.gro \\
-            --ff oplsaa --water spce --out system/
+            --protein protein_only.pdb \\
+            --component A1.itp:A1.gro \\
+            --component COA.itp:COA.gro \\
+            --out system/
+
+        simforge ligand integrate \\
+            --protein-gro protein_only.gro \\
+            --protein-topology topol_Protein_chain_A.itp \\
+            --protein-topology topol_Protein_chain_B.itp \\
+            --protein-posre posre_Protein_chain_A.itp \\
+            --protein-posre posre_Protein_chain_B.itp \\
+            --component A1.itp:A1.gro \\
+            --component COA.itp:COA.gro \\
+            --out competitive_system/
     """
     # ── Input validation ──────────────────────────────────────────────────────
-    missing = [
-        str(p) for p in (protein, ligand_itp, ligand_gro) if not p.exists()
-    ]
+    raw_protein_given = protein is not None
+    preparam_given = protein_gro is not None or bool(protein_topology)
+
+    if raw_protein_given and preparam_given:
+        app.print(
+            "[red]Error:[/red] --protein and --protein-gro/--protein-topology "
+            "are mutually exclusive. Use --protein for a raw PDB (runs "
+            "pdb2gmx), or --protein-gro + --protein-topology for an "
+            "already-parameterized protein (skips pdb2gmx)."
+        )
+        raise typer.Exit(1)
+    if not raw_protein_given and not preparam_given:
+        app.print(
+            "[red]Error:[/red] Provide either --protein (raw PDB) or "
+            "--protein-gro + --protein-topology (already-parameterized protein)."
+        )
+        raise typer.Exit(1)
+    if preparam_given and (protein_gro is None or not protein_topology):
+        app.print(
+            "[red]Error:[/red] --protein-gro and --protein-topology must be "
+            "given together (at least one --protein-topology is required)."
+        )
+        raise typer.Exit(1)
+
+    legacy_given = ligand_itp is not None or ligand_gro is not None
+    if legacy_given and component:
+        app.print(
+            "[red]Error:[/red] --ligand-itp/--ligand-gro and --component are "
+            "mutually exclusive. Use --ligand-itp/--ligand-gro for a single "
+            "ligand, or one or more --component for multiple molecules."
+        )
+        raise typer.Exit(1)
+    if legacy_given and (ligand_itp is None or ligand_gro is None):
+        app.print("[red]Error:[/red] --ligand-itp and --ligand-gro must be given together.")
+        raise typer.Exit(1)
+    if not legacy_given and not component:
+        app.print(
+            "[red]Error:[/red] Provide either --ligand-itp/--ligand-gro or "
+            "at least one --component TOPOLOGY.itp:COORDS.gro."
+        )
+        raise typer.Exit(1)
+
+    from ligand.integrate import ParameterizedMolecule, assemble_system, assemble_system_multi
+
+    components_desc: list[ParameterizedMolecule] = []
+    if component:
+        for raw in component:
+            if ":" not in raw:
+                app.print(
+                    f"[red]Error:[/red] --component value '{raw}' is not in "
+                    "'TOPOLOGY.itp:COORDS.gro' form."
+                )
+                raise typer.Exit(1)
+            itp_str, gro_str = raw.split(":", 1)
+            itp_path, gro_path = Path(itp_str), Path(gro_str)
+            components_desc.append(ParameterizedMolecule(
+                component_id=itp_path.stem,
+                topology_path=itp_path,
+                coordinate_path=gro_path,
+            ))
+    else:
+        components_desc.append(ParameterizedMolecule(
+            component_id=ligand_itp.stem,
+            topology_path=ligand_itp,
+            coordinate_path=ligand_gro,
+        ))
+
+    protein_topology_paths = [Path(p) for p in protein_topology]
+    protein_posre_paths = [Path(p) for p in protein_posre]
+
+    missing: list[str] = []
+    if raw_protein_given:
+        if not protein.exists():
+            missing.append(str(protein))
+    else:
+        if not protein_gro.exists():
+            missing.append(str(protein_gro))
+        missing += [str(p) for p in protein_topology_paths if not p.exists()]
+        missing += [str(p) for p in protein_posre_paths if not p.exists()]
+    for c in components_desc:
+        missing += [str(p) for p in (c.topology_path, c.coordinate_path) if not p.exists()]
     if missing:
         for m in missing:
             app.print(f"[red]Error:[/red] File not found: {m}")
         raise typer.Exit(1)
 
+    if raw_protein_given:
+        protein_desc = protein.name
+    else:
+        protein_desc = f"{protein_gro.name} (+{len(protein_topology_paths)} chain topolog{'y' if len(protein_topology_paths) == 1 else 'ies'}, pdb2gmx skipped)"
+    header = f"[dim]{protein_desc}[/dim] + " + " + ".join(
+        f"[dim]{c.component_id}[/dim]" for c in components_desc
+    )
     app.print(Panel(
-        f"[bold cyan]Ligand Integrate[/bold cyan]  "
-        f"[dim]{protein.name}[/dim] + [dim]{ligand_itp.name}[/dim] + "
-        f"[dim]{ligand_gro.name}[/dim]  →  [dim]{out_dir}[/dim]",
+        f"[bold cyan]Ligand Integrate[/bold cyan]  {header}  →  [dim]{out_dir}[/dim]",
         border_style="cyan", padding=(0, 2),
     ))
-
-    from ligand.integrate import assemble_system
 
     import time as _time
     t0 = _time.monotonic()
 
-    result = assemble_system(
-        protein_pdb=protein,
-        ligand_itp=ligand_itp,
-        ligand_gro=ligand_gro,
-        out_dir=out_dir,
-        forcefield=forcefield,
-        water_model=water,
-        run_grompp=not no_grompp,
-    )
+    if raw_protein_given and legacy_given:
+        result = assemble_system(
+            protein_pdb=protein,
+            ligand_itp=ligand_itp,
+            ligand_gro=ligand_gro,
+            out_dir=out_dir,
+            forcefield=forcefield,
+            water_model=water,
+            run_grompp=not no_grompp,
+        )
+    elif raw_protein_given:
+        result = assemble_system_multi(
+            protein_pdb=protein,
+            components=components_desc,
+            out_dir=out_dir,
+            forcefield=forcefield,
+            water_model=water,
+            run_grompp=not no_grompp,
+        )
+    else:
+        result = assemble_system_multi(
+            protein_gro=protein_gro,
+            protein_topology_itps=protein_topology_paths,
+            protein_posre_itps=protein_posre_paths,
+            components=components_desc,
+            out_dir=out_dir,
+            forcefield=forcefield,
+            water_model=water,
+            run_grompp=not no_grompp,
+        )
 
     elapsed = _time.monotonic() - t0
 
@@ -3549,29 +3950,58 @@ def integrate_cmd(
         app.print(f"\n  [yellow]⚠[/yellow]  Assembly finished with errors  [dim]({elapsed:.1f}s)[/dim]\n")
 
     app.print(f"  [bold]Outputs[/bold]  →  {out_dir}/")
-    for label, path in [
-        ("protein.gro",           result.protein_gro),
-        ("protein.itp",           result.protein_itp),
-        ("ligand_atomtypes.itp",  result.ligand_atomtypes_itp),
-        (f"{ligand_itp.name}",    result.ligand_itp),
-        ("topol.top",             result.topol_top),
-        ("complex.gro",           result.complex_gro),
-        ("assembly_report.yaml",  result.report_path),
-    ]:
+    output_rows = [("protein.gro", result.protein_gro)]
+    if result.protein_itp is not None:
+        output_rows.append(("protein.itp", result.protein_itp))
+    else:
+        for name in result.protein_topology_includes:
+            output_rows.append((name, out_dir / name))
+    if legacy_given:
+        output_rows += [
+            ("ligand_atomtypes.itp", result.ligand_atomtypes_itp),
+            (ligand_itp.name, result.ligand_itp),
+        ]
+    else:
+        output_rows.append(("component_atomtypes.itp", out_dir / "component_atomtypes.itp"))
+        for c in components_desc:
+            output_rows.append((c.topology_path.name, out_dir / c.topology_path.name))
+    output_rows += [
+        ("topol.top", result.topol_top),
+        ("complex.gro", result.complex_gro),
+        ("assembly_report.yaml", result.report_path),
+    ]
+    for label, path in output_rows:
         if path and Path(path).exists():
             app.print(f"    [green]✓[/green]  {label}")
         else:
             app.print(f"    [red]✗[/red]  {label}  [dim](not created)[/dim]")
 
-    app.print(
-        f"\n     Protein mol:   [bold]{result.protein_mol_name}[/bold]"
-        f"  ({result.protein_atom_count} atoms)"
-    )
-    app.print(
-        f"     Ligand mol:    [bold]{result.ligand_mol_name}[/bold]"
-        f"  ({result.ligand_atom_count} atoms)"
-    )
-    app.print(f"     Complex total: [bold]{result.total_atom_count}[/bold] atoms")
+    app.print(f"\n  [bold]Protein[/bold]")
+    for mol in result.protein_molecules:
+        app.print(f"    {mol['name']}")
+
+    if legacy_given:
+        app.print(
+            f"\n  [bold]Ligand[/bold]    [bold]{result.ligand_mol_name}[/bold]"
+            f"  ({result.ligand_atom_count} atoms)"
+        )
+    else:
+        app.print(f"\n  [bold]Parameterized components[/bold]")
+        for comp in result.components:
+            role_tag = f" [dim]({comp['role']})[/dim]" if comp.get("role") else ""
+            plural = "molecule" if comp["count"] == 1 else "molecules"
+            app.print(
+                f"    {comp['id']:<10} {comp['count']:>2} {plural}{role_tag}"
+                f"  [dim]({comp['atom_count']} atoms, mol name: {comp['molecule_name']})[/dim]"
+            )
+            renames = comp.get("atomtype_renames") or {}
+            if renames:
+                app.print(
+                    f"      [yellow]atomtype conflicts resolved:[/yellow] "
+                    + ", ".join(f"{old} → {new}" for old, new in renames.items())
+                )
+
+    app.print(f"\n  Total atoms: [bold]{result.total_atom_count}[/bold]")
 
     for warn in result.warnings:
         app.print(f"\n  [yellow]⚠[/yellow]  {warn}")
@@ -3587,6 +4017,260 @@ def integrate_cmd(
         f"    gmx solvate -cp {out_dir}/complex.gro -cs spc216.gro \\\n"
         f"                -o {out_dir}/solvated.gro -p {out_dir}/topol.top\n"
     )
+
+
+# ── simforge ligand batch-prepare ─────────────────────────────────────────────
+
+@_ligand_app.command("batch-prepare")
+def batch_prepare_cmd(
+    root: Path = typer.Argument(
+        ...,
+        help="Root directory containing one subdirectory per protein-ligand complex.",
+        exists=False,
+    ),
+    ligand_resname: str = typer.Option(
+        ...,
+        "--ligand-resname", "-r",
+        help="3-char residue name shared by the same ligand across all complexes.",
+    ),
+    ligand_reference: Optional[Path] = typer.Option(
+        None,
+        "--ligand-reference",
+        help=(
+            "Optional chemically explicit reference (.sdf/.mol/.pdb) used as the "
+            "authoritative ligand identity source (requires RDKit)."
+        ),
+    ),
+    hydrogenation_mode: str = typer.Option(
+        "auto",
+        "--hydrogenation",
+        help="Hydrogenation backend: auto | rdkit | openbabel | none.",
+    ),
+) -> None:
+    """Discover a multi-complex ligand campaign and prepare each unique ligand once.
+
+    Recursively discovers one complex PDB per subdirectory of ROOT, extracts
+    each receptor-specific protein/ligand pose, determines which ligand
+    occurrences are chemically the same, and hydrogenates/prepares each
+    distinct ligand exactly once for LigParGen submission.
+
+    \b
+    Outputs:
+        <system>/simforge/protein_only.pdb
+        <system>/simforge/ligand_pose.pdb
+        simforge_campaign/campaign_manifest.json
+        simforge_campaign/report.md
+        simforge_campaign/ligands/<ID>/parameterization/ligand_for_ligpargen.pdb
+
+    Examples:
+
+        simforge ligand batch-prepare A6/ --ligand-resname A6
+        simforge ligand batch-prepare A6/ --ligand-resname A6 --ligand-reference A6.sdf
+    """
+    if not root.exists():
+        app.print(f"[red]Error:[/red] Campaign root not found: {root}")
+        raise typer.Exit(1)
+
+    from ligand.campaign import prepare_campaign
+
+    app.print(Panel(
+        f"[bold cyan]Ligand Campaign — Prepare[/bold cyan]  [dim]{root}[/dim]  ·  "
+        f"residue [bold]{ligand_resname.strip().upper()}[/bold]",
+        border_style="cyan", padding=(0, 2),
+    ))
+
+    result = prepare_campaign(
+        root, ligand_resname,
+        ligand_reference=ligand_reference,
+        hydrogenation_mode=hydrogenation_mode,
+    )
+
+    if not result.success:
+        app.print(f"\n  [red]✗  Campaign preparation failed:[/red] {result.error}")
+        raise typer.Exit(1)
+
+    manifest = result.manifest
+
+    if result.resumed:
+        app.print(
+            "\n  [yellow]⚠[/yellow]  Existing campaign manifest found and validated "
+            "— reusing it without regenerating."
+        )
+        app.print(f"     Manifest: {result.manifest_path}")
+
+    app.print("\n  [green]✓[/green]  Campaign prepared successfully\n")
+    app.print(f"  Systems discovered:     [bold]{result.systems_discovered}[/bold]")
+    app.print(f"  Unique ligands:         [bold]{result.unique_ligands}[/bold]")
+
+    def _conf_word(level: str) -> str:
+        color = {"high": "green", "medium": "yellow", "low": "red", "unknown": "dim"}.get(level, "dim")
+        return f"[{color}]{level}[/{color}]"
+
+    for ligand_id, lig in manifest.ligands.items():
+        ready = lig.parameterization_status == "ready_for_ligpargen"
+        app.print(f"\n  [bold]{ligand_id}[/bold]")
+        app.print(f"    Occurrences:          {lig.occurrences}")
+        if lig.element_corrections:
+            app.print(
+                f"    Elements:             [yellow]normalized with warnings[/yellow] "
+                f"({len(lig.element_corrections)} correction(s))"
+            )
+        else:
+            app.print(f"    Elements:             {_conf_word(lig.element_assignment_confidence)}")
+        app.print(f"    Connectivity:         {_conf_word(lig.connectivity_confidence)}")
+        app.print(f"    Bond orders:          {_conf_word(lig.bond_order_confidence)}")
+        app.print(f"    Hydrogens:            {lig.hydrogenation_status}")
+        if lig.hydrogenation_performed:
+            h_line = f"[green]performed[/green] ({lig.hydrogenation_backend})"
+        elif lig.hydrogenation_status == "complete":
+            h_line = "not needed (already complete)"
+        else:
+            h_line = f"[red]not performed[/red] ({lig.hydrogenation_backend})"
+        app.print(f"    Hydrogenation:        {h_line}")
+        app.print(
+            f"    Chemical validation:  "
+            f"{'[green]verified[/green]' if ready else _conf_word(lig.chemical_identity_confidence)}"
+            f"  ({lig.chemical_identity_method})"
+        )
+        app.print(
+            f"    Parameterization:     "
+            f"{'[green]ready_for_ligpargen[/green]' if ready else '[red]BLOCKED[/red]'}"
+        )
+        app.print(f"    Identity:             {lig.identity_method} ({lig.identity_confidence})")
+
+        if lig.readiness_block_reasons:
+            app.print("\n    [red]Blocked because:[/red]")
+            for reason in lig.readiness_block_reasons:
+                app.print(f"      - {reason}")
+            if lig.chemical_identity_method != "chemical_reference":
+                app.print(
+                    "\n    [dim]Provide --ligand-reference <SDF/MOL2/SMILES> for high-confidence chemistry.[/dim]"
+                )
+
+        if ready and lig.ligand_for_ligpargen:
+            app.print(
+                f"\n    [dim]Upload this file to LigParGen:[/dim]\n\n"
+                f"      [bold]{lig.ligand_for_ligpargen}[/bold]"
+            )
+
+    if result.system_errors:
+        app.print(f"\n  [red]System errors ({len(result.system_errors)}):[/red]")
+        for sid, err in result.system_errors.items():
+            app.print(f"    [red]•[/red] {sid}: {err}")
+
+    for w in result.warnings:
+        app.print(f"\n  [yellow]⚠[/yellow]  {w}")
+
+    n_ready = sum(1 for lig in manifest.ligands.values() if lig.parameterization_status == "ready_for_ligpargen")
+    n_blocked = len(manifest.ligands) - n_ready
+    app.print(f"\n  LigParGen submissions required: [bold]{n_ready}[/bold]")
+    if n_blocked:
+        app.print(f"  Blocked (chemical validation required): [bold red]{n_blocked}[/bold red]")
+    if n_ready:
+        app.print(
+            f"\n  [dim]Next steps:[/dim]\n"
+            f"    1. Upload each ligand_for_ligpargen.pdb above to LigParGen.\n"
+            f"    2. Place the resulting .itp/.gro into "
+            f"simforge_campaign/ligands/<ID>/ligpargen/\n"
+            f"    3. Run: simforge ligand batch-integrate {root}\n"
+        )
+
+
+# ── simforge ligand batch-integrate ───────────────────────────────────────────
+
+@_ligand_app.command("batch-integrate")
+def batch_integrate_cmd(
+    root: Path = typer.Argument(
+        ...,
+        help="Campaign root directory (same one passed to batch-prepare).",
+        exists=False,
+    ),
+    forcefield: str = typer.Option(
+        "oplsaa",
+        "--forcefield", "--ff",
+        help="GROMACS force field name passed to pdb2gmx (default: oplsaa).",
+    ),
+    water: str = typer.Option(
+        "spce",
+        "--water",
+        help="Water model passed to pdb2gmx (default: spce).",
+    ),
+    no_grompp: bool = typer.Option(
+        False,
+        "--no-grompp",
+        help="Skip the optional gmx grompp dry-run validation.",
+    ),
+) -> None:
+    """Validate campaign LigParGen outputs and assemble every receptor system.
+
+    Validates each unique ligand's LigParGen .itp/.gro exactly once, then for
+    every system in the campaign reconstructs a receptor-specific ligand pose
+    (heavy atoms transferred exactly from the original complex, hydrogens
+    repositioned) and assembles a complete GROMACS system via the same
+    pipeline used by 'simforge ligand integrate'.
+
+    \b
+    Outputs per system:
+        <system>/simforge/<ID>_pose_parameterized.gro
+        <system>/simforge/system/complex.gro
+        <system>/simforge/system/topol.top
+        <system>/simforge/system/assembly_report.yaml
+
+    Example:
+
+        simforge ligand batch-integrate A6/
+    """
+    if not root.exists():
+        app.print(f"[red]Error:[/red] Campaign root not found: {root}")
+        raise typer.Exit(1)
+
+    from ligand.campaign_integrate import integrate_campaign
+
+    app.print(Panel(
+        f"[bold cyan]Ligand Campaign — Integrate[/bold cyan]  [dim]{root}[/dim]",
+        border_style="cyan", padding=(0, 2),
+    ))
+
+    result = integrate_campaign(
+        root, forcefield=forcefield, water_model=water, run_grompp=not no_grompp,
+    )
+
+    if result.manifest is None:
+        app.print(f"\n  [red]✗[/red]  {result.error}")
+        raise typer.Exit(1)
+
+    for ligand_id, lig in result.ligands.items():
+        if lig.error is not None and not lig.systems:
+            app.print(f"\n  [red]✗[/red]  [bold]{ligand_id}[/bold]: {lig.error}")
+            continue
+        status = "[green]parameters validated[/green]" if not lig.error else "[red]parameters invalid[/red]"
+        app.print(f"\n  [bold]{ligand_id}[/bold] {status}")
+        if lig.error:
+            app.print(f"    [red]{lig.error}[/red]")
+        for w in lig.warnings:
+            app.print(f"    [yellow]⚠[/yellow]  {w}")
+
+    app.print("\n  Building systems...\n")
+
+    any_systems = False
+    for ligand_id, lig in result.ligands.items():
+        for sid, so in lig.systems.items():
+            any_systems = True
+            if so.success:
+                app.print(f"  {sid:<12} [green]✓ complete[/green]")
+            else:
+                app.print(f"  {sid:<12} [red]✗ failed: {so.error}[/red]")
+
+    if not any_systems:
+        app.print("  [red](no systems were built)[/red]")
+
+    app.print(
+        f"\n  [bold]{result.systems_succeeded}/{result.systems_total}[/bold] "
+        "protein-ligand systems ready"
+    )
+
+    if not result.success:
+        raise typer.Exit(1)
 
 
 # ── Membrane sub-app ──────────────────────────────────────────────────────────
@@ -3664,6 +4348,23 @@ def inspect_mask(
 
     table.add_row("Total Checked", str(report.get("total_lipids_checked", 0)), "")
     app.print(table)
+
+
+# ── Platform consolidation commands ──────────────────────────────────────────
+# High-level declarative system build + environment/system diagnostics.
+from core.platform_cli import (  # noqa: E402
+    build_fn as _build_fn,
+    doctor_fn as _doctor_fn,
+    validate_system_fn as _validate_system_fn,
+    inspect_run_fn as _inspect_run_fn,
+    campaign_build_fn as _campaign_build_fn,
+)
+
+cli.command(name="build")(_build_fn)
+cli.command(name="doctor")(_doctor_fn)
+cli.command(name="validate-system")(_validate_system_fn)
+cli.command(name="inspect-run")(_inspect_run_fn)
+cli.command(name="campaign-build")(_campaign_build_fn)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,24 @@
+# Example B — pre-parameterized protein + one ligand.
+#
+#   simforge build configs/systems/B_preparameterized_protein_ligand.yaml --out B_system/
+#
+# Pre-parameterized mode: `structure` is a .gro that has already been through
+# pdb2gmx. SimForge NEVER re-runs pdb2gmx here. Supply the chain topology
+# .itp file(s) that pdb2gmx originally wrote (one per chain), or use
+# `topology: auto` to discover sibling topol_Protein_chain_*.itp files.
+system:
+  name: preparam_protein_ligand_demo
+
+  protein:
+    structure: protein_only.gro
+    topology: auto               # -> topol_Protein_chain_*.itp next to the .gro
+    restraints: auto             # -> posre_Protein_chain_*.itp
+
+  components:
+    - id: A1
+      topology: A1.itp
+      coordinates: A1.gro
+      role: competitive_ligand
+
+  forcefield: oplsaa
+  water_model: spce

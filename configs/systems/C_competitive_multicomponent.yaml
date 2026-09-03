@@ -1,0 +1,43 @@
+# Example C — competitive / multi-component system (the validated architecture).
+#
+#   simforge build configs/systems/C_competitive_multicomponent.yaml --out competitive_system/
+#
+# 4-chain pre-parameterized protein (24199 atoms)
+#   + independently parameterized inhibitor A1 (35 atoms)
+#   + cofactor COA (80 atoms)
+#   -> 24314 atoms pre-solvation
+#
+# Both A1.itp and COA.itp are independent LigParGen submissions. If they both
+# declare, e.g., opls_800 with different parameters, SimForge namespaces the
+# conflict per component (A1_opls_800 / COA_opls_800) and records the full
+# rename map in provenance.json. Each component MUST retain its original
+# [ atomtypes ] block for this to work — otherwise the build fails in preflight.
+system:
+  name: hmgcoa_A1_competitive
+
+  protein:
+    structure: protein_only.gro
+    topology:
+      - topol_Protein_chain_A.itp
+      - topol_Protein_chain_B.itp
+      - topol_Protein_chain_C.itp
+      - topol_Protein_chain_D.itp
+    restraints:
+      - posre_Protein_chain_A.itp
+      - posre_Protein_chain_B.itp
+      - posre_Protein_chain_C.itp
+      - posre_Protein_chain_D.itp
+
+  components:
+    - id: A1
+      topology: A1.itp
+      coordinates: A1.gro
+      role: competitive_ligand
+
+    - id: COA
+      topology: COA_original.itp
+      coordinates: COA.gro
+      role: cofactor
+
+  forcefield: oplsaa
+  water_model: spce
