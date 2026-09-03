@@ -26,6 +26,10 @@ echo "SimForge namespaced the collision. See it in the provenance:"
 run python -c "import json,sys; print(json.dumps(json.load(open('$OUT/provenance.json'))['atomtype_renames'], indent=2))"
 
 if [[ "${1:-}" == "--capture" ]]; then
-    "$0" > demo/expected_output.txt 2>&1 || true
+    # capture via a temp file so the redirect target does not itself make the
+    # tree "dirty" while the demo runs
+    _tmp="$(mktemp)"
+    "$0" > "$_tmp" 2>&1 || true
+    mv "$_tmp" demo/expected_output.txt
     echo "wrote demo/expected_output.txt"
 fi

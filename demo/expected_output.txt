@@ -98,7 +98,7 @@ $ simforge build demo/system.yaml --out demo_system --verbose
 │    Validation  READY                                                         │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭────────────────────────── Reproducibility advisory ──────────────────────────╮
-│  ⚠ SimForge source tree has uncommitted changes (commit a457e8dcb886,        │
+│  ⚠ SimForge source tree has uncommitted changes (commit 3fb2c6b9abfe,        │
 │  branch release/0.1-research-preview); this system is recorded as non-clean  │
 │  / research-development provenance                                           │
 │  Commit SimForge before a build you intend to be reproducible.               │
@@ -148,10 +148,10 @@ $ simforge validate-system demo_system
 
 $ simforge inspect-run demo_system
 ╭─────────────────── Reproducibility Manifest — demo_system ───────────────────╮
-│  Generated   2026-09-03T06:00:42+00:00                                       │
+│  Generated   2026-09-03T06:09:23+00:00                                       │
 │  Command     simforge build demo/system.yaml --out demo_system               │
 │  Spec        /home/jesusxd/Escritorio/simforge/demo/system.yaml              │
-│  SimForge    0.1.0a1  (git a457e8dcb8 +dirty)                                │
+│  SimForge    0.1.0a1  (git 3fb2c6b9ab +dirty)                                │
 │  Python      3.13.9  /home/jesusxd/miniconda3/bin/python3.13                 │
 │  GROMACS     2025.2                                                          │
 │  RDKit       not found                                                       │
