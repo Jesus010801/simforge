@@ -392,17 +392,36 @@ def _check_coordinate_validity(gro: Any) -> Check:
                  FAIL if hard else WARN, "; ".join(dict.fromkeys(problems)), problems)
 
 
+def _gro_min_box_vector(gro: Path) -> Optional[float]:
+    """Shortest box edge (nm) from a .gro file's final line, or None."""
+    try:
+        lines = [ln for ln in gro.read_text().splitlines() if ln.strip()]
+        if len(lines) < 3:
+            return None
+        vals = [float(x) for x in lines[-1].split()[:3]]
+        return min(v for v in vals if v > 0) or None
+    except Exception:
+        return None
+
+
 def _grompp_dry_run(out_dir: Path, gro: Path, top: Path) -> Check:
     mdp = out_dir / "_sf_validate.mdp"
     tpr = out_dir / "_sf_validate.tpr"
+    # A freshly assembled system is not yet in a simulation box: the coordinate
+    # file's box is often tight around the solute. grompp -maxwarn 0 rejects a
+    # cut-off longer than half the shortest box vector, so scale the topology-
+    # syntax-check cut-off to the box. This is a preprocessing sanity check, not
+    # a production run — the user still solvates + sets a real box afterwards.
+    min_box = _gro_min_box_vector(gro)
+    rc = 1.0 if not min_box else max(0.30, min(1.0, round(0.45 * min_box, 3)))
     mdp.write_text(
         "integrator    = steep\n"
         "nsteps        = 0\n"
         "nstlist       = 1\n"
         "cutoff-scheme = Verlet\n"
-        "rlist         = 1.0\n"
-        "rcoulomb      = 1.0\n"
-        "rvdw          = 1.0\n"
+        f"rlist         = {rc}\n"
+        f"rcoulomb      = {rc}\n"
+        f"rvdw          = {rc}\n"
     )
     try:
         res = subprocess.run(
