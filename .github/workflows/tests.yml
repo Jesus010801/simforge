@@ -44,7 +44,9 @@ jobs:
           channel-priority: strict
       - name: Install GROMACS + SimForge
         run: |
-          conda install -y gromacs
+          # Pin to the version SimForge is validated against (see README /
+          # THIRD_PARTY_NOTICES). Do not claim support for versions not tested.
+          conda install -y "gromacs=2025.2"
           pip install -e ".[dev]"
       - name: GROMACS version
         run: gmx --version | head -n 20
