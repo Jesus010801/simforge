@@ -1,9 +1,20 @@
 # conftest.py — shared fixtures for the full SimForge test suite
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
+
+# Deterministic CLI help/output rendering across environments. GitHub Actions
+# sets FORCE_COLOR, which makes rich/typer split option flags across ANSI style
+# spans (e.g. `--legacy` renders as `-` + `-legacy`), so a plain-substring check
+# like `"--legacy" in help_text` fails there but passes locally. Force no-color,
+# wide output for the whole test session (also propagates to subprocess-based
+# CLI tests via the environment).
+os.environ["NO_COLOR"] = "1"
+os.environ.pop("FORCE_COLOR", None)
+os.environ.setdefault("COLUMNS", "200")
 
 from core.parser import parse_yaml
 from core.decision_engine import build_simulation_plan
