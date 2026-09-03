@@ -1,0 +1,28 @@
+# Conda environment for SimForge (research preview).
+#
+#   conda env create -f environment.yml
+#   conda activate simforge
+#   pip install -e .            # or: pip install -e ".[dev]"
+#   simforge doctor
+#
+# GROMACS is the one hard external dependency. SimForge is validated against
+# GROMACS 2025.2; the conda-forge build below tracks the latest release. If you
+# already have a system/module GROMACS on PATH, you can drop the `gromacs` line
+# and use that instead.
+name: simforge
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.11
+  - pip
+  - gromacs>=2024          # external binary; 2025.2 is the validated version
+  - numpy>=1.24
+  - matplotlib>=3.6        # FEL / study plots (optional feature)
+  - rdkit>=2022.09         # optional: chemical perception / hydrogenation
+  - openbabel>=3.1         # optional: fallback hydrogenation backend
+  - pip:
+      - typer[all]>=0.9
+      - rich>=13
+      - pydantic>=2
+      - pyyaml>=6
+      - pytest>=7

@@ -4,15 +4,58 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "simforge"
-version = "0.1.0"
-description = "Molecular simulation workflow compiler"
+version = "0.1.0a1"
+description = "Reproducible construction, validation and provenance for GROMACS molecular-simulation systems"
+readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "The SimForge Authors" },
+]
+keywords = [
+    "molecular-dynamics",
+    "gromacs",
+    "reproducibility",
+    "provenance",
+    "computational-biology",
+    "molecular-simulation",
+    "force-field",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
 dependencies = [
     "typer[all]>=0.9",
     "rich>=13",
     "pydantic>=2",
     "pyyaml>=6",
+    "numpy>=1.24",
 ]
+
+[project.optional-dependencies]
+# Chemical perception, formal-charge estimation, RDKit-backed hydrogenation and
+# pose reconstruction. SimForge has a documented degraded path without RDKit.
+chem = ["rdkit>=2022.09"]
+# Free-energy-landscape and MD-study plotting.
+analysis = ["matplotlib>=3.6"]
+# Everything needed to run the test suite and contribute.
+dev = [
+    "pytest>=7",
+    "matplotlib>=3.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/Jesus010801/simforge"
+Repository = "https://github.com/Jesus010801/simforge"
+Issues = "https://github.com/Jesus010801/simforge/issues"
+Changelog = "https://github.com/Jesus010801/simforge/blob/main/CHANGELOG.md"
 
 [project.scripts]
 simforge = "simforge.cli:app"
@@ -37,9 +80,12 @@ include = [
     "adapters*",
     "ligand*",
     "utils*",
+    "analysis*",
 ]
 
 [tool.pytest.ini_options]
 markers = [
-    "rdkit: tests that require RDKit (run in rdkit_env conda environment)",
+    "gmx: test requires a real GROMACS (gmx) binary on PATH",
+    "rdkit: test requires RDKit (install the 'chem' extra or use a dedicated env)",
+    "membrane_wip: known-incomplete membrane pre-shrink / packing behaviour (see CHANGELOG)",
 ]
