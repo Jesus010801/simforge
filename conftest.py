@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 # ── Deterministic CLI help/output rendering across environments ─────────────
-# MUST run before anything imports typer. On CI, typer.rich_utils sets
+# MUST run before anything imports typer / rich. On CI, typer.rich_utils sets
 # FORCE_TERMINAL=True whenever GITHUB_ACTIONS / FORCE_COLOR / PY_COLORS is set,
-# which makes it render option flags as styled Rich spans — `--legacy` becomes
-# `-` + `-legacy` — so `"--legacy" in help_text` passes locally but fails in
-# CI. `_TYPER_FORCE_DISABLE_TERMINAL` is typer's own opt-out; it also reaches
-# the subprocess-based CLI tests via the inherited environment.
+# and Rich treats the runner as a terminal, so it renders styled spans and
+# wraps to width — `--legacy` becomes `-` + `-legacy`, numbers get bolded —
+# and plain-substring assertions on help / CLI output pass locally but fail in
+# CI. Neutralise both: typer's own `_TYPER_FORCE_DISABLE_TERMINAL` opt-out and
+# Rich's `TTY_COMPATIBLE=0` ("not a terminal"). These also reach the
+# subprocess-based CLI tests via the inherited environment.
 import os
 
 os.environ["_TYPER_FORCE_DISABLE_TERMINAL"] = "1"
+os.environ["TTY_COMPATIBLE"] = "0"
 os.environ["NO_COLOR"] = "1"
 os.environ.pop("FORCE_COLOR", None)
 os.environ.setdefault("COLUMNS", "200")
