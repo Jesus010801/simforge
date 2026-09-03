@@ -1,8 +1,13 @@
-# Runtime dependencies
-typer[all]>=0.9
+# SimForge dependencies are declared in pyproject.toml.
+#
+#   pip install -e .            # runtime
+#   pip install -e ".[dev]"     # + test tooling
+#   pip install -e ".[dev,chem,analysis]"   # + RDKit + matplotlib
+#
+# This file is kept only for tools that still expect a requirements.txt.
+typer>=0.12
 rich>=13
 pydantic>=2
 pyyaml>=6
-
-# Development / testing
+numpy>=1.24
 pytest>=7
