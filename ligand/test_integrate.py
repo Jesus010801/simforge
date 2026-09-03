@@ -6,6 +6,7 @@ All tests are pure Python — no GROMACS or RDKit required.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import MagicMock, patch
@@ -15,18 +16,31 @@ import yaml
 
 from ligand.integrate import (
     AssemblyResult,
+    AtomtypeMergeResult,
+    ParameterizedMolecule,
     Pdb2gmxMeta,
+    _apply_atomtype_renames,
+    _referenced_posre_includes,
+    _sanitize_component_id,
     _should_retry_with_ignh,
+    assemble_system,
+    assemble_system_multi,
     detect_chain_itp_includes,
     extract_atomtypes_section,
     generate_topol_top,
+    generate_topol_top_multi,
+    generate_topol_top_preparameterized,
+    inject_components_into_master_topol,
     inject_ligand_into_master_topol,
     merge_gro_files,
+    merge_gro_files_multi,
     parse_molecules_section,
     remove_atomtypes_from_itp,
+    resolve_and_merge_atomtypes,
     run_pdb2gmx,
     split_topol_top,
     validate_system,
+    validate_system_multi,
 )
 from ligand.prepare import (
     _has_hydrogens,
@@ -1288,7 +1302,17 @@ class TestHydrogenHandling:
         report = yaml.safe_load(result.report_path.read_text())
         assert report["hydrogenated_ligand_pdb"] is not None
 
-    def test_report_next_steps_recommend_h_file_after_obabel(self, tmp_path):
+    def test_obabel_hydrogenation_alone_does_not_imply_ligpargen_ready(self, tmp_path):
+        """A successful Open Babel AddHs is not, by itself, chemical validation.
+
+        Open Babel performs its own bond-order/valence perception, but it is
+        not externally validated and has produced an incorrect result for at
+        least one real ligand (see ligand.chemical_perception module
+        docstring). Hydrogenation completing without error must not be
+        reported as LigParGen-ready -- the report should explicitly request
+        further validation (e.g. a chemical reference) instead of recommending
+        submission.
+        """
         pdb = tmp_path / "complex.pdb"
         pdb.write_text(_COMPLEX_NO_H)
         with (
@@ -1297,10 +1321,17 @@ class TestHydrogenHandling:
             patch(_SUBPROC_RUN, side_effect=_mock_obabel_success),
         ):
             result = extract_ligand_from_complex(pdb, "E20", tmp_path / "out")
+
+        assert result.hydrogenation_performed is True
+        assert result.hydrogenated_ligand_pdb is not None
+        assert result.parameterization_status == "chemical_validation_required"
+        assert result.readiness_block_reasons
+
         report = yaml.safe_load(result.report_path.read_text())
+        assert report["parameterization_status"] == "chemical_validation_required"
         next_steps_text = " ".join(report.get("next_steps", []))
-        # Should recommend the _H.pdb file, not the raw one
-        assert "_H.pdb" in next_steps_text or "ligand_for_ligpargen_H" in next_steps_text
+        assert "chemical_validation_required" in next_steps_text
+        assert "ligand-reference" in next_steps_text
 
     def test_report_next_steps_warn_when_manual_required(self, tmp_path):
         pdb = tmp_path / "complex.pdb"
@@ -1339,15 +1370,22 @@ class TestPrepareCLI:
         )
         assert result.exit_code != 0
 
-    def test_prepare_with_h_exits_zero(self, tmp_path):
+    def test_prepare_with_ambiguous_h_ratio_blocks_without_rdkit(self, tmp_path):
+        """_COMPLEX_WITH_H is a 2-heavy-atom/1-H ligand: a plausible-but-
+        unverified ratio. Without RDKit there is no way to confirm bond
+        orders/hydrogen completeness, so this must now report
+        chemical_validation_required rather than silently exiting 0 (the
+        pre-fix behaviour, which never distinguished "ratio looks fine" from
+        "chemistry is actually verified")."""
         pdb = tmp_path / "complex.pdb"
         pdb.write_text(_COMPLEX_WITH_H)
-        result = _runner.invoke(
-            _cli,
-            ["ligand", "prepare", str(pdb), "--ligand-resname", "E20",
-             "--out", str(tmp_path / "out")],
-        )
-        assert result.exit_code == 0
+        with patch(_RDKIT_AVAIL, return_value=False):
+            result = _runner.invoke(
+                _cli,
+                ["ligand", "prepare", str(pdb), "--ligand-resname", "E20",
+                 "--out", str(tmp_path / "out")],
+            )
+        assert result.exit_code != 0
 
     def test_prepare_manual_required_exits_nonzero(self, tmp_path):
         pdb = tmp_path / "complex.pdb"
@@ -1371,7 +1409,11 @@ class TestPrepareCLI:
             )
         assert "hydrogen" in result.output.lower()
 
-    def test_prepare_obabel_success_exits_zero(self, tmp_path):
+    def test_prepare_obabel_success_requires_chemical_validation(self, tmp_path):
+        """Open Babel fabricating hydrogens is exactly the mechanism behind
+        the historical mis-hydrogenation bug (see
+        ligand.chemical_perception): a successful AddHs-equivalent call must
+        not, by itself, exit 0 as LigParGen-ready."""
         pdb = tmp_path / "complex.pdb"
         pdb.write_text(_COMPLEX_NO_H)
         with (
@@ -1384,7 +1426,8 @@ class TestPrepareCLI:
                 ["ligand", "prepare", str(pdb), "--ligand-resname", "E20",
                  "--out", str(tmp_path / "out")],
             )
-        assert result.exit_code == 0
+        assert result.exit_code != 0
+        assert "chemical_validation_required" in result.output
 
     def test_prepare_obabel_success_recommends_h_file(self, tmp_path):
         pdb = tmp_path / "complex.pdb"
@@ -1463,6 +1506,10 @@ class TestHydrogenationCLIOption:
         assert result.exit_code == 0
 
     def test_hydrogenation_openbabel_forced(self, tmp_path):
+        """Forcing --hydrogenation openbabel still requires chemical
+        validation before the CLI reports success -- Open Babel hydrogenating
+        successfully is not the same as the result being LigParGen-ready
+        (see ligand.chemical_perception)."""
         pdb = tmp_path / "complex.pdb"
         pdb.write_text(_COMPLEX_NO_H)
         with (
@@ -1474,7 +1521,8 @@ class TestHydrogenationCLIOption:
                 ["ligand", "prepare", str(pdb), "--ligand-resname", "E20",
                  "--out", str(tmp_path / "out"), "--hydrogenation", "openbabel"],
             )
-        assert result.exit_code == 0
+        assert result.exit_code != 0
+        assert "chemical_validation_required" in result.output
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1800,7 +1848,9 @@ class TestHydrationStatus:
             )
         assert cli_result.exit_code != 0
 
-    def test_cli_e20_like_exits_zero_after_obabel_success(self, tmp_path):
+    def test_cli_e20_like_requires_chemical_validation_after_obabel_success(self, tmp_path):
+        """Open Babel successfully re-hydrogenating a heavily under-protonated
+        ligand (1H/28 heavy) is still not, by itself, LigParGen-ready."""
         pdb = tmp_path / "complex.pdb"
         pdb.write_text(_COMPLEX_E20_LIKE)
         with (
@@ -1813,7 +1863,8 @@ class TestHydrationStatus:
                 ["ligand", "prepare", str(pdb), "--ligand-resname", "E20",
                  "--out", str(tmp_path / "out")],
             )
-        assert cli_result.exit_code == 0
+        assert cli_result.exit_code != 0
+        assert "chemical_validation_required" in cli_result.output
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2801,3 +2852,962 @@ class TestMasterTopologyAssemble:
         assert result.topology_mode == "embedded"
         assert result.protein_topology_includes == []
         assert result.protein_itp is not None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Multi-component fixtures — reproduces the real A1/COA competitive-system
+# pattern: two independently-run LigParGen submissions that each restart
+# their local OPLS type numbering at opls_800, colliding on the name while
+# meaning two chemically different atom types (hydrogen vs. nitrogen).
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_A1_LIKE_ITP = dedent("""\
+    ;
+    ; GENERATED BY LigParGen Server
+    ;
+    [ atomtypes ]
+      opls_800  H800     1.0080     0.000    A    2.50000E-01   1.25520E-01
+      opls_801  C801    12.0110     0.000    A    3.50000E-01   2.76144E-01
+    [ moleculetype ]
+    ; Name               nrexcl
+    LIG                   3
+    [ atoms ]
+    ;   nr       type  resnr residue  atom   cgnr     charge       mass
+         1   opls_800      1    LIG   H00      1     0.4285     1.0080
+         2   opls_801      1    LIG   C00      1    -0.4285    12.0110
+    [ bonds ]
+    ; ai   aj  funct   c0         c1
+       1    2    1   1.09000e-01   3.40000e+05
+""")
+
+def _gro_text(title: str, atoms: list[tuple[str, str, float, float, float]]) -> str:
+    """Build a fixed-width .gro text block (same layout as utils.gro_parser.write_gro)."""
+    lines = [title, f"{len(atoms):5d}"]
+    for i, (resname, atomname, x, y, z) in enumerate(atoms, start=1):
+        lines.append(f"{1:5d}{resname:<5s}{atomname:>5s}{i:5d}{x:8.3f}{y:8.3f}{z:8.3f}")
+    lines.append("   ".join(f"{v:8.5f}" for v in (5.0, 5.0, 5.0)))
+    return "\n".join(lines) + "\n"
+
+
+_A1_LIKE_GRO = _gro_text("LIGPARGEN GENERATED GRO FILE", [
+    ("LIG", "H00", 3.000, 3.000, 3.000),
+    ("LIG", "C00", 3.100, 3.000, 3.000),
+])
+
+_COA_LIKE_ITP = dedent("""\
+    ;
+    ; GENERATED BY LigParGen Server
+    ;
+    [ atomtypes ]
+      opls_800  N800    14.0070     0.000    A    3.25000E-01   7.11280E-01
+      opls_802  S802    32.0600     0.000    A    3.60000E-01   1.77820E+00
+    [ moleculetype ]
+    ; Name               nrexcl
+    COA                   3
+    [ atoms ]
+    ;   nr       type  resnr residue  atom   cgnr     charge       mass
+         1   opls_800      1    COA   N00      1    -0.0954    14.0070
+         2   opls_802      1    COA   S00      1    -0.2000    32.0600
+    [ bonds ]
+    ; ai   aj  funct   c0         c1
+       1    2    1   1.75000e-01   2.30000e+05
+""")
+
+_COA_LIKE_GRO = _gro_text("LIGPARGEN GENERATED GRO FILE", [
+    ("COA", "N00", 4.000, 4.000, 4.000),
+    ("COA", "S00", 4.100, 4.000, 4.000),
+])
+
+# A second, non-conflicting ligand (disjoint numbering from E20's opls_100-102)
+_LIGAND2_ITP_WITH_ATOMTYPES = dedent("""\
+    ;
+    ; GENERATED BY LigParGen Server
+    ;
+    [ atomtypes ]
+      opls_200  C200    12.0110     0.000    A    3.50000E-01   2.76144E-01
+      opls_201  N201    14.0070     0.000    A    3.25000E-01   7.11280E-01
+    [ moleculetype ]
+    ; Name               nrexcl
+    LG2                 3
+    [ atoms ]
+    ;   nr       type  resnr residue  atom   cgnr     charge       mass
+         1   opls_200      1    LG2    C1      1     0.1000    12.0110
+         2   opls_201      1    LG2    N1      1    -0.1000    14.0070
+    [ bonds ]
+    ; ai   aj  funct   c0         c1
+       1    2    1   1.47000e-01   3.37000e+05
+""")
+
+_LIGAND2_GRO = _gro_text("LIGPARGEN GENERATED GRO FILE", [
+    ("LG2", "C1", 6.000, 6.000, 6.000),
+    ("LG2", "N1", 6.100, 6.000, 6.000),
+])
+
+
+def _pdb2gmx_master_write(cmd, **kwargs):
+    """Shared mocked-pdb2gmx side_effect: writes the dimer master topology."""
+    for flag, content in [
+        ("-o", _MINIMAL_PROTEIN_GRO),
+        ("-p", _MASTER_TOPOL_TOP),
+        ("-i", "; posre\n"),
+    ]:
+        idx = list(cmd).index(flag)
+        Path(cmd[idx + 1]).write_text(content)
+    return MagicMock(returncode=0, stdout="", stderr="")
+
+
+def _write_component(tmp_path: Path, component_id: str, itp_text: str, gro_text: str) -> ParameterizedMolecule:
+    itp_p = tmp_path / f"{component_id}.itp"
+    itp_p.write_text(itp_text)
+    gro_p = tmp_path / f"{component_id}.gro"
+    gro_p.write_text(gro_text)
+    return ParameterizedMolecule(component_id=component_id, topology_path=itp_p, coordinate_path=gro_p)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# resolve_and_merge_atomtypes — cross-component atomtype namespace isolation
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_A1_ATOMTYPES_BLOCK, _ = extract_atomtypes_section(_A1_LIKE_ITP)
+_COA_ATOMTYPES_BLOCK, _ = extract_atomtypes_section(_COA_LIKE_ITP)
+
+
+class TestResolveAndMergeAtomtypes:
+    def test_conflicting_name_renamed_in_both_components(self):
+        result = resolve_and_merge_atomtypes([
+            ("A1", _A1_ATOMTYPES_BLOCK),
+            ("COA", _COA_ATOMTYPES_BLOCK),
+        ])
+        assert result.renames["A1"]["opls_800"] == "A1_opls_800"
+        assert result.renames["COA"]["opls_800"] == "COA_opls_800"
+
+    def test_non_conflicting_names_kept_as_is(self):
+        result = resolve_and_merge_atomtypes([
+            ("A1", _A1_ATOMTYPES_BLOCK),
+            ("COA", _COA_ATOMTYPES_BLOCK),
+        ])
+        assert "opls_801" not in result.renames["A1"]
+        assert "opls_802" not in result.renames["COA"]
+        assert "opls_801" in result.combined_block
+        assert "opls_802" in result.combined_block
+
+    def test_combined_block_contains_namespaced_names_not_bare_conflict(self):
+        result = resolve_and_merge_atomtypes([
+            ("A1", _A1_ATOMTYPES_BLOCK),
+            ("COA", _COA_ATOMTYPES_BLOCK),
+        ])
+        assert "A1_opls_800" in result.combined_block
+        assert "COA_opls_800" in result.combined_block
+        assert not re.search(r"(?<![A-Za-z0-9_])opls_800(?![A-Za-z0-9_])", result.combined_block)
+
+    def test_conflict_preserves_both_parameter_sets(self):
+        """The two chemically different opls_800 definitions must both survive,
+        under their new distinct names — this is the core correctness property:
+        namespace isolation must not drop or overwrite either parameter set."""
+        result = resolve_and_merge_atomtypes([
+            ("A1", _A1_ATOMTYPES_BLOCK),
+            ("COA", _COA_ATOMTYPES_BLOCK),
+        ])
+        a1_line = next(l for l in result.combined_block.splitlines() if "A1_opls_800" in l)
+        coa_line = next(l for l in result.combined_block.splitlines() if "COA_opls_800" in l)
+        assert "1.0080" in a1_line       # A1's hydrogen mass preserved
+        assert "H800" in a1_line
+        assert "14.0070" in coa_line     # COA's nitrogen mass preserved
+        assert "N800" in coa_line
+
+    def test_identical_definitions_deduplicated_not_renamed(self):
+        result = resolve_and_merge_atomtypes([
+            ("A1", _A1_ATOMTYPES_BLOCK), ("A1_DUP", _A1_ATOMTYPES_BLOCK),
+        ])
+        assert result.renames["A1"] == {}
+        assert result.renames["A1_DUP"] == {}
+        assert result.combined_block.count("opls_800") == 1
+        assert result.combined_block.count("opls_801") == 1
+
+    def test_single_component_no_conflicts(self):
+        result = resolve_and_merge_atomtypes([("A1", _A1_ATOMTYPES_BLOCK)])
+        assert result.renames["A1"] == {}
+        assert "opls_800" in result.combined_block
+
+    def test_component_with_no_atomtypes_yields_empty_renames(self):
+        result = resolve_and_merge_atomtypes([("EMPTY", ""), ("A1", _A1_ATOMTYPES_BLOCK)])
+        assert result.renames["EMPTY"] == {}
+        assert "opls_800" in result.combined_block
+
+    def test_no_atomtypes_anywhere_yields_empty_block(self):
+        result = resolve_and_merge_atomtypes([("A", ""), ("B", "")])
+        assert result.combined_block == ""
+
+    def test_malformed_atomtypes_line_raises(self):
+        bad = "[ atomtypes ]\n  opls_999\n"  # no parameters at all
+        with pytest.raises(ValueError):
+            resolve_and_merge_atomtypes([("BAD", bad)])
+
+    def test_three_way_conflict_all_renamed_deterministically(self):
+        b1 = "[ atomtypes ]\n  opls_1  X1  1.0  0.0  A  0.1  0.1\n"
+        b2 = "[ atomtypes ]\n  opls_1  X2  2.0  0.0  A  0.2  0.2\n"
+        b3 = "[ atomtypes ]\n  opls_1  X3  3.0  0.0  A  0.3  0.3\n"
+        result = resolve_and_merge_atomtypes([("M1", b1), ("M2", b2), ("M3", b3)])
+        assert result.renames["M1"]["opls_1"] == "M1_opls_1"
+        assert result.renames["M2"]["opls_1"] == "M2_opls_1"
+        assert result.renames["M3"]["opls_1"] == "M3_opls_1"
+
+    def test_generated_namespace_name_collision_raises(self):
+        """Adversarial edge case: component A1 already defines a type literally
+        named 'A1_opls_800' (different params) in addition to the conflicting
+        'opls_800' -- after renaming, the two would collide. Must fail
+        explicitly rather than overwrite either definition."""
+        b1 = (
+            "[ atomtypes ]\n"
+            "  opls_800      H800  1.0080  0.000  A  0.250  0.125\n"
+            "  A1_opls_800   X800  9.0000  0.000  A  0.900  0.900\n"
+        )
+        b2 = "[ atomtypes ]\n  opls_800  N800  14.0070  0.000  A  0.325  0.711\n"
+        with pytest.raises(ValueError):
+            resolve_and_merge_atomtypes([("A1", b1), ("COA", b2)])
+
+    def test_sanitize_component_id_used_for_namespace_prefix(self):
+        """Component ids with characters unsafe for a GROMACS atomtype name
+        are sanitized before being used as a rename prefix."""
+        result = resolve_and_merge_atomtypes([
+            ("a1-ligand.v2", _A1_ATOMTYPES_BLOCK),
+            ("COA", _COA_ATOMTYPES_BLOCK),
+        ])
+        new_name = result.renames["a1-ligand.v2"]["opls_800"]
+        assert re.fullmatch(r"[A-Za-z0-9_]+", new_name)
+        assert new_name.endswith("_opls_800")
+
+
+class TestSanitizeComponentId:
+    def test_replaces_invalid_characters(self):
+        assert _sanitize_component_id("A1-ligand.v2") == "A1_ligand_v2"
+
+    def test_leading_digit_prefixed(self):
+        assert _sanitize_component_id("2A1") == "C_2A1"
+
+    def test_empty_string_falls_back(self):
+        assert _sanitize_component_id("") == "MOL"
+
+    def test_already_valid_id_unchanged(self):
+        assert _sanitize_component_id("A1") == "A1"
+        assert _sanitize_component_id("COA") == "COA"
+
+
+class TestApplyAtomtypeRenames:
+    def test_renames_atom_type_column(self):
+        out = _apply_atomtype_renames(_A1_LIKE_ITP, {"opls_800": "A1_opls_800"})
+        assert "A1_opls_800" in out
+        assert not re.search(r"(?<![A-Za-z0-9_])opls_800(?![A-Za-z0-9_])", out)
+
+    def test_does_not_touch_bonded_numeric_fields(self):
+        itp_text = "[ bonds ]\n  1  2  1  0.1234  462750.400\n"
+        out = _apply_atomtype_renames(itp_text, {"opls_800": "A1_opls_800"})
+        assert out == itp_text
+
+    def test_no_renames_returns_text_unchanged(self):
+        text = "some text with opls_800 in it"
+        assert _apply_atomtype_renames(text, {}) == text
+
+    def test_does_not_partial_match_longer_identifier(self):
+        text = "opls_8000 should not become renamed_8000"
+        out = _apply_atomtype_renames(text, {"opls_800": "RENAMED"})
+        assert "opls_8000" in out
+        assert "RENAMED" not in out
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# assemble_system_multi — protein + N parameterized non-protein components
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestAssembleSystemMultiComponent:
+    def _run(self, tmp_path, components, run_grompp=False, side_effect=None):
+        prot_pdb = tmp_path / "protein.pdb"
+        prot_pdb.write_text("END\n")
+        out = tmp_path / "system"
+        with (
+            patch(_GMX_WHICH, return_value="/usr/bin/gmx"),
+            patch(_GMX_SUBPROC, side_effect=side_effect or _pdb2gmx_master_write),
+        ):
+            return assemble_system_multi(
+                protein_pdb=prot_pdb,
+                components=components,
+                out_dir=out,
+                run_grompp=run_grompp,
+            )
+
+    def _a1_coa(self, tmp_path) -> list[ParameterizedMolecule]:
+        return [
+            _write_component(tmp_path, "A1", _A1_LIKE_ITP, _A1_LIKE_GRO),
+            _write_component(tmp_path, "COA", _COA_LIKE_ITP, _COA_LIKE_GRO),
+        ]
+
+    # ── ligand + cofactor with a genuine atomtype collision ──────────────────
+
+    def test_succeeds(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        assert result.success is True
+
+    def test_molecule_names_from_moleculetype_not_filename(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        by_id = {c["id"]: c for c in result.components}
+        assert by_id["A1"]["molecule_name"] == "LIG"   # NOT "A1"
+        assert by_id["COA"]["molecule_name"] == "COA"
+
+    def test_atomtype_renames_reported_per_component(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        by_id = {c["id"]: c for c in result.components}
+        assert by_id["A1"]["atomtype_renames"] == {"opls_800": "A1_opls_800"}
+        assert by_id["COA"]["atomtype_renames"] == {"opls_800": "COA_opls_800"}
+
+    def test_molecules_section_has_both_molecule_names_after_chains(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        text = result.topol_top.read_text()
+        mol_pos = text.index("[ molecules ]")
+        mol_section = text[mol_pos:]
+        assert "Protein_chain_A" in mol_section
+        assert "Protein_chain_B" in mol_section
+        assert "LIG" in mol_section
+        assert "COA" in mol_section
+        b_pos = mol_section.rindex("Protein_chain_B")
+        lig_pos = mol_section.index("LIG")
+        coa_pos = mol_section.index("COA")
+        assert b_pos < lig_pos < coa_pos  # component order preserved, after protein
+
+    def test_combined_atomtypes_file_preserves_both_parameter_sets(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        at_text = (result.topol_top.parent / "component_atomtypes.itp").read_text()
+        assert "A1_opls_800" in at_text
+        assert "COA_opls_800" in at_text
+        assert "opls_801" in at_text   # A1's non-conflicting type untouched
+        assert "opls_802" in at_text   # COA's non-conflicting type untouched
+
+    def test_cleaned_component_itp_atoms_use_renamed_type(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        a1_out = (result.topol_top.parent / "A1.itp").read_text()
+        assert "A1_opls_800" in a1_out
+        assert not re.search(r"(?<![A-Za-z0-9_])opls_800(?![A-Za-z0-9_])", a1_out)
+
+    def test_charges_masses_untouched_by_renaming(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        a1_out = (result.topol_top.parent / "A1.itp").read_text()
+        assert "0.4285" in a1_out       # H00 charge preserved
+        assert "1.0080" in a1_out       # H00 mass preserved
+
+    def test_topol_top_include_order_atomtypes_before_components(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        text = result.topol_top.read_text()
+        at_pos = text.index("component_atomtypes.itp")
+        a1_pos = text.index("A1.itp")
+        coa_pos = text.index("COA.itp")
+        assert at_pos < a1_pos
+        assert at_pos < coa_pos
+
+    def test_total_atom_count(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        # protein (5, _MINIMAL_PROTEIN_GRO) + A1 (2) + COA (2)
+        assert result.total_atom_count == 9
+
+    def test_complex_gro_ordering_protein_then_components(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        from utils.gro_parser import parse_gro
+        gro = parse_gro(result.complex_gro)
+        resnames = [a.residue_name for a in gro.atoms]
+        assert resnames == ["ALA"] * 5 + ["LIG"] * 2 + ["COA"] * 2
+
+    def test_report_has_components_list(self, tmp_path):
+        result = self._run(tmp_path, self._a1_coa(tmp_path))
+        report = yaml.safe_load(result.report_path.read_text())
+        assert "components" in report
+        ids = {c["id"] for c in report["components"]}
+        assert ids == {"A1", "COA"}
+        a1 = next(c for c in report["components"] if c["id"] == "A1")
+        assert a1["molecule_name"] == "LIG"
+        assert a1["atom_count"] == 2
+        assert a1["atomtype_renames"] == {"opls_800": "A1_opls_800"}
+
+    # ── two non-conflicting ligands ───────────────────────────────────────────
+
+    def test_two_non_conflicting_ligands_no_renames(self, tmp_path):
+        components = [
+            _write_component(tmp_path, "E20", _LIGAND_ITP_WITH_ATOMTYPES, _MINIMAL_LIGAND_GRO),
+            _write_component(tmp_path, "LG2", _LIGAND2_ITP_WITH_ATOMTYPES, _LIGAND2_GRO),
+        ]
+        result = self._run(tmp_path, components)
+        assert result.success is True
+        by_id = {c["id"]: c for c in result.components}
+        assert by_id["E20"]["atomtype_renames"] == {}
+        assert by_id["LG2"]["atomtype_renames"] == {}
+        at_text = (result.topol_top.parent / "component_atomtypes.itp").read_text()
+        for t in ("opls_100", "opls_101", "opls_102", "opls_200", "opls_201"):
+            assert t in at_text
+
+    # ── role metadata ──────────────────────────────────────────────────────────
+
+    def test_role_is_metadata_only(self, tmp_path):
+        itp_p = tmp_path / "A1.itp"
+        itp_p.write_text(_A1_LIKE_ITP)
+        gro_p = tmp_path / "A1.gro"
+        gro_p.write_text(_A1_LIKE_GRO)
+        itp_p2 = tmp_path / "COA.itp"
+        itp_p2.write_text(_COA_LIKE_ITP)
+        gro_p2 = tmp_path / "COA.gro"
+        gro_p2.write_text(_COA_LIKE_GRO)
+        components = [
+            ParameterizedMolecule(component_id="A1", topology_path=itp_p, coordinate_path=gro_p, role="ligand"),
+            ParameterizedMolecule(component_id="COA", topology_path=itp_p2, coordinate_path=gro_p2, role="cofactor"),
+        ]
+        result = self._run(tmp_path, components)
+        assert result.success is True
+        by_id = {c["id"]: c for c in result.components}
+        assert by_id["A1"]["role"] == "ligand"
+        assert by_id["COA"]["role"] == "cofactor"
+
+    # ── failure modes ──────────────────────────────────────────────────────────
+
+    def test_no_components_fails_explicitly(self, tmp_path):
+        result = self._run(tmp_path, [])
+        assert result.success is False
+        assert result.error
+
+    def test_component_atom_count_mismatch_fails(self, tmp_path):
+        itp_p = tmp_path / "A1.itp"
+        itp_p.write_text(_A1_LIKE_ITP)  # declares 2 atoms
+        gro_p = tmp_path / "A1.gro"
+        gro_p.write_text(_MINIMAL_LIGAND_GRO)  # has 3 atoms — mismatch
+        components = [ParameterizedMolecule(component_id="A1", topology_path=itp_p, coordinate_path=gro_p)]
+        result = self._run(tmp_path, components)
+        assert result.success is False
+        assert "atom count" in result.error.lower() or "mismatch" in result.error.lower()
+
+    def test_unresolvable_atomtype_conflict_fails_explicitly(self, tmp_path):
+        bad_itp = (
+            ";\n[ atomtypes ]\n"
+            "  opls_999\n"  # malformed: no parameters
+            "[ moleculetype ]\n"
+            "BAD 3\n"
+            "[ atoms ]\n"
+            "     1   opls_999      1    BAD   X1      1     0.0000     1.0000\n"
+        )
+        bad_gro = _gro_text("x", [("BAD", "X1", 1.000, 1.000, 1.000)])
+        components = [_write_component(tmp_path, "BAD", bad_itp, bad_gro)]
+        result = self._run(tmp_path, components)
+        assert result.success is False
+        assert "atomtype" in result.error.lower()
+
+    # ── back-compat: wrapper vs. explicit single-component multi call ────────
+
+    def test_wrapper_matches_explicit_single_component_call(self, tmp_path):
+        lig_itp = tmp_path / "LIG.itp"
+        lig_itp.write_text(_LIGAND_ITP_WITH_ATOMTYPES)
+        lig_gro = tmp_path / "LIG.gro"
+        lig_gro.write_text(_MINIMAL_LIGAND_GRO)
+        prot_pdb = tmp_path / "protein.pdb"
+        prot_pdb.write_text("END\n")
+
+        with (
+            patch(_GMX_WHICH, return_value="/usr/bin/gmx"),
+            patch(_GMX_SUBPROC, side_effect=_pdb2gmx_master_write),
+        ):
+            via_wrapper = assemble_system(
+                protein_pdb=prot_pdb, ligand_itp=lig_itp, ligand_gro=lig_gro,
+                out_dir=tmp_path / "via_wrapper", run_grompp=False,
+            )
+
+        component = ParameterizedMolecule(component_id="LIG", topology_path=lig_itp, coordinate_path=lig_gro)
+        with (
+            patch(_GMX_WHICH, return_value="/usr/bin/gmx"),
+            patch(_GMX_SUBPROC, side_effect=_pdb2gmx_master_write),
+        ):
+            via_multi = assemble_system_multi(
+                protein_pdb=prot_pdb, components=[component],
+                out_dir=tmp_path / "via_multi", run_grompp=False,
+                atomtypes_filename="ligand_atomtypes.itp",
+            )
+
+        assert via_wrapper.success == via_multi.success
+        assert via_wrapper.ligand_mol_name == via_multi.ligand_mol_name == "E20"
+        assert via_wrapper.ligand_atom_count == via_multi.ligand_atom_count
+        assert via_wrapper.total_atom_count == via_multi.total_atom_count
+        assert via_wrapper.protein_molecules == via_multi.protein_molecules
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# inject_components_into_master_topol / generate_topol_top_multi /
+# merge_gro_files_multi / validate_system_multi — direct low-level tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestInjectComponentsIntoMasterTopol:
+    def test_two_components_included_and_ordered(self, tmp_path):
+        top = tmp_path / "topol.top"
+        top.write_text(_MASTER_TOPOL_TOP)
+        inject_components_into_master_topol(
+            top,
+            atomtypes_itp_name="component_atomtypes.itp",
+            components=[("A1.itp", "LIG", 1), ("COA.itp", "COA", 1)],
+        )
+        text = top.read_text()
+        assert 'include "component_atomtypes.itp"' in text
+        assert 'include "A1.itp"' in text
+        assert 'include "COA.itp"' in text
+        a1_pos = text.index("A1.itp")
+        coa_pos = text.index("COA.itp")
+        assert a1_pos < coa_pos
+        mol_pos = text.index("[ molecules ]")
+        mol_section = text[mol_pos:]
+        assert "LIG" in mol_section and "COA" in mol_section
+
+    def test_single_atomtypes_include_for_all_components(self, tmp_path):
+        top = tmp_path / "topol.top"
+        top.write_text(_MASTER_TOPOL_TOP)
+        inject_components_into_master_topol(
+            top, atomtypes_itp_name="component_atomtypes.itp",
+            components=[("A1.itp", "LIG", 1), ("COA.itp", "COA", 1)],
+        )
+        assert top.read_text().count("component_atomtypes.itp") == 1
+
+    def test_raises_on_non_master_topology(self, tmp_path):
+        top = tmp_path / "topol.top"
+        top.write_text(_MINIMAL_TOPOL_TOP)  # embedded, no topol_*.itp includes
+        with pytest.raises(ValueError):
+            inject_components_into_master_topol(
+                top, atomtypes_itp_name="component_atomtypes.itp",
+                components=[("A1.itp", "LIG", 1)],
+            )
+
+
+class TestGenerateTopolTopMulti:
+    def _gen(self, tmp_path, components=None) -> Path:
+        if components is None:
+            components = [("A1.itp", "LIG", 1), ("COA.itp", "COA", 1)]
+        return generate_topol_top_multi(
+            out_dir=tmp_path,
+            forcefield="oplsaa",
+            water_model="spce",
+            protein_itp_name="protein.itp",
+            atomtypes_itp_name="component_atomtypes.itp",
+            protein_molecules=[("Protein_chain_A", 1)],
+            components=components,
+        )
+
+    def test_atomtypes_before_all_components(self, tmp_path):
+        text = self._gen(tmp_path).read_text()
+        at_pos = text.index("component_atomtypes.itp")
+        assert at_pos < text.index("A1.itp")
+        assert at_pos < text.index("COA.itp")
+
+    def test_protein_before_components(self, tmp_path):
+        text = self._gen(tmp_path).read_text()
+        assert text.index("protein.itp") < text.index("A1.itp")
+
+    def test_molecules_section_has_all_entries(self, tmp_path):
+        text = self._gen(tmp_path).read_text()
+        assert "Protein_chain_A           1" in text
+        assert "LIG            1" in text
+        assert "COA            1" in text
+
+
+class TestMergeGroFilesMulti:
+    def test_merges_protein_and_two_components_in_order(self, tmp_path):
+        pg = tmp_path / "protein.gro"
+        pg.write_text(_MINIMAL_PROTEIN_GRO)
+        a1g = tmp_path / "A1.gro"
+        a1g.write_text(_A1_LIKE_GRO)
+        coag = tmp_path / "COA.gro"
+        coag.write_text(_COA_LIKE_GRO)
+        out = tmp_path / "complex.gro"
+        total = merge_gro_files_multi(pg, [a1g, coag], out)
+        assert total == 5 + 2 + 2
+        from utils.gro_parser import parse_gro
+        gro = parse_gro(out)
+        assert [a.residue_name for a in gro.atoms] == ["ALA"] * 5 + ["LIG"] * 2 + ["COA"] * 2
+        assert [a.atom_number for a in gro.atoms] == list(range(1, 10))
+
+    def test_box_comes_from_protein(self, tmp_path):
+        pg = tmp_path / "protein.gro"
+        pg.write_text(_MINIMAL_PROTEIN_GRO)
+        a1g = tmp_path / "A1.gro"
+        a1g.write_text(_A1_LIKE_GRO)
+        out = tmp_path / "complex.gro"
+        merge_gro_files_multi(pg, [a1g], out)
+        from utils.gro_parser import parse_gro
+        assert parse_gro(out).box == parse_gro(pg).box
+
+    def test_no_coordinate_transformation_applied(self, tmp_path):
+        """Component coordinates must be copied verbatim -- no relocation."""
+        pg = tmp_path / "protein.gro"
+        pg.write_text(_MINIMAL_PROTEIN_GRO)
+        a1g = tmp_path / "A1.gro"
+        a1g.write_text(_A1_LIKE_GRO)
+        out = tmp_path / "complex.gro"
+        merge_gro_files_multi(pg, [a1g], out)
+        from utils.gro_parser import parse_gro
+        merged = parse_gro(out)
+        original = parse_gro(a1g)
+        merged_a1_atoms = merged.atoms[5:7]
+        for m, o in zip(merged_a1_atoms, original.atoms):
+            assert (m.x, m.y, m.z) == (o.x, o.y, o.z)
+
+
+class TestValidateSystemMulti:
+    def _fixtures(self, tmp_path) -> dict:
+        pg = tmp_path / "protein.gro"
+        pg.write_text(_MINIMAL_PROTEIN_GRO)
+        a1g = tmp_path / "A1.gro"
+        a1g.write_text(_A1_LIKE_GRO)
+        coag = tmp_path / "COA.gro"
+        coag.write_text(_COA_LIKE_GRO)
+        cg = tmp_path / "complex.gro"
+        merge_gro_files_multi(pg, [a1g, coag], cg)
+
+        merge_result = resolve_and_merge_atomtypes([
+            ("A1", _A1_ATOMTYPES_BLOCK), ("COA", _COA_ATOMTYPES_BLOCK),
+        ])
+        at_itp = tmp_path / "component_atomtypes.itp"
+        at_itp.write_text(merge_result.combined_block)
+
+        _, a1_remaining = extract_atomtypes_section(_A1_LIKE_ITP)
+        a1_itp = tmp_path / "A1.itp"
+        a1_itp.write_text(_apply_atomtype_renames(a1_remaining, merge_result.renames["A1"]))
+
+        _, coa_remaining = extract_atomtypes_section(_COA_LIKE_ITP)
+        coa_itp = tmp_path / "COA.itp"
+        coa_itp.write_text(_apply_atomtype_renames(coa_remaining, merge_result.renames["COA"]))
+
+        top = generate_topol_top_multi(
+            out_dir=tmp_path, forcefield="oplsaa", water_model="spce",
+            protein_itp_name="protein.itp", atomtypes_itp_name="component_atomtypes.itp",
+            protein_molecules=[("Protein_chain_A", 1)],
+            components=[("A1.itp", "LIG", 1), ("COA.itp", "COA", 1)],
+        )
+        return {
+            "complex_gro": cg, "atomtypes_itp": at_itp, "topol_top": top,
+            "components": [
+                {"component_id": "A1", "molecule_name": "LIG", "itp_path": a1_itp},
+                {"component_id": "COA", "molecule_name": "COA", "itp_path": coa_itp},
+            ],
+        }
+
+    def test_valid_system_no_errors(self, tmp_path):
+        f = self._fixtures(tmp_path)
+        errors = validate_system_multi(
+            out_dir=tmp_path, protein_mol_name="Protein_chain_A",
+            components=f["components"], complex_gro_path=f["complex_gro"],
+            topol_top_path=f["topol_top"], atomtypes_itp_path=f["atomtypes_itp"],
+            run_grompp=False,
+        )
+        assert errors == []
+
+    def test_molecule_name_mismatch_detected(self, tmp_path):
+        f = self._fixtures(tmp_path)
+        f["components"][0]["molecule_name"] = "WRONG"
+        errors = validate_system_multi(
+            out_dir=tmp_path, protein_mol_name="Protein_chain_A",
+            components=f["components"], complex_gro_path=f["complex_gro"],
+            topol_top_path=f["topol_top"], atomtypes_itp_path=f["atomtypes_itp"],
+            run_grompp=False,
+        )
+        assert any("mismatch" in e.lower() for e in errors)
+
+    def test_missing_atomtypes_file_detected(self, tmp_path):
+        f = self._fixtures(tmp_path)
+        f["atomtypes_itp"].unlink()
+        errors = validate_system_multi(
+            out_dir=tmp_path, protein_mol_name="Protein_chain_A",
+            components=f["components"], complex_gro_path=f["complex_gro"],
+            topol_top_path=f["topol_top"], atomtypes_itp_path=f["atomtypes_itp"],
+            run_grompp=False,
+        )
+        assert any("atomtypes" in e.lower() for e in errors)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MODE B — pre-parameterized protein (pdb2gmx already run upstream, skipped
+# here entirely). Reproduces the real competitive-system fixture: a0.gro's
+# first 24199 atoms across 4 chains (Protein_chain_A..D, sizes 6133/6066/
+# 6071/5929) + A1 (LIG, 35 atoms) + COA (80 atoms) = 24314 total.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_REAL_CHAIN_SIZES: dict[str, int] = {
+    "Protein_chain_A": 6133,
+    "Protein_chain_B": 6066,
+    "Protein_chain_C": 6071,
+    "Protein_chain_D": 5929,
+}
+
+
+def _synthetic_chain_itp(mol_name: str, n_atoms: int, posre_name: str | None = None) -> str:
+    """A minimal but structurally valid [ moleculetype ] block with n_atoms
+    atoms, optionally embedding the pdb2gmx-style #ifdef POSRES include."""
+    lines = ["[ moleculetype ]", f"; Name            nrexcl", f"{mol_name}     3", "[ atoms ]"]
+    for i in range(1, n_atoms + 1):
+        lines.append(f"{i}   opls_135      1    ALA   CA      {i}     0.0000    12.0110")
+    if posre_name:
+        lines += ["", "#ifdef POSRES", f'#include "{posre_name}"', "#endif"]
+    return "\n".join(lines) + "\n"
+
+
+def _synthetic_component(component_id: str, mol_name: str, n_atoms: int, prefix: str) -> tuple[str, str]:
+    """A synthetic n-atom non-protein component with its own unique
+    (non-colliding) atomtypes, for atom-count-only regression fixtures."""
+    lines = ["[ atomtypes ]"]
+    for i in range(n_atoms):
+        lines.append(f"  {prefix}{i}   X{i}   12.0000   0.000   A   0.350   0.276")
+    lines += ["[ moleculetype ]", f"{mol_name}   3", "[ atoms ]"]
+    for i in range(1, n_atoms + 1):
+        lines.append(f"{i}   {prefix}{i - 1}      1    {mol_name}   A{i}      {i}     0.0000    12.0000")
+    itp_text = "\n".join(lines) + "\n"
+    atoms = [(mol_name, f"A{i + 1}", 10.0 + 0.01 * i, 10.0, 10.0) for i in range(n_atoms)]
+    return itp_text, _gro_text("synthetic component", atoms)
+
+
+_A1_FULL_ITP, _A1_FULL_GRO = _synthetic_component("A1", "LIG", 35, prefix="a1_t")
+_COA_FULL_ITP, _COA_FULL_GRO = _synthetic_component("COA", "COA", 80, prefix="coa_t")
+
+
+class TestAssembleSystemMultiPreparameterizedProtein:
+    def _write_chains(self, tmp_path, sizes=None, with_posre=True) -> tuple[list[Path], list[Path]]:
+        sizes = sizes or _REAL_CHAIN_SIZES
+        topo_paths: list[Path] = []
+        posre_paths: list[Path] = []
+        for name, n in sizes.items():
+            letter = name[-1]
+            posre_name = f"posre_Protein_chain_{letter}.itp"
+            itp_p = tmp_path / f"topol_Protein_chain_{letter}.itp"
+            itp_p.write_text(_synthetic_chain_itp(name, n, posre_name=posre_name))
+            topo_paths.append(itp_p)
+            if with_posre:
+                posre_p = tmp_path / posre_name
+                posre_p.write_text("[ position_restraints ]\n; placeholder\n1 1 1000 1000 1000\n")
+                posre_paths.append(posre_p)
+        return topo_paths, posre_paths
+
+    def _write_protein_gro(self, tmp_path, sizes=None, n_override: int | None = None) -> Path:
+        sizes = sizes or _REAL_CHAIN_SIZES
+        total = n_override if n_override is not None else sum(sizes.values())
+        atoms = [("ALA", "CA", 1.0 + 0.001 * i, 1.0, 1.0) for i in range(total)]
+        p = tmp_path / "protein_only.gro"
+        p.write_text(_gro_text("Preparameterized protein", atoms))
+        return p
+
+    def _a1_coa_components(self, tmp_path) -> list[ParameterizedMolecule]:
+        return [
+            _write_component(tmp_path, "A1", _A1_LIKE_ITP, _A1_LIKE_GRO),
+            _write_component(tmp_path, "COA", _COA_LIKE_ITP, _COA_LIKE_GRO),
+        ]
+
+    def _a1_coa_full_size_components(self, tmp_path) -> list[ParameterizedMolecule]:
+        return [
+            _write_component(tmp_path, "A1", _A1_FULL_ITP, _A1_FULL_GRO),
+            _write_component(tmp_path, "COA", _COA_FULL_ITP, _COA_FULL_GRO),
+        ]
+
+    def _run(self, tmp_path, protein_gro, protein_topology_itps, components,
+              protein_posre_itps=None, run_grompp=False, mock_subprocess=True):
+        out = tmp_path / "system"
+        if mock_subprocess:
+            with patch(_GMX_SUBPROC) as mock_run:
+                result = assemble_system_multi(
+                    protein_gro=protein_gro,
+                    protein_topology_itps=protein_topology_itps,
+                    protein_posre_itps=protein_posre_itps,
+                    components=components,
+                    out_dir=out,
+                    run_grompp=run_grompp,
+                )
+            return result, mock_run
+        result = assemble_system_multi(
+            protein_gro=protein_gro,
+            protein_topology_itps=protein_topology_itps,
+            protein_posre_itps=protein_posre_itps,
+            components=components,
+            out_dir=out,
+            run_grompp=run_grompp,
+        )
+        return result, None
+
+    # ── core behavior ──────────────────────────────────────────────────────────
+
+    def test_pdb2gmx_never_invoked(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path)
+        gro = self._write_protein_gro(tmp_path)
+        result, mock_run = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        assert result.success is True, result.error or result.errors
+        mock_run.assert_not_called()
+
+    def test_multi_chain_molecule_names_parsed(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path)
+        gro = self._write_protein_gro(tmp_path)
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        assert [m["name"] for m in result.protein_molecules] == [
+            "Protein_chain_A", "Protein_chain_B", "Protein_chain_C", "Protein_chain_D",
+        ]
+
+    def test_component_integration_with_preparameterized_protein(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path)
+        gro = self._write_protein_gro(tmp_path)
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        by_id = {c["id"]: c for c in result.components}
+        assert by_id["A1"]["molecule_name"] == "LIG"
+        assert by_id["COA"]["molecule_name"] == "COA"
+
+    def test_atomtype_namespace_handling_still_works(self, tmp_path):
+        """The A1/COA opls_800 collision must be resolved identically to raw-PDB mode."""
+        topo, posre = self._write_chains(tmp_path)
+        gro = self._write_protein_gro(tmp_path)
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        by_id = {c["id"]: c for c in result.components}
+        assert by_id["A1"]["atomtype_renames"] == {"opls_800": "A1_opls_800"}
+        assert by_id["COA"]["atomtype_renames"] == {"opls_800": "COA_opls_800"}
+        at_text = (result.topol_top.parent / "component_atomtypes.itp").read_text()
+        assert "A1_opls_800" in at_text and "COA_opls_800" in at_text
+
+    def test_final_atom_count_matches_real_fixture(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path)
+        gro = self._write_protein_gro(tmp_path)
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_full_size_components(tmp_path), posre)
+        assert result.protein_atom_count == 24199
+        assert result.total_atom_count == 24199 + 35 + 80 == 24314
+
+    def test_final_molecules_section(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path)
+        gro = self._write_protein_gro(tmp_path)
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_full_size_components(tmp_path), posre)
+        text = result.topol_top.read_text()
+        mol_pos = text.index("[ molecules ]")
+        mol_lines = [
+            l.split()[0] for l in text[mol_pos:].splitlines()[2:] if l.strip() and not l.strip().startswith(";")
+        ]
+        assert mol_lines == ["Protein_chain_A", "Protein_chain_B", "Protein_chain_C", "Protein_chain_D", "LIG", "COA"]
+
+    def test_grompp_never_run_flag_and_no_pdb2gmx_command(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5})
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        result, mock_run = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        assert mock_run.call_count == 0
+
+    # ── position restraint preservation ─────────────────────────────────────────
+
+    def test_posre_files_copied_and_include_preserved(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5})
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        assert result.success is True
+        out_dir = result.topol_top.parent
+        assert (out_dir / "posre_Protein_chain_A.itp").exists()
+        copied_chain = (out_dir / "topol_Protein_chain_A.itp").read_text()
+        assert '#include "posre_Protein_chain_A.itp"' in copied_chain
+        assert "#ifdef POSRES" in copied_chain
+        assert result.warnings == []  # posre was supplied, no warning expected
+
+    def test_missing_posre_warns_but_does_not_block(self, tmp_path):
+        topo, _ = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5}, with_posre=False)
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), protein_posre_itps=None)
+        assert result.success is True
+        assert any("posre_Protein_chain_A.itp" in w for w in result.warnings)
+
+    # ── report fields ────────────────────────────────────────────────────────────
+
+    def test_report_records_preparameterized_mode(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5})
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        report = yaml.safe_load(result.report_path.read_text())
+        assert report["protein_input_mode"] == "preparameterized"
+        assert report["pdb2gmx_used"] is False
+        assert report["protein_gro"] if "protein_gro" in report else True  # tolerated either location
+        assert report["outputs"]["protein_gro"]
+        assert report["protein_topology_includes"] == ["topol_Protein_chain_A.itp"]
+        assert report["protein_atom_count"] == 5
+
+    def test_topology_mode_field_is_preparameterized(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5})
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        assert result.topology_mode == "preparameterized"
+        assert result.protein_itp is None
+
+    # ── failure modes ────────────────────────────────────────────────────────────
+
+    def test_atom_count_mismatch_blocks(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5})
+        # GRO declares 4 atoms, topology declares 5 -> mismatch
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5}, n_override=4)
+        result, _ = self._run(tmp_path, gro, topo, self._a1_coa_components(tmp_path), posre)
+        assert result.success is False
+        assert "atom count mismatch" in result.error.lower()
+
+    def test_missing_topology_include_blocks(self, tmp_path):
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        result, _ = self._run(tmp_path, gro, [], self._a1_coa_components(tmp_path))
+        assert result.success is False
+        assert "protein_topology_itps" in result.error or "topology" in result.error.lower()
+
+    def test_both_protein_pdb_and_protein_gro_rejected(self, tmp_path):
+        topo, posre = self._write_chains(tmp_path, sizes={"Protein_chain_A": 5})
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 5})
+        fake_pdb = tmp_path / "protein.pdb"
+        fake_pdb.write_text("END\n")
+        result = assemble_system_multi(
+            protein_pdb=fake_pdb,
+            protein_gro=gro,
+            protein_topology_itps=topo,
+            protein_posre_itps=posre,
+            components=self._a1_coa_components(tmp_path),
+            out_dir=tmp_path / "system",
+            run_grompp=False,
+        )
+        assert result.success is False
+        assert "mutually exclusive" in result.error.lower()
+
+    def test_neither_protein_input_given_rejected(self, tmp_path):
+        result = assemble_system_multi(
+            components=self._a1_coa_components(tmp_path),
+            out_dir=tmp_path / "system",
+            run_grompp=False,
+        )
+        assert result.success is False
+
+    def test_topology_missing_moleculetype_blocks(self, tmp_path):
+        bad_itp = tmp_path / "topol_Protein_chain_A.itp"
+        bad_itp.write_text("[ atoms ]\n1 opls_1 1 ALA CA 1 0.0 12.0\n")  # no [ moleculetype ]
+        gro = self._write_protein_gro(tmp_path, sizes={"Protein_chain_A": 1})
+        result, _ = self._run(tmp_path, gro, [bad_itp], self._a1_coa_components(tmp_path), mock_subprocess=False)
+        assert result.success is False
+        assert "moleculetype" in result.error.lower()
+
+
+class TestReferencedPosreIncludes:
+    def test_finds_posre_include(self):
+        text = '#include "topol.itp"\n#ifdef POSRES\n#include "posre_Protein_chain_A.itp"\n#endif\n'
+        assert _referenced_posre_includes(text) == ["posre_Protein_chain_A.itp"]
+
+    def test_no_posre_include_returns_empty(self):
+        assert _referenced_posre_includes('#include "forcefield.itp"\n') == []
+
+
+class TestGenerateTopolTopPreparameterized:
+    def test_multi_chain_includes_and_order(self, tmp_path):
+        top = generate_topol_top_preparameterized(
+            out_dir=tmp_path, forcefield="oplsaa", water_model="spce",
+            protein_topology_names=[
+                "topol_Protein_chain_A.itp", "topol_Protein_chain_B.itp",
+                "topol_Protein_chain_C.itp", "topol_Protein_chain_D.itp",
+            ],
+            atomtypes_itp_name="component_atomtypes.itp",
+            protein_molecules=[
+                ("Protein_chain_A", 1), ("Protein_chain_B", 1),
+                ("Protein_chain_C", 1), ("Protein_chain_D", 1),
+            ],
+            components=[("A1.itp", "LIG", 1), ("COA.itp", "COA", 1)],
+        )
+        text = top.read_text()
+        at_pos = text.index("component_atomtypes.itp")
+        chain_d_pos = text.index("topol_Protein_chain_D.itp")
+        a1_pos = text.index("A1.itp")
+        assert at_pos < chain_d_pos < a1_pos
+        mol_pos = text.index("[ molecules ]")
+        mol_section = text[mol_pos:]
+        assert "Protein_chain_D" in mol_section
+        assert "LIG" in mol_section
+        assert "COA" in mol_section

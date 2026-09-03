@@ -76,6 +76,19 @@ class LigandPrepareResult:
     recommended_ligpargen_input: Optional[Path] = None
     warnings: list[str] = field(default_factory=list)
     error: Optional[str] = None
+    # Chemical-perception fields (see ligand.chemical_perception). A successful
+    # hydrogenation call does NOT by itself imply these are "high" -- see
+    # parameterization_status / readiness_block_reasons, which are the
+    # authoritative LigParGen-readiness signal.
+    element_corrections: list[dict] = field(default_factory=list)
+    element_assignment_confidence: str = "unknown"      # high|medium|low|unknown
+    connectivity_confidence: str = "unknown"
+    bond_order_confidence: str = "unknown"
+    hydrogenation_chemical_confidence: str = "unknown"
+    chemical_identity_method: str = "none"               # chemical_reference|pdb_geometry_valence_optimization|none
+    chemical_identity_confidence: str = "unknown"
+    parameterization_status: str = "chemical_validation_required"  # ready_for_ligpargen|chemical_validation_required
+    readiness_block_reasons: list[str] = field(default_factory=list)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -104,20 +117,38 @@ def extract_ligand_from_complex(
     ligand_resname: str,
     out_dir: str | Path,
     hydrogenation_mode: str = "auto",
+    chemical_reference: Optional[str | Path] = None,
 ) -> LigandPrepareResult:
     """
     Split a docked complex PDB into protein-only and ligand-only files.
 
-    Hydrogen completeness is assessed and auto-hydrogenation is triggered when
-    the status is "missing" or "incomplete".  Use ``hydrogenation_mode="none"``
-    to skip hydrogenation; the call will still block downstream if the ligand is
-    not provably complete.
+    Ligand atom elements are normalized first (see
+    ``ligand.chemical_perception.normalize_ligand_elements``), then either:
+
+      - ``chemical_reference`` is given: bonds/orders/formal-charge/
+        stereochemistry come from that authoritative source, mapped onto
+        this pose's heavy-atom coordinates
+        (``ligand.chemical_perception.map_reference_onto_pose``), or
+      - PDB-only: hydrogen completeness/hydrogenation goes through
+        geometry-based bond-order perception, never the legacy
+        ``MolFromPDBFile()+AddHs()`` combination (see
+        ``ligand.chemical_perception`` module docstring for why).
+
+    ``LigandPrepareResult.parameterization_status`` is the authoritative
+    LigParGen-readiness signal -- it is ``"ready_for_ligpargen"`` only when
+    every chemical-confidence dimension is high, NOT merely because
+    hydrogenation raised no exception. Use ``hydrogenation_mode="none"`` to
+    skip automatic hydrogenation entirely; the call still reports readiness
+    (which will not be ready without existing complete hydrogens).
 
     Args:
         complex_pdb:        Path to the docked complex PDB.
         ligand_resname:     Residue name of the ligand (e.g. "E20").
         out_dir:            Directory for output files.
         hydrogenation_mode: "auto" | "rdkit" | "openbabel" | "none"
+        chemical_reference: Optional path to a chemically explicit reference
+                             (.sdf/.mol/.pdb) treated as the authoritative
+                             chemistry source for this ligand.
     """
     complex_pdb = Path(complex_pdb)
     out_dir = Path(out_dir)
@@ -189,23 +220,133 @@ def extract_ligand_from_complex(
     end_suffix = "\nEND\n" if has_ter else "\nTER\nEND\n"
     prot_pdb.write_text("\n".join(protein_lines) + end_suffix)
 
+    # ── Element normalization (ligand-only, before any chemistry) ──────────────
+    from ligand.chemical_perception import normalize_ligand_elements
+
+    elem_norm = normalize_ligand_elements(lig_pdb.read_text())
+    element_corrections = [
+        {
+            "atom_index": c.atom_index,
+            "atom_name": c.atom_name,
+            "original_element": c.original_element,
+            "corrected_element": c.corrected_element,
+            "reason": c.reason,
+        }
+        for c in elem_norm.corrections
+    ]
+    element_assignment_confidence = elem_norm.confidence
+    if elem_norm.corrections:
+        lig_pdb.write_text(elem_norm.pdb_text)
+        warnings.append(
+            f"Corrected {len(elem_norm.corrections)} ligand atom element assignment(s): "
+            + "; ".join(
+                f"atom {c.atom_index} ({c.atom_name}): {c.original_element} -> {c.corrected_element}"
+                for c in elem_norm.corrections
+            )
+        )
+    # Re-derive from the (possibly corrected) file for downstream counting.
+    ligand_lines = [
+        l for l in lig_pdb.read_text().splitlines()
+        if l[:6].rstrip() in ("ATOM", "HETATM")
+    ]
+
     # ── Hydrogen completeness assessment ──────────────────────────────────────
     n_h_atoms = _count_h_atoms(ligand_lines)
     n_heavy_atoms = _count_heavy_atoms(ligand_lines)
     has_h = n_h_atoms > 0
 
-    hydrogenation_status, hydrogenation_complete = _determine_hydrogenation_status(
-        ligand_lines, n_h_atoms, n_heavy_atoms
-    )
-
-    # ── Hydrogenation ─────────────────────────────────────────────────────────
-    needs_hydrogenation = hydrogenation_status in ("missing", "incomplete")
     hydrogenated_pdb: Optional[Path] = None
     hydrogenation_performed = False
     hydrogenation_backend = "none"
-    hydrogenation_confidence = 1.0 if hydrogenation_complete else 0.0
+    hydrogenation_confidence = 0.0
+    hydrogenation_chemical_confidence = "unknown"
+    connectivity_confidence = "unknown"
+    bond_order_confidence = "unknown"
+    chemical_identity_method = "none"
+    chemical_identity_confidence = "unknown"
+    formal_charge: Optional[int] = None
+    charge_estimated = False
 
-    if not hydrogenation_complete:
+    if chemical_reference is not None:
+        # ── Reference-guided path: authoritative chemistry ─────────────────────
+        from ligand.chemical_perception import map_reference_onto_pose, normalize_ligand_residue_metadata
+
+        chemical_identity_method = "chemical_reference"
+        mapping_result = map_reference_onto_pose(chemical_reference, lig_pdb)
+
+        if not mapping_result.success:
+            hydrogenation_status, hydrogenation_complete = "unknown", False
+            connectivity_confidence = "low"
+            bond_order_confidence = "low"
+            chemical_identity_confidence = "low"
+            warnings.append(f"Reference-guided preparation failed: {mapping_result.error}")
+        else:
+            from rdkit import Chem
+
+            hydrogenated_pdb = out_dir / "ligand_for_ligpargen_H.pdb"
+            pdb_block = Chem.MolToPDBBlock(mapping_result.mol)
+            fixed_block = normalize_ligand_residue_metadata(pdb_block, resname=ligand_resname)
+            hydrogenated_pdb.write_text(fixed_block)
+
+            hydrogenation_performed = True
+            hydrogenation_backend = "rdkit_reference_guided"
+            hydrogenation_confidence = 1.0
+            hydrogenation_chemical_confidence = "high"
+            connectivity_confidence = "high"
+            bond_order_confidence = "high"
+            chemical_identity_confidence = "high"
+            hydrogenation_status, hydrogenation_complete = "complete", True
+            n_h_atoms = mapping_result.n_hydrogen_atoms
+            formal_charge = mapping_result.formal_charge
+            charge_estimated = True
+            warnings.extend(mapping_result.warnings)
+
+        needs_hydrogenation = False  # never fall through to backend cascade below
+
+    else:
+        # ── PDB-only path ────────────────────────────────────────────────────
+        chemical_identity_method = "pdb_geometry_valence_optimization"
+
+        # Probe geometry-based perception once up front so connectivity/
+        # bond-order confidence is captured even when the ligand already has
+        # enough hydrogens and no backend call ends up being needed below
+        # (_determine_hydrogenation_status performs the same probe
+        # internally to decide status/complete, but does not expose
+        # confidence through its existing tuple return).
+        if n_h_atoms > 0:
+            from ligand.chemical_perception import perceive_chemistry
+
+            _perception_probe = perceive_chemistry(lig_pdb)
+            connectivity_confidence = _perception_probe.connectivity_confidence
+            bond_order_confidence = _perception_probe.bond_order_confidence
+
+        hydrogenation_status, hydrogenation_complete = _determine_hydrogenation_status(
+            ligand_lines, n_h_atoms, n_heavy_atoms
+        )
+        needs_hydrogenation = hydrogenation_status in ("missing", "incomplete")
+        hydrogenation_confidence = 1.0 if hydrogenation_complete else 0.0
+        if hydrogenation_complete:
+            if bond_order_confidence == "high":
+                hydrogenation_chemical_confidence = "high"
+            elif n_h_atoms > 0 and _perception_probe.method in ("unavailable", "legacy_pdb_flavor"):
+                # RDKit isn't installed/too old to independently verify bond
+                # orders -- but the input already had a complete hydrogen
+                # set and SimForge computed/fabricated nothing, so this
+                # isn't the failure mode behind the historical
+                # mis-hydrogenation bug. Accept at "medium": sufficient for
+                # decide_ligpargen_readiness's relaxed bar when
+                # hydrogenation_performed=False, never for the "high" bar
+                # required when SimForge itself adds hydrogens.
+                connectivity_confidence = "medium"
+                bond_order_confidence = "medium"
+                hydrogenation_chemical_confidence = "medium"
+            else:
+                hydrogenation_chemical_confidence = "low"
+            if formal_charge is None and n_h_atoms > 0 and _perception_probe.used_charge is not None:
+                formal_charge = _perception_probe.used_charge
+                charge_estimated = True
+
+    if chemical_reference is None and not hydrogenation_complete:
         if hydrogenation_mode == "none":
             # User explicitly chose not to hydrogenate
             hydrogenation_backend = "skipped"
@@ -236,20 +377,44 @@ def extract_ligand_from_complex(
             h_pdb = out_dir / "ligand_for_ligpargen_H.pdb"
             h_result = backend.add_hydrogens(lig_pdb, h_pdb)
             hydrogenation_backend = h_result.backend_name
+            connectivity_confidence = h_result.connectivity_confidence
+            bond_order_confidence = h_result.bond_order_confidence
 
             if h_result.success:
                 hydrogenated_pdb = h_result.output_path
                 hydrogenation_performed = True
                 hydrogenation_confidence = h_result.confidence
+                hydrogenation_chemical_confidence = h_result.hydrogenation_confidence
                 hydrogenation_status = "complete"
                 hydrogenation_complete = True
                 if h_result.n_hydrogen_atoms:
                     n_h_atoms = h_result.n_hydrogen_atoms
+                if h_result.formal_charge is not None:
+                    formal_charge = h_result.formal_charge
+                    charge_estimated = True
             else:
                 hydrogenation_confidence = 0.0
+                hydrogenation_chemical_confidence = "low"
                 if h_result.warning:
                     warnings.append(h_result.warning)
         # status == "unknown" and mode != "none": leave as-is, no action
+
+    if chemical_reference is None:
+        # PDB-only chemical identity is never more than "medium" confidence
+        # (no external reference), even when geometry-based perception fully
+        # converged -- see decide_ligpargen_readiness for the hard gate.
+        chemical_identity_confidence = "medium" if bond_order_confidence == "high" else "low"
+
+    # ── Normalize residue metadata on whatever backend produced hydrogens ──────
+    # RDKit's AddHs()/some Open Babel output writes new atoms into a generic
+    # "UNL" residue with a blank chain; force every atom back to the ligand's
+    # own resname/chain/resid.
+    if hydrogenated_pdb is not None:
+        from ligand.chemical_perception import normalize_ligand_residue_metadata
+
+        hydrogenated_pdb.write_text(
+            normalize_ligand_residue_metadata(hydrogenated_pdb.read_text(), resname=ligand_resname)
+        )
 
     hydrogenation_required = (
         hydrogenation_status in ("missing", "incomplete") and not hydrogenation_performed
@@ -265,9 +430,23 @@ def extract_ligand_from_complex(
     else:
         recommended_input = None  # not safe to submit
 
-    # ── Estimate formal charge ────────────────────────────────────────────────
-    charge_source = hydrogenated_pdb if hydrogenated_pdb is not None else lig_pdb
-    formal_charge, charge_estimated = _estimate_formal_charge(charge_source, warnings)
+    # ── Estimate formal charge (fallback only -- prefer the value already
+    # derived from geometry-based/reference-guided chemical perception) ────────
+    if formal_charge is None:
+        charge_source = hydrogenated_pdb if hydrogenated_pdb is not None else lig_pdb
+        formal_charge, charge_estimated = _estimate_formal_charge(charge_source, warnings)
+
+    # ── LigParGen readiness gate ────────────────────────────────────────────────
+    from ligand.chemical_perception import decide_ligpargen_readiness
+
+    parameterization_status, readiness_block_reasons = decide_ligpargen_readiness(
+        element_assignment_confidence=element_assignment_confidence,
+        connectivity_confidence=connectivity_confidence,
+        bond_order_confidence=bond_order_confidence,
+        hydrogenation_status=hydrogenation_status,
+        hydrogenation_confidence=hydrogenation_chemical_confidence,
+        hydrogenation_performed=hydrogenation_performed,
+    )
 
     # ── Write report ──────────────────────────────────────────────────────────
     report_data = _build_report(
@@ -290,6 +469,15 @@ def extract_ligand_from_complex(
         lig_pdb=lig_pdb,
         prot_pdb=prot_pdb,
         warnings=warnings,
+        element_corrections=element_corrections,
+        element_assignment_confidence=element_assignment_confidence,
+        connectivity_confidence=connectivity_confidence,
+        bond_order_confidence=bond_order_confidence,
+        hydrogenation_chemical_confidence=hydrogenation_chemical_confidence,
+        chemical_identity_method=chemical_identity_method,
+        chemical_identity_confidence=chemical_identity_confidence,
+        parameterization_status=parameterization_status,
+        readiness_block_reasons=readiness_block_reasons,
     )
     report_path = out_dir / "ligand_report.yaml"
     report_path.write_text(yaml.dump(report_data, default_flow_style=False, allow_unicode=True))
@@ -316,6 +504,15 @@ def extract_ligand_from_complex(
         hydrogenation_confidence=hydrogenation_confidence,
         recommended_ligpargen_input=recommended_input,
         warnings=warnings,
+        element_corrections=element_corrections,
+        element_assignment_confidence=element_assignment_confidence,
+        connectivity_confidence=connectivity_confidence,
+        bond_order_confidence=bond_order_confidence,
+        hydrogenation_chemical_confidence=hydrogenation_chemical_confidence,
+        chemical_identity_method=chemical_identity_method,
+        chemical_identity_confidence=chemical_identity_confidence,
+        parameterization_status=parameterization_status,
+        readiness_block_reasons=readiness_block_reasons,
     )
 
 
@@ -399,24 +596,43 @@ def _determine_hydrogenation_status(
     if n_h_atoms == 0:
         return "missing", False
 
-    # Try RDKit for exact completeness check
+    # Try geometry-based bond-order perception for an exact completeness
+    # check (ligand.chemical_perception.perceive_chemistry). This replaced
+    # the legacy Chem.MolFromPDBBlock()+RemoveHs()+AddHs() round-trip, which
+    # does not perceive aromaticity/bond order from geometry and therefore
+    # mis-classifies (and, if used for hydrogenation itself, over-protonates)
+    # ring-containing and element-column-defective ligands -- see
+    # ligand.chemical_perception module docstring for the real regression
+    # this caused. When perception does not converge (e.g. RDKit absent, or
+    # too old for rdDetermineBonds), fall through to the ratio heuristic
+    # exactly as before.
     try:
-        from rdkit import Chem
+        import tempfile
 
-        pdb_block = "\n".join(pdb_lines) + "\nEND\n"
-        mol = Chem.MolFromPDBBlock(pdb_block, removeHs=False, sanitize=True)
-        if mol is not None:
-            mol_no_h = Chem.RemoveHs(mol)
+        from ligand.chemical_perception import perceive_chemistry
+
+        with tempfile.NamedTemporaryFile("w", suffix=".pdb", delete=False) as f:
+            f.write("\n".join(pdb_lines) + "\nEND\n")
+            tmp_path = f.name
+        try:
+            perception = perceive_chemistry(tmp_path)
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
+
+        if perception.success:
+            from rdkit import Chem
+
+            mol_no_h = Chem.RemoveHs(perception.mol)
             mol_all_h = Chem.AddHs(mol_no_h)
             expected_h = mol_all_h.GetNumAtoms() - mol_no_h.GetNumAtoms()
             if n_h_atoms >= expected_h:
                 return "complete", True
             else:
                 return "incomplete", False
-    except (ImportError, Exception):
+    except Exception:
         pass
 
-    # Without RDKit: apply ratio heuristic
+    # Without confident geometry-based perception: apply ratio heuristic
     if n_heavy_atoms > 0 and (n_h_atoms / n_heavy_atoms) < _INCOMPLETE_RATIO_THRESHOLD:
         return "incomplete", False
 
@@ -488,22 +704,32 @@ def _build_report(
     lig_pdb: Path,
     prot_pdb: Path,
     warnings: list[str],
+    element_corrections: list[dict],
+    element_assignment_confidence: str,
+    connectivity_confidence: str,
+    bond_order_confidence: str,
+    hydrogenation_chemical_confidence: str,
+    chemical_identity_method: str,
+    chemical_identity_confidence: str,
+    parameterization_status: str,
+    readiness_block_reasons: list[str],
 ) -> dict:
     charge_str = str(formal_charge) if formal_charge is not None else "UNKNOWN"
+    ready = parameterization_status == "ready_for_ligpargen"
 
-    not_ready = (
-        hydrogenation_status in ("missing", "incomplete")
-        or hydrogenation_backend == "skipped"
-    )
-
-    if not_ready and not hydrogenation_performed:
+    if not ready:
         next_steps: list[str] = [
-            "WARNING: The ligand is not LigParGen-ready. "
-            f"Hydrogenation status: {hydrogenation_status}. "
-            "Do NOT submit ligand_for_ligpargen.pdb to LigParGen without complete protonation.",
-            "Option A -- install RDKit (conda install -c conda-forge rdkit) and re-run",
-            "Option B -- install Open Babel (conda install -c conda-forge openbabel) and re-run",
-            "Option C -- add hydrogens manually in Avogadro, PyMOL, or Discovery Studio",
+            "WARNING: chemical_validation_required -- this ligand is NOT "
+            "LigParGen-ready. A successful hydrogenation call is not, by "
+            "itself, sufficient (see readiness_block_reasons below). Do NOT "
+            "submit ligand_for_ligpargen.pdb to LigParGen.",
+        ] + [f"  - {reason}" for reason in readiness_block_reasons] + [
+            "Option A -- provide --ligand-reference <SDF/MOL/PDB> with the "
+            "correct connectivity/bond orders/charge for this ligand",
+            "Option B -- supply a pose PDB that already retains explicit, "
+            "chemically correct hydrogens",
+            "Option C -- resolve chemistry manually (Avogadro, PyMOL, "
+            "Discovery Studio) and re-run with --hydrogenation none",
         ]
     else:
         submit_file = recommended_ligpargen_input or lig_pdb
@@ -536,6 +762,16 @@ def _build_report(
         "hydrogenated_ligand_pdb": str(hydrogenated_ligand_pdb) if hydrogenated_ligand_pdb else None,
         "hydrogenation_confidence": hydrogenation_confidence,
         "recommended_ligpargen_input": str(recommended_ligpargen_input) if recommended_ligpargen_input else None,
+        # ── Chemical perception provenance ──────────────────────────────────
+        "element_corrections": element_corrections,
+        "element_assignment_confidence": element_assignment_confidence,
+        "connectivity_confidence": connectivity_confidence,
+        "bond_order_confidence": bond_order_confidence,
+        "hydrogenation_chemical_confidence": hydrogenation_chemical_confidence,
+        "chemical_identity_method": chemical_identity_method,
+        "chemical_identity_confidence": chemical_identity_confidence,
+        "parameterization_status": parameterization_status,
+        "readiness_block_reasons": readiness_block_reasons,
         "outputs": {
             "ligand_pdb": str(lig_pdb),
             "protein_pdb": str(prot_pdb),

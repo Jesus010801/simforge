@@ -34,6 +34,14 @@ class HydrogenationResult:
     n_hydrogen_atoms: int = 0
     confidence: float = 0.0
     warning: Optional[str] = None
+    # Chemical-perception confidence metadata (see ligand.chemical_perception).
+    # "high" | "medium" | "low" | "unknown". A successful hydrogenation call
+    # does NOT by itself imply high confidence -- see decide_ligpargen_readiness.
+    connectivity_confidence: str = "unknown"
+    bond_order_confidence: str = "unknown"
+    hydrogenation_confidence: str = "unknown"
+    method: str = "none"
+    formal_charge: Optional[int] = None
 
 
 # ── Availability probes (module-level for easy mocking in tests) ──────────────
@@ -87,6 +95,24 @@ class HydrogenationBackend:
 # ── RDKit backend ─────────────────────────────────────────────────────────────
 
 class RDKitHydrogenationBackend(HydrogenationBackend):
+    """
+    Hydrogenates via geometry-based bond-order perception
+    (``ligand.chemical_perception.add_hydrogens_with_confidence``), NOT the
+    legacy ``Chem.MolFromPDBFile()`` + ``Chem.AddHs()`` combination.
+
+    That legacy combination trusts the PDB element column verbatim and does
+    not perceive aromaticity/bond order from geometry, so it silently
+    over-protonates molecules whenever the input has an element-column
+    defect or non-trivial ring systems -- this was the root cause of a real
+    mis-hydrogenation regression (an 18-carbon, 1-chlorine ligand with a
+    "CL" atom mistyped to element "C" was hydrogenated to ~C19H34O3 instead
+    of the correct C18H15ClO3). See ``ligand.chemical_perception`` for the
+    full analysis. This backend never falls back to that legacy path --
+    when geometry-based perception cannot converge confidently (typically:
+    a heavy-atom-only pose with no explicit hydrogens), it fails explicitly
+    so the ``auto`` cascade can try Open Babel or report manual_required,
+    rather than silently emitting a wrong molecule.
+    """
     name = "rdkit"
 
     def is_available(self) -> bool:
@@ -94,48 +120,37 @@ class RDKitHydrogenationBackend(HydrogenationBackend):
 
     def add_hydrogens(self, input_pdb: Path, output_pdb: Path) -> HydrogenationResult:
         try:
-            from rdkit import Chem
-
-            mol = Chem.MolFromPDBFile(str(input_pdb), removeHs=False, sanitize=True)
-            if mol is None:
-                return HydrogenationResult(
-                    success=False,
-                    backend_name=self.name,
-                    warning="RDKit could not parse the ligand PDB.",
-                )
-
-            mol_h = Chem.AddHs(mol, addCoords=True)
-            pdb_block = Chem.MolToPDBBlock(mol_h)
-            if pdb_block is None:
-                return HydrogenationResult(
-                    success=False,
-                    backend_name=self.name,
-                    warning="RDKit could not write the protonated PDB.",
-                )
-
-            output_pdb.write_text(pdb_block)
-            n_h = sum(1 for a in mol_h.GetAtoms() if a.GetAtomicNum() == 1)
-
-            return HydrogenationResult(
-                success=True,
-                output_path=output_pdb,
-                backend_name=self.name,
-                n_hydrogen_atoms=n_h,
-                confidence=1.0,
-            )
-
+            from ligand.chemical_perception import add_hydrogens_with_confidence
         except ImportError:
             return HydrogenationResult(
                 success=False,
                 backend_name=self.name,
                 warning="RDKit is not installed.",
             )
-        except Exception as exc:
+
+        result = add_hydrogens_with_confidence(input_pdb, output_pdb)
+        if not result.success:
             return HydrogenationResult(
                 success=False,
                 backend_name=self.name,
-                warning=f"RDKit failed to add hydrogens: {exc}",
+                warning=result.warning,
+                connectivity_confidence=result.connectivity_confidence,
+                bond_order_confidence=result.bond_order_confidence,
+                method=result.method,
             )
+
+        return HydrogenationResult(
+            success=True,
+            output_path=result.output_path,
+            backend_name=self.name,
+            n_hydrogen_atoms=result.n_hydrogen_atoms,
+            confidence=1.0,
+            connectivity_confidence=result.connectivity_confidence,
+            bond_order_confidence=result.bond_order_confidence,
+            hydrogenation_confidence=result.hydrogenation_confidence,
+            method=result.method,
+            formal_charge=result.formal_charge,
+        )
 
 
 # ── Open Babel backend ────────────────────────────────────────────────────────
@@ -209,6 +224,16 @@ class OpenBabelHydrogenationBackend(HydrogenationBackend):
             backend_name=self.name,
             n_hydrogen_atoms=n_h,
             confidence=0.9,
+            # Open Babel performs its own valence/aromaticity perception, which
+            # is generally more robust than the retired legacy RDKit PDB-flavor
+            # path -- but it is not externally validated and has itself
+            # produced an incorrect result for at least one real regression
+            # ligand. "medium", not "high": on its own it cannot satisfy
+            # decide_ligpargen_readiness()'s bar for ready_for_ligpargen.
+            connectivity_confidence="medium",
+            bond_order_confidence="medium",
+            hydrogenation_confidence="medium",
+            method="openbabel_perception",
         )
 
 

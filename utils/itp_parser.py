@@ -35,6 +35,7 @@ class ItpFile:
     sections: dict[str, list[str]] = field(default_factory=dict)
     moleculetype: Optional[MoleculetypeRecord] = None
     atoms: list[AtomRecord] = field(default_factory=list)
+    bonds: list[tuple[int, int]] = field(default_factory=list)
 
     @property
     def total_charge(self) -> float:
@@ -76,6 +77,9 @@ def parse_itp(path: str | Path) -> ItpFile:
 
     if "atoms" in sections:
         result.atoms = _parse_atoms(sections["atoms"])
+
+    if "bonds" in sections:
+        result.bonds = _parse_bonds(sections["bonds"])
 
     return result
 
@@ -120,3 +124,18 @@ def _parse_atoms(lines: list[str]) -> list[AtomRecord]:
             mass=mass,
         ))
     return atoms
+
+
+def _parse_bonds(lines: list[str]) -> list[tuple[int, int]]:
+    """Parse [ bonds ] pairs (1-based atom indices), ignoring function/params."""
+    bonds: list[tuple[int, int]] = []
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        try:
+            i, j = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        bonds.append((i, j))
+    return bonds
