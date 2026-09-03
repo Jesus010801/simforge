@@ -1,0 +1,21 @@
+# Example A — simple protein-ligand system (raw protein).
+#
+#   simforge build configs/systems/A_protein_ligand.yaml --out A_system/
+#
+# Raw protein mode: `structure` is a .pdb, so SimForge runs `gmx pdb2gmx`
+# (oplsaa / spce) and generates the protein topology + position restraints.
+# Do NOT list protein.topology / protein.restraints in this mode.
+system:
+  name: protein_ligand_demo
+
+  protein:
+    structure: protein_only.pdb
+
+  components:
+    - id: E20
+      topology: E20.itp          # LigParGen .itp (keeps its own [ atomtypes ])
+      coordinates: E20.gro        # system-specific pose for THIS system
+      role: competitive_ligand
+
+  forcefield: oplsaa
+  water_model: spce

@@ -54,6 +54,13 @@ configs/hmg.pdb
 bilayer_x
 bilayer_y:
 
+# ── Local working configs (absolute paths / uncommitted structures) ────────
+configs/WT.yaml
+configs/test-memb.yaml
+configs/glp1r_membrane.yaml
+configs/GLP-1_Receptor.yaml
+configs/GLP-1_Receptor_tm_aware.yaml
+
 # ── Internal working notes (kept locally, not published) ────────────────────
 docs/internal/
 docs/FEL/
