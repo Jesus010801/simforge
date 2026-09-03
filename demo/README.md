@@ -22,6 +22,10 @@ validation → provenance.**
 This is a **software demonstration** (6-residue peptide, methane + methanol),
 not a scientific benchmark.
 
+> The "Reproducibility advisory" panel in `expected_output.txt` appears because
+> the capture was taken from a modified working tree. From a clean clone it
+> does not appear — that panel *is* the feature working.
+
 ## Fallback
 
 `./demo/run_demo.sh --capture` regenerates `demo/expected_output.txt`. If the

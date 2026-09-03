@@ -1,0 +1,205 @@
+
+$ simforge doctor
+╭──────────────────────────── SIMFORGE ENVIRONMENT ────────────────────────────╮
+│                                                                              │
+│   Component     Level      Version   Status              Detail              │
+│  ──────────────────────────────────────────────────────────────────────────  │
+│   SimForge      REQUIRED   0.1.0a1   ✓ PASS              /home/jesusxd/Esc   │
+│                                                          ritorio/simforge    │
+│   Python        REQUIRED   3.13.9    ✓ PASS              /home/jesusxd/min   │
+│                                                          iconda3/bin/pytho   │
+│                                                          n3.13               │
+│   Environment   OPTIONAL   —         ⚠                   base  —             │
+│                                      WRONG_ENVIRONMENT   RDKit-dependent     │
+│                                                          steps need a        │
+│                                                          dedicated env       │
+│                                                          (e.g. rdkit_env)    │
+│   GROMACS       REQUIRED   2025.2    ✓ PASS              /usr/local/gromac   │
+│                                                          s/bin/gmx           │
+│   OPLSAA        REQUIRED   —         ✓ PASS              /usr/local/gromac   │
+│                                                          s/share/gromacs/t   │
+│                                                          op/oplsaa.ff        │
+│   RDKit         OPTIONAL   —         ✗ MISSING           not importable —    │
+│                                                          ligand chemistry    │
+│                                                          features degrade    │
+│                                                          to heuristics       │
+│   Open Babel    OPTIONAL   3.1.1     ✓ AVAILABLE         fallback            │
+│                                                          hydrogenation       │
+│                                                          backend             │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  Overall status: READY
+
+
+----- the entire system, declaratively -----
+# examples/multicomponent — preparameterized protein + TWO independently
+# parameterized components with a deliberate atomtype-name collision.
+#
+#   simforge build examples/multicomponent/system.yaml --out multi_system
+#   simforge validate-system multi_system
+#   simforge inspect-run  multi_system    # see the atomtype rename map
+#
+# SOFTWARE DEMONSTRATION, not a scientific benchmark. Same 6-residue peptide
+# fragment as protein_ligand_min. MTH (methane) and EOL (methanol) each ship
+# their own [ atomtypes ] block, and BOTH define `opls_800` / `opls_801` — but
+# for different elements. SimForge namespaces the collision per component
+# (MTH_opls_800, EOL_opls_800, ...) and records the full map in provenance.json
+# under `atomtype_renames`. A naive `cat A.itp B.itp` would silently corrupt
+# one of the two molecules.
+system:
+  name: multicomponent_demo
+
+  protein:
+    structure: protein.gro
+    topology: auto
+    restraints: auto
+
+  components:
+    - id: MTH
+      topology: MTH.itp
+      coordinates: MTH.gro
+      role: ligand
+    - id: EOL
+      topology: EOL.itp
+      coordinates: EOL.gro
+      role: cofactor
+
+  forcefield: oplsaa
+  water_model: spce
+
+$ simforge build demo/system.yaml --out demo_system --verbose
+╭──────────────────────────────────────────────────────────────────────────────╮
+│  SimForge Build  protein.gro (preparameterized) + MTH + EOL  →  demo_system  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↪ auto-discovered 1 protein chain topology file(s): 
+['topol_Protein_chain_A.itp']
+  ↪ auto-discovered 1 position-restraint file(s): ['posre_Protein_chain_A.itp']
+╭─────────────────────────────────── System ───────────────────────────────────╮
+│    Protein                                                                   │
+│      input mode: preparameterized                                            │
+│      chains: 1                                                               │
+│      atoms: 96                                                               │
+│        Protein_chain_A × 1                                                   │
+│                                                                              │
+│    Components                                                                │
+│      MTH      MTH         5 atoms  ligand                                    │
+│          opls_800 → MTH_opls_800                                             │
+│          opls_801 → MTH_opls_801                                             │
+│      EOL      EOL         6 atoms  cofactor                                  │
+│          opls_800 → EOL_opls_800                                             │
+│          opls_801 → EOL_opls_801                                             │
+│                                                                              │
+│    Atomtype conflicts                                                        │
+│      4 resolved automatically                                                │
+│                                                                              │
+│    Total atoms  107                                                          │
+│                                                                              │
+│    Validation  READY                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭────────────────────────── Reproducibility advisory ──────────────────────────╮
+│  ⚠ SimForge source tree has uncommitted changes (commit a457e8dcb886,        │
+│  branch release/0.1-research-preview); this system is recorded as non-clean  │
+│  / research-development provenance                                           │
+│  Commit SimForge before a build you intend to be reproducible.               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭────────────────────────────── ✓ Build complete ──────────────────────────────╮
+│  ✓ System   → /home/jesusxd/Escritorio/simforge/demo_system                  │
+│    Topology → /home/jesusxd/Escritorio/simforge/demo_system/topol.top        │
+│    Coords   → /home/jesusxd/Escritorio/simforge/demo_system/complex.gro      │
+│    Provenance →                                                              │
+│  /home/jesusxd/Escritorio/simforge/demo_system/provenance.json               │
+│    Validation →                                                              │
+│  /home/jesusxd/Escritorio/simforge/demo_system/validation_report.json        │
+│                                                                              │
+│  Next:  gmx solvate -cp                                                      │
+│  /home/jesusxd/Escritorio/simforge/demo_system/complex.gro -cs spc216.gro    │
+│  -o /home/jesusxd/Escritorio/simforge/demo_system/solvated.gro -p            │
+│  /home/jesusxd/Escritorio/simforge/demo_system/topol.top                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+$ simforge validate-system demo_system
+╭───── SYSTEM VALIDATION — /home/jesusxd/Escritorio/simforge/demo_system ──────╮
+│                                                                              │
+│   Check                 Severity   Status   Message                          │
+│  ──────────────────────────────────────────────────────────────────────────  │
+│   topology_present      blocking   ✓ PASS   found topol.top                  │
+│   coordinate_present    blocking   ✓ PASS   complex.gro: 107 atoms           │
+│   includes_resolve      blocking   ✓ PASS   5 local include(s) resolved, 3   │
+│                                             force-field include(s)           │
+│                                             delegated to GROMACS             │
+│   molecule_table        blocking   ✓ PASS   3 molecule row(s), all           │
+│                                             resolvable                       │
+│   atomtype_resolution   blocking   ✓ PASS   all 36 referenced atomtypes      │
+│                                             resolve                          │
+│   atom_counts           blocking   ✓ PASS   topology and coordinates agree   │
+│                                             (107 atoms)                      │
+│   coordinate_validity   blocking   ✓ PASS   coordinates finite, box sane,    │
+│                                             no exact overlaps                │
+│   grompp_dry_run        blocking   ✓ PASS   gmx grompp -maxwarn 0            │
+│                                             succeeded                        │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+  Scientific readiness: READY
+
+  report → /home/jesusxd/Escritorio/simforge/demo_system/validation_report.json
+
+
+$ simforge inspect-run demo_system
+╭─────────────────── Reproducibility Manifest — demo_system ───────────────────╮
+│  Generated   2026-09-03T06:00:42+00:00                                       │
+│  Command     simforge build demo/system.yaml --out demo_system               │
+│  Spec        /home/jesusxd/Escritorio/simforge/demo/system.yaml              │
+│  SimForge    0.1.0a1  (git a457e8dcb8 +dirty)                                │
+│  Python      3.13.9  /home/jesusxd/miniconda3/bin/python3.13                 │
+│  GROMACS     2025.2                                                          │
+│  RDKit       not found                                                       │
+│  Force field oplsaa   Water spce                                             │
+│  Protein     preparameterized  (pdb2gmx skipped)                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Auto-discovery
+    ↪ auto-discovered 1 protein chain topology file(s): 
+['topol_Protein_chain_A.itp']
+    ↪ auto-discovered 1 position-restraint file(s): 
+['posre_Protein_chain_A.itp']
+                                   Inputs                                   
+                                                                            
+  Role                        File                        SHA256            
+ ────────────────────────────────────────────────────────────────────────── 
+  protein_structure           protein.gro                 f0d769e84cd72f12  
+  protein_topology_0          topol_Protein_chain_A.itp   2f33f8293992122d  
+  protein_restraint_0         posre_Protein_chain_A.itp   fa55fd769cbb09b8  
+  component_MTH_topology      MTH.itp                     1bdc584fabaab6e3  
+  component_MTH_coordinates   MTH.gro                     7a965ddf133993c0  
+  component_EOL_topology      EOL.itp                     310fbc71cce62b5c  
+  component_EOL_coordinates   EOL.gro                     6c51fe518c21cd9a  
+                                                                            
+                           Outputs                           
+                                                             
+  Role              File                   SHA256            
+ ─────────────────────────────────────────────────────────── 
+  topol_top         topol.top              c5cac84f2903ea47  
+  complex_gro       complex.gro            e90cd7e58a2536d4  
+  protein_gro       protein.gro            f0d769e84cd72f12  
+  assembly_report   assembly_report.yaml   8919dd3c3cce5bd6  
+                                                             
+
+  Atomtype renames: 4 across 2 component(s)
+  Validation: READY
+
+
+The two components each declared 'opls_800' for a different element;
+SimForge namespaced the collision. See it in the provenance:
+
+$ python -c import json,sys; print(json.dumps(json.load(open('demo_system/provenance.json'))['atomtype_renames'], indent=2))
+{
+  "MTH": {
+    "opls_800": "MTH_opls_800",
+    "opls_801": "MTH_opls_801"
+  },
+  "EOL": {
+    "opls_800": "EOL_opls_800",
+    "opls_801": "EOL_opls_801"
+  }
+}
