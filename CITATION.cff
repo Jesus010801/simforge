@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use SimForge, please cite it as below."
+title: "SimForge"
+type: software
+version: "0.1.0a1"
+date-released: "2026-09-03"
+repository-code: "https://github.com/Jesus010801/simforge"
+url: "https://github.com/Jesus010801/simforge"
+license: MIT
+abstract: >-
+  SimForge is a Python tool for declarative construction, validation, and
+  provenance tracking of GROMACS molecular-simulation systems. It compiles a
+  single system specification into reproducible topologies and coordinates,
+  gates them with a blocking grompp check, and records SHA256-hashed inputs and
+  outputs alongside environment and version metadata.
+keywords:
+  - molecular-dynamics
+  - GROMACS
+  - reproducibility
+  - provenance
+  - computational-biology
+  - molecular-simulation
+authors:
+  # TODO(maintainer): replace this placeholder with your real name, and add
+  # `orcid:` and `affiliation:` fields before a non-preview release.
+  - name: "SimForge contributors"

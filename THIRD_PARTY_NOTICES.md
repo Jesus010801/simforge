@@ -1,0 +1,45 @@
+# Third-Party Notices
+
+SimForge's own source code is released under the MIT License (see `LICENSE`).
+
+This file documents third-party material that is **bundled in the repository**
+but **not authored by SimForge and not covered by SimForge's MIT license**.
+
+> **Status: RESEARCH PREVIEW.** The redistribution terms of some membrane-setup
+> assets below have **not been fully verified**. They are included here only to
+> keep the (beta, QC-required) membrane workflow runnable during the preview.
+> Before any non-preview release, these must be resolved — by obtaining explicit
+> permission, replacing them, or fetching them at runtime with user consent.
+> The membrane workflow is not a headline capability of this preview.
+
+## `docs/Prot-Memb_FILES/`
+
+Community tools for protein–membrane system construction, following the
+Berger-lipid / InflateGRO GROMACS tutorial lineage.
+
+| File(s) | Origin | Stated terms | Verified? |
+|---|---|---|---|
+| `water_deletor.pl` | Justin A. Lemkul, Ph.D. (Virginia Tech) | Header states **GPL-3.0-or-later** | ✅ explicit in file header |
+| `inflategro.pl` | InflateGRO — Kandt, Ash & Tieleman (2007), *Methods* 41:475 | No license header; historically distributed for academic use | ❌ needs confirmation |
+| `inflategro-Jorge.pl` | Local modification of InflateGRO | Derivative of the above | ❌ needs confirmation |
+| `MoveMemb.f`, `AperR.f`, `movie-shrink.f` | Fortran helpers from the same tutorial lineage | Unknown | ❌ needs confirmation |
+| `ScriptCamilo-Jorge.sh`, `system-gro.py`, `run_inflategro.sh` | Local workflow scripts, possibly derived from tutorial material | Unknown | ❌ needs confirmation |
+| `oplsaa_membrane.ff/` | OPLS-AA/L extended with Berger lipid parameters ("Camilo's extended forcefield") | OPLS-AA is distributed with GROMACS; Berger lipid parameters carry their own citation norms (Berger, Edholm & Jähnig, 1997) | ❌ needs confirmation |
+| `*.mdp` | Standard GROMACS run-parameter files (tutorial-derived) | De-facto public | — |
+
+**GPL note:** `water_deletor.pl` is GPL-3.0-or-later. Its inclusion here is
+"mere aggregation" — it does not place SimForge's own code under the GPL — but
+anyone redistributing this repository redistributes that file under GPL terms.
+
+## Python dependencies
+
+Installed from PyPI, each under its own license (not bundled here):
+`typer`, `rich`, `pydantic`, `pyyaml`, and the optional `numpy`, `matplotlib`,
+`rdkit`. See each project for its license.
+
+## External executables (not bundled — must be installed by the user)
+
+- **GROMACS** (LGPL-2.1) — required. Validated against 2025.2.
+- **Open Babel** (GPL-2.0) — optional, hydrogenation fallback.
+- **LigParGen** — external web service for OPLS-AA ligand parameterization;
+  SimForge does not bundle or wrap it.
