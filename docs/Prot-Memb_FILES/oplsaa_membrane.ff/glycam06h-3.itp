@@ -1,0 +1,667 @@
+; GLYCAM_06_H PARAMETERS (FOR AMBER 11.0, RESP 0.010), COPYRIGHT CCRC 2011
+; Converted to Gromacs format on 2013-12-10
+
+
+[ atomtypes ]
+; name  at.num    mass     charge ptype sigma    epsilon
+  Ho_S    1          1.008   0.0000 A   3.56359e-02   1.25520e-01   ; M.B. Tessier 2011
+  Hc_S    1          1.008   0.0000 A   2.64953e-01   6.56888e-02   ; OPLS
+  Ha_S    1          1.008   0.0000 A   2.59964e-01   6.27600e-02   ; Spellmeyer
+  Hp_S    1          1.008   0.0000 A   1.95998e-01   6.56888e-02   ; Veenstra et al JCC,8,(1992),963
+  Oh_S    8         16.000   0.0000 A   3.06647e-01   8.80314e-01   ; OPLS
+  Os_S    8         16.000   0.0000 A   3.00001e-01   7.11280e-01   ; OPLS ether
+  Oy_S    8         16.000   0.0000 A   3.00001e-01   7.11280e-01   ; OPLS ether - sialic acid only
+  Cg_S    6         12.010   0.0000 A   3.39967e-01   4.57730e-01   ; Spellmeyer
+  Cy_S    6         12.010   0.0000 A   3.39967e-01   4.57730e-01   ; Spellmeyer - sialic acid only
+  Cp_S    6         12.010   0.0000 A   3.39967e-01   4.57730e-01   ; Spellmeyer
+  Ck_S    6         12.010   0.0000 A   3.39967e-01   3.59824e-01   ; Spellmeyer
+  Cj_S    6         12.010   0.0000 A   3.39967e-01   3.59824e-01   ; Spellmeyer
+  Ng_S    7         14.010   0.0000 A   3.25000e-01   7.11280e-01   ; OPLS
+  NT_S    7         14.010   0.0000 A   3.25000e-01   7.11280e-01   ; OPLS
+  Sm_S   16         32.060   0.0000 A   3.06647e-01   8.80314e-01   ; OPLS
+; new addition
+  S_S    16         32.060   0.0000 A   3.06647e-01   8.80314e-01   ; OPLS
+  H_S    1          1.008   0.0000 A   1.06908e-01   6.56888e-02   ; !Ferguson base pair geom.
+  H2_S    1          1.008   0.0000 A   2.29317e-01   6.56888e-02   ; Veenstra et al JCC,8,(1992),963
+  H1_S    1          1.008   0.0000 A   2.47135e-01   6.56888e-02   ; Veenstra et al JCC,8,(1992),963
+  P_S   15         30.970   0.0000 A   3.74177e-01   8.36800e-01   ; JCC,7,(1986),230; 04/24/05 from parm94.dat
+  O2_S    8         16.000   0.0000 A   2.95992e-01   8.78640e-01   ; OPLS
+  C_S    6         12.010   0.0000 A   3.39967e-01   3.59824e-01   ; OPLS
+  O_S    8         16.000   0.0000 A   2.95992e-01   8.78640e-01   ; OPLS
+  N3_S    7         14.010   0.0000 A   3.25000e-01   7.11280e-01   ; OPLS
+
+
+[ bondtypes ]
+; i    j  func       b0          kb
+   S_S Ng_S    1     0.16750   199158.4 ; N-Sulfate - Using avg value from ZULPIF and ZULPIF01 (CSD 1.638 A)
+  Cg_S Sm_S    1     0.18100   198321.6 ; Changed from 222.0 based on methanethiol nmodes
+;  N3_S  H_S    1     0.10100   363171.2 ; Parm10
+;  N3_S Cg_S    1     0.14900   297064.0 ; Methanaminium (eqm value from crystal avg)
+  Cj_S Ck_S    1     0.14670   293633.1 ; CRC manual for 1,3-butadiene
+  Os_S Cj_S    1     0.13590   380325.6 ; copy of Os-Ck
+  Os_S Ck_S    1     0.13590   380325.6 ; Methoxyethene (JACS 1993, 115, 11921)
+  Cj_S Cj_S    1     0.13370   526347.2 ; copy of Ck-Ck
+  Ck_S Ck_S    1     0.13370   526347.2 ; JCC 1996, 17 (5&6),669
+  Cg_S Cj_S    1     0.15140   271123.2 ; copy of Cg-Ck
+  Cg_S Ck_S    1     0.15140   271123.2 ; JCC 1996, 17 (5&6),669
+  Cj_S Ha_S    1     0.10950   301248.0 ; copy of Ck-Ha
+  Ck_S Ha_S    1     0.10950   301248.0 ; Ethane for alkenes
+  Cg_S Hp_S    1     0.10950   301248.0 ; Copy of Cg-Hc
+  NT_S  H_S    1     0.10100   363171.2 ; Parm99
+  NT_S Cg_S    1     0.14700   294553.6 ; K calculated from methyl amine (eqm value from crystal average)
+  Cg_S Cp_S    1     0.15200   259408.0 ; Copy of Cg-Cg
+  Cp_S H2_S    1     0.10900   284512.0 ; Copy of Cg-H1
+  Cp_S H1_S    1     0.10900   284512.0 ; Copy of Cg-H1
+  Cp_S Os_S    1     0.14600   238488.0 ; Copy of Cg-Os
+   P_S Os_S    1     0.16100   192464.0 ; Parm94
+   P_S O2_S    1     0.14800   439320.0 ; Parm10
+   S_S Os_S    1     0.15890   172380.8 ; K calculated from methyl sulphate (eqm value from THEOCHEM 395/396 (1997) 107-122)
+   S_S O2_S    1     0.14400   518816.0 ; K calculated from methyl sulphate (eqm value from THEOCHEM 395/396 (1997) 107-122)
+   C_S Os_S    1     0.13230   376560.0 ; Parm99
+  Cg_S Cg_S    1     0.15200   259408.0 ; Butane (gauche, and trans)
+  Cg_S Hc_S    1     0.10900   284512.0 ; Parm94
+  Cg_S H1_S    1     0.10900   284512.0 ; Parm94
+  Cg_S H2_S    1     0.10900   284512.0 ; Parm94
+  Cg_S Oh_S    1     0.14300   267776.0 ; Methanol
+  Cg_S  C_S    1     0.15300   184096.0 ; 2-Methylpropanoate
+  Cg_S Ng_S    1     0.14500   282001.6 ; N-Methylethanamide
+   C_S  O_S    1     0.12290   476976.0 ; Parm10
+   C_S Ng_S    1     0.13350   410032.0 ; Parm94
+   C_S O2_S    1     0.12500   548940.8 ; Parm10
+   C_S Hc_S    1     0.10900   276980.8 ; Parm91
+   C_S H1_S    1     0.10920   343088.0 ; Methanol
+  Oh_S Ho_S    1     0.09600   462750.4 ; Methanol
+  Ng_S  H_S    1     0.10100   363171.2 ; Parm94
+  Cy_S Oh_S    1     0.14100   267776.0 ; Parm94 - for sialic acid only!
+  Cg_S Os_S    1     0.14600   238488.0 ; Parm94   K calculated from methyl sulphate (eqm value from THEOCHEM 395/396 (1997) 107-122)
+  Cg_S Oy_S    1     0.14100   267776.0 ; Parm94 - for sialic acid only!
+  Cy_S Cg_S    1     0.15200   259408.0 ; Butane (gauche, and trans) - for sialic acid only!
+  Cy_S Os_S    1     0.14100   267776.0 ; Parm94 - for sialic acid only!
+  Cy_S Oy_S    1     0.14100   267776.0 ; Parm94 - for sialic acid only!
+  Cy_S  C_S    1     0.15300   184096.0 ; 2-Methylpropanoate - for sialic acid only!
+
+
+[ angletypes ]
+;  i    j    k  func       th0       cth
+ S_S  Ng_S  Cg_S  1   110.000  259.408 ; avg value from ZULPIF & ZULPIF01 118.4 deg
+O2_S   S_S  Ng_S  1   108.000  702.912 ; avg value from ZULPIF & ZULPIF01 106.4 deg
+ S_S  Ng_S   H_S  1   121.200  313.800 ; avg value from QM 6-31++g** 114.0 deg (ethylsulfamate)
+H2_S  Cg_S  Sm_S  1   109.600  347.272 ; Avg value from set of CSD crystal structures 109.2 deg
+Os_S  Cg_S  Sm_S  1   108.300  569.024 ; Avg value from set of CSD crystal structures 108.3 deg
+Cg_S  Cg_S  Sm_S  1   108.600  418.400 ; AA cys
+Cg_S  Sm_S  Cg_S  1   109.500  418.400 ; AA cyx
+H1_S  Cg_S  Sm_S  1   109.500  418.400 ; AA cys     changed based on NMA nmodes
+Hc_S  Cg_S  Sm_S  1   109.500  418.400 ; AA cys     changed based on NMA nmodes
+; H_S  N3_S  Cg_S  1   109.200  380.744 ; Methanaminium (eqm. value copied from H -NT-Cg)
+; H_S  N3_S   H_S  1   109.500  292.880 ; Parm10
+;N3_S  Cg_S  Hp_S  1   109.600  476.976 ; Methanaminium (eqm. value copied from NT-Cg-H1)
+Cj_S  Cg_S  Ck_S  1   111.500  390.786 ; Copy of Ck-Cg-Ck from GLYCAM06
+Ck_S  Cg_S  Ck_S  1   111.500  390.786 ; K calculated from 1,4-pentadiene (value from ED of C2 and CS conformers JACS 1987,109,24,7304-7309 108.9 deg)
+Cj_S  Cg_S  Cj_S  1   111.500  390.786 ; Copy of Ck-Cg-Ck from GLYCAM06
+Os_S  Cj_S  Ha_S  1   107.500  544.757 ; Copy of Os-Ck-Ha from GLYCAM06
+Os_S  Ck_S  Ha_S  1   107.500  544.757 ; K calculated from methoxyethene (value from J Mol Struct 102 (1983) pg 333-345 methoxyethene 108.3 deg)
+Cg_S  Os_S  Cj_S  1   107.000  317.984 ; Copy of Cg-Os-Ck from GLYCAM06
+Cg_S  Os_S  Ck_S  1   107.000  317.984 ; K calculated from methoxyethene (value from J Mol Struct 28 (1975) pg 193-203 methoxyethene 118.3 deg)
+Os_S  Cj_S  Cj_S  1   119.000  497.896 ; Copy of Os-Ck-Ck from GLYCAM06
+Os_S  Ck_S  Ck_S  1   119.000  497.896 ; K calculated from methoxyethene (value from J Mol Struct 28 (1975) pg 193-203 methoxyethene 127.7 deg)
+Cg_S  Cj_S  Cg_S  1   115.600  385.765 ; Copy of Cg-Ck-Cg from GLYCAM06
+Cg_S  Ck_S  Cg_S  1   115.600  385.765 ; K calculated from 2-methylpropene (eqm value from ED,MW average 115.6 deg)
+Ck_S  Cj_S  Ha_S  1   126.400  273.634 ; Copy of Cj-Ck-Ha from GLYCAM06
+Cj_S  Ck_S  Ha_S  1   126.400  273.634 ; K calculated from 1,3-butadiene (value form ED of 1,3-butadiene 120.9 deg)
+Ck_S  Cj_S  Cj_S  1   127.700  413.379 ; Copy of Ck-Ck-Cj from GLYCAM06
+Ck_S  Ck_S  Cj_S  1   127.700  413.379 ; K calculated from 1,3-butadiene (eqm value from ED 124.4 deg)
+Ha_S  Cj_S  Ha_S  1   117.400  261.918 ; Copy of Ha-Ck-Ha from GLYCAM06
+Ha_S  Ck_S  Ha_S  1   117.400  261.918 ; K calculated from ethylene (eqm value from ED,MW average)
+Ha_S  Cj_S  Cj_S  1   121.300  319.658 ; Copy of Ha-Ck-Ck from GLYCAM06
+Ha_S  Ck_S  Ck_S  1   121.300  319.658 ; K calculated from ethylene (eqm value from ED,MW average)
+H1_S  Cg_S  Cj_S  1   111.500  468.608 ; Copy of H1-Cg-Ck from GLYCAM06
+H1_S  Cg_S  Ck_S  1   111.500  468.608 ; Copy of Hc-Cg-Ck from GLYCAM06
+Hc_S  Cg_S  Cj_S  1   114.000  346.435 ; Copy of Hc-Cg-Ck from GLYCAM06
+Hc_S  Cg_S  Ck_S  1   114.000  346.435 ; K calculated from propene (eqm value from JMS 1973,17,207-223,ED 111.7 deg)
+Ha_S  Cj_S  Cg_S  1   114.000  418.400 ; Copy of Ha-Ck-Cg from GLYCAM06
+Ha_S  Ck_S  Cg_S  1   114.000  418.400 ; K calculated from propene (eqm value from ED,MW average)
+Cg_S  Cj_S  Cj_S  1   122.500  400.827 ; Copy of Cg-Ck-Ck from GLYCAM06
+Cg_S  Ck_S  Ck_S  1   122.500  400.827 ; K calculated from propene (eqm value from JMS 1973,17,207-223,ED 124.3 deg)
+Cg_S  Cg_S  Cj_S  1   112.000  359.824 ; Copy of Cg-Cg-Ck from GLYCAM06
+Cg_S  Cg_S  Ck_S  1   112.000  359.824 ; K calculated from but-1-ene (eqm value from JACS 1980,102(7),471)
+Oh_S  Cg_S  Cj_S  1   107.500  585.760 ; Copy of Oh-Cg-Ck from GLYCAM06
+Oh_S  Cg_S  Ck_S  1   107.500  585.760 ; Copy of Oh-Cg-Cg from GLYCAM06
+Hp_S  Cg_S  Hp_S  1   109.500  334.720 ; Copy of Hc-Cg-Hc from GLYCAM06
+Hp_S  Cg_S  Cp_S  1   112.600  376.560 ; Copy of Cg-Cg-Hc from GLYCAM06
+Hp_S  Cg_S  Cg_S  1   112.600  376.560 ; Copy of Cg-Cg-Hc from GLYCAM06
+Cp_S  Os_S  Cg_S  1   111.600  418.400 ; Copy of Cg-Os-Cg from GLYCAM06
+Cp_S  Cg_S  Ng_S  1   109.700  669.440 ; Copy of Cg-Cg-N  from GLYCAM06
+;Cg_S  N3_S  Cg_S  1   111.100  451.872 ; 
+;N3_S  Cg_S  Cp_S  1   111.600  560.656 ; Copy of NT-Cg-Cg from GLYCAM06
+;N3_S  Cg_S  Cg_S  1   111.600  560.656 ; Copy of NT-Cg-Cg from GLYCAM06
+ H_S  NT_S   H_S  1   109.500  292.880 ; Copy of H-N3-H (Parm10) from GLYCAM06
+ H_S  NT_S  Cg_S  1   109.200  410.032 ; K calculated from methyl amine (eqm value from crystal average)
+NT_S  Cg_S  H1_S  1   109.600  535.552 ; K calculated from methyl amine (eqm value from crystal average)
+NT_S  Cg_S  Cg_S  1   111.600  560.656 ; K calculated from ethyl amine (eqm value from crystal average)
+Cg_S  NT_S  Cg_S  1   108.100  451.872 ; K calculated from dimethyl amine (eqm value from crystal average)
+H1_S  Cp_S  H1_S  1   109.500  376.560 ; Copy of H1-Cg-H1 from GLYCAM06
+Cp_S  Cg_S  H1_S  1   111.000  376.560 ; Copy of Cg-Cg-H1 from GLYCAM06
+Cg_S  Cp_S  H1_S  1   111.000  376.560 ; Copy of Cg-Cg-H1 from GLYCAM06
+Cg_S  Cp_S  Cg_S  1   113.500  376.560 ; Copy of Cg-Cg-Cg from GLYCAM06
+Cp_S  Cg_S  Cg_S  1   113.500  376.560 ; Copy of Cg-Cg-Cg from GLYCAM06
+Os_S  Cp_S  Cg_S  1   108.500  585.760 ; Copy of Os-Cg-Cg from GLYCAM06
+Os_S  Cg_S  Cp_S  1   108.500  585.760 ; Copy of Os-Cg-Cg from GLYCAM06
+H2_S  Cp_S  Os_S  1   110.000  502.080 ; Copy of H1-Cg-Os from GLYCAM06
+H1_S  Cp_S  Os_S  1   110.000  502.080 ; Copy of H1-Cg-Os from GLYCAM06
+Os_S   P_S  Os_S  1   109.600  376.560 ; Parm94 and changed eqm value for better reproduction of average of crystal structures
+ P_S  Os_S  Cp_S  1   119.000  418.400 ; K calculated from dimethyl phosphate (eqm value from crystal average)
+O2_S   P_S  Os_S  1   108.230  836.800 ; Parm99
+O2_S   P_S  O2_S  1   119.900 1171.520 ; Parm10
+O2_S   S_S  O2_S  1   113.910 1029.264 ; K calculated from methyl sulphate  (eqm value from THEOCHEM 395/396 (1997) 107-122)
+ S_S  Os_S  Cg_S  1   118.880  418.400 ; K calculated from methyl sulphate  (eqm value from THEOCHEM 395/396 (1997) 107-122)
+O2_S   S_S  Os_S  1   106.870  870.272 ; K calculated from methyl sulphate  (eqm value from THEOCHEM 395/396 (1997) 107-122)
+Oh_S  Cg_S   C_S  1   112.360  527.184 ; Glycam_93 (taken from Os-Cg-C) - for N-glycolyl
+Cg_S  Os_S   C_S  1   117.000  502.080 ; K calculated from methyl acetate (eqm value from crystal average)
+Os_S   C_S   O_S  1   125.000  669.440 ; Parm99
+Os_S   C_S  Cg_S  1   110.800  794.960 ; K calculated from methyl acetate (eqm value from crystal average)
+Hc_S  Cg_S  Hc_S  1   109.500  334.720 ; Methane, Ethane
+H1_S  Cg_S  H1_S  1   109.500  376.560 ; Methanol, Propanol
+H2_S  Cg_S  H2_S  1   109.500  376.560 ; Methanol, Propanol
+Cg_S  Cg_S  Hc_S  1   112.600  376.560 ; Ethane
+Cg_S  Cg_S  H1_S  1   111.000  376.560 ; Propanol
+Cg_S  Cp_S  H2_S  1   111.000  376.560 ; Propanol
+Cg_S  Cg_S  H2_S  1   111.000  376.560 ; Propanol
+Cg_S  Cg_S  Cg_S  1   113.500  376.560 ; Propane
+Oh_S  Cg_S  Cg_S  1   107.500  585.760 ; Ethanol
+H1_S  Cg_S  Oh_S  1   110.000  502.080 ; Methanol (best fit for trans and gauche hyrdogens)
+H2_S  Cg_S  Oh_S  1   110.000  502.080 ; Methanol (best fit for trans and gauche hyrdogens)
+Cg_S  Oh_S  Ho_S  1   109.500  460.240 ; Methanol
+Cy_S  Oh_S  Ho_S  1   109.500  460.240 ; - Sialic Acid Only
+Cg_S  Os_S  Cg_S  1   111.600  418.400 ; Methoxymethane (Dimethyl ether)
+Os_S  Cg_S  Cg_S  1   108.500  585.760 ; Methoxyethane (Ethylmethyl ether)
+Oy_S  Cg_S  Cg_S  1   108.500  585.760 ; Methoxyethane (Ethylmethyl ether) - for sialic acid only
+H1_S  Cg_S  Os_S  1   110.000  502.080 ; Methoxymethane (Dimethyl ether) - best fit for trans and gauche hyrdogens
+H1_S  Cg_S  Oy_S  1   110.000  502.080 ; Methoxymethane - for sialic acid only!
+H2_S  Cg_S  Os_S  1   110.000  502.080 ; Methoxymethane - best fit for trans and gauche hyrdogens
+H1_S   C_S   O_S  1   110.000  502.080 ; Methoxymethane - best fit for trans and gauche hyrdogens
+H1_S   C_S  Ng_S  1   112.400  460.240 ; AVG K C-C=O, H-C-N FOR N-FORMYL - Approximate
+Os_S  Cp_S  Os_S  1   112.000  836.800 ; Copy of Os-Cg-Os from GLYCAM06
+Os_S  Cg_S  Os_S  1   112.000  836.800 ; Dimethoxymethane, 1,1 Dimethoxyethane
+Oh_S  Cg_S  Os_S  1   112.000  836.800 ; Copy of Os-Cg-Os (not derived)
+O2_S   C_S  O2_S  1   126.000  669.440 ; Parm10
+O2_S   C_S  Cg_S  1   115.000  585.760 ; Aprroximate based from 2-Dimethylpropanoate and Oh-Cg-Cg
+Cg_S   C_S  Ng_S  1   115.600  585.760 ; Force constant taken from Parm94, Angle set to HF/6-31G(d) value N-Methylethanamide
+Cg_S   C_S   O_S  1   121.700  669.440 ; Force constant taken from Parm94, Angle set to HF/6-31G(d) value N-Methylethanamide
+Ng_S   C_S   O_S  1   122.900  669.440 ; Parm94
+Ng_S  Cg_S  Hc_S  1   110.100  418.400 ; Force constant taken from Hc-Cg-C Parm94, Angle set to average HF/6-31G(d) value N-Methylethanamide
+Os_S  Cg_S  Ng_S  1   107.900  894.539 ; AVE X'TAL ASN-GLCNAC, K FROM FAMM (GLYCAM_93)
+Cg_S  Cg_S  Ng_S  1   109.700  669.440 ; Parm91
+H1_S  Cg_S  Ng_S  1   109.500  418.400 ; Parm94 H-Cg-N
+H2_S  Cg_S  Ng_S  1   109.500  418.400 ; Parm94 H-Cg-N
+ C_S  Cg_S  Cg_S  1   111.100  527.184 ; Parm94
+ C_S  Cg_S  Hc_S  1   109.500  418.400 ; Parm94
+ C_S  Cg_S  H1_S  1   109.500  418.400 ; Parm94
+ C_S  Cg_S  H2_S  1   109.500  418.400 ; Parm94
+ C_S  Ng_S  Cg_S  1   120.000  418.400 ; Force constant taken from Parm94 - modified the angle by 2.9 degrees
+Cg_S  Ng_S  Cg_S  1   118.000  418.400 ; Parm94
+ H_S  Ng_S  Cg_S  1   118.000  251.040 ; N-Methylethanamide
+ C_S  Ng_S   H_S  1   120.000  418.400 ; Parm99
+ H_S  Ng_S   H_S  1   120.000  292.880 ; Parm94
+H2_S   C_S  Ng_S  1   112.400  460.240 ; AVG K C-C=O, H-C-N FOR N-FORMYL
+H2_S   C_S   O_S  1   122.200  460.240 ; AVG K C-C=O, H-C-N FOR FORMYL
+Os_S  Cg_S   C_S  1   112.360  527.184 ; Glycam_93
+O2_S   C_S  Oh_S  1   126.000  669.440 ; Parm96
+Os_S  Cy_S  Cg_S  1   108.500  585.760 ; Methoxyethane (Ethylmethyl ether) - for sialic acid only!
+Oh_S  Cy_S  Cg_S  1   108.500  585.760 ; - for sialic acid only!
+Oy_S  Cy_S  Cg_S  1   108.500  585.760 ; Methoxyethane - for sialic acid only!
+Oh_S  Cy_S   C_S  1   112.360  527.184 ; - for sialic acid only!
+Os_S  Cy_S   C_S  1   112.360  527.184 ; Glycam_93 - for sialic acid only!
+Oy_S  Cy_S   C_S  1   112.360  527.184 ; Glycam_93 - for sialic acid only!
+Oy_S  Cy_S  Oh_S  1   112.000  836.800 ; - for sialic acid only!
+Oy_S  Cy_S  Os_S  1   112.000  836.800 ; Dimethoxymethane, 1,1 Dimethoxyethane - for sialic acid only!
+Cg_S  Cy_S   C_S  1   111.100  527.184 ; Parm94 - for sialic acid only!
+Cg_S  Os_S  Cy_S  1   111.600  418.400 ; Methoxymethane - for sialic acid only!
+Cg_S  Oy_S  Cy_S  1   111.600  418.400 ; Methoxymethane - for sialic acid only!
+O2_S   C_S  Cy_S  1   115.000  585.760 ; Aprroximate based from 2,2-Dimethylpropanoate and Oh-Cg-Cg - for sialic acid only!
+Hc_S  Cg_S  Cy_S  1   112.600  376.560 ; Ethane - for sialic acid only!
+Cg_S  Cg_S  Cy_S  1   113.500  376.560 ; Propane - for sialic acid only!
+
+
+[ dihedraltypes ]
+;i  j   k  l   func  phase  kd      pn
+O2_S   S_S  Ng_S   H_S   9    0.0   -0.41840 6 ; SCEE=1.0 SCNB=1.0 N-Sulfates
+O2_S   S_S  Ng_S  Cg_S   9    0.0    0.46024 3 ; SCEE=1.0 SCNB=1.0 N-Sulfates
+O2_S   S_S  Ng_S  Cg_S   9    0.0    0.00000 2 ; 
+O2_S   S_S  Ng_S  Cg_S   9    0.0    0.00000 1 ; 
+ S_S  Ng_S  Cg_S  H1_S   9    0.0    8.36800 1 ; SCEE=1.0 SCNB=1.0 N-Sulfates
+ S_S  Ng_S  Cg_S  Cg_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 N-Sulfates
+ S_S  Ng_S  Cg_S  Cg_S   9    0.0    2.09200 2 ; 
+ S_S  Ng_S  Cg_S  Cg_S   9    0.0    2.09200 1 ; 
+Cg_S  Os_S  Cg_S  Sm_S   9    0.0    2.80328 3 ; SCEE=1.0 SCNB=1.0 Thiol-linkages
+Cg_S  Os_S  Cg_S  Sm_S   9    0.0    7.94960 2 ; 
+Cg_S  Os_S  Cg_S  Sm_S   9    0.0    4.76976 1 ; 
+Os_S  Cg_S  Sm_S  Cg_S   9    0.0    4.30952 3 ; SCEE=1.0 SCNB=1.0 (methoxymethyl)(methyl)sulfane
+Os_S  Cg_S  Sm_S  Cg_S   9    0.0    6.02496 2 ; 
+Os_S  Cg_S  Sm_S  Cg_S   9    0.0    1.12968 1 ; 
+H2_S  Cg_S  Sm_S  Cg_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 (methoxymethyl)(methyl)sulfane
+Sm_S  Cg_S  Cg_S  H2_S   9    0.0    1.17152 3 ; SCEE=1.0 SCNB=1.0 (2,2-dimethoxyethyl)(methyl)sulfane
+Sm_S  Cg_S  Cg_S  H2_S   9    0.0    0.16736 2 ; 
+Sm_S  Cg_S  Cg_S  H2_S   9    0.0   -0.87864 1 ; 
+Sm_S  Cg_S  Cg_S  Os_S   9    0.0    0.12552 3 ; SCEE=1.0 SCNB=1.0 (2-methoxyethyl)(methyl)sulfane
+Sm_S  Cg_S  Cg_S  Os_S   9    0.0    0.75312 2 ; 
+Sm_S  Cg_S  Cg_S  Os_S   9    0.0   -4.30952 1 ; 
+Cg_S  Sm_S  Cg_S  H1_S   9    0.0    1.38072 3 ; SCEE=1.0 SCNB=1.0 Dimethylsulfane
+Cg_S  Cg_S  Sm_S  Cg_S   9    0.0    1.33888 3 ; SCEE=1.0 SCNB=1.0 Ethyl(methyl)sulfane
+Cg_S  Cg_S  Sm_S  Cg_S   9    0.0    1.46440 2 ; 
+Cg_S  Cg_S  Sm_S  Cg_S   9    0.0    1.46440 1 ; 
+Sm_S  Cg_S  Cg_S  Hc_S   9    0.0    0.33472 3 ; SCEE=1.0 SCNB=1.0 Ethyl(methyl)sulfane
+Sm_S  Cg_S  Cg_S  H1_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 2-Methoxyethyl(methyl)sulfane
+Sm_S  Cg_S  Cg_S  H1_S   9    0.0   -0.20920 2 ; 
+Sm_S  Cg_S  Cg_S  H1_S   9    0.0    0.16736 1 ; 
+Sm_S  Cg_S  Cg_S  Oh_S   9    0.0    0.08368 3 ; SCEE=1.0 SCNB=1.0 Thiol-linkages
+Sm_S  Cg_S  Cg_S  Oh_S   9    0.0    0.83680 1 ; 
+Cg_S  Cg_S  Cg_S  Sm_S   9    0.0    0.04184 3 ; SCEE=1.0 SCNB=1.0 Propyl(methyl)sulfane
+Cg_S  Cg_S  Cg_S  Sm_S   9    0.0    0.83680 2 ; 
+Cg_S  Cg_S  Cg_S  Sm_S   9    0.0    2.13384 1 ; 
+; H_S  N3_S  Cg_S  Hp_S   9    0.0    0.54392 3 ; SCEE=1.0 SCNB=1.0 Methanaminium
+; H_S  N3_S  Cg_S  Cg_S   9    0.0    0.54392 3 ; SCEE=1.0 SCNB=1.0 Ethanaminium
+Ck_S  Cg_S  Cg_S  Ng_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Lipids, from N-but-3-en-1-ylacetamide
+Ck_S  Cg_S  Cg_S  Ng_S   9    0.0    0.12552 2 ; 
+Ck_S  Cg_S  Cg_S  Ng_S   9    0.0   -0.92048 1 ; 
+Cj_S  Cg_S  Cg_S  Ng_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Lipids, copy of Ck-Cg-Cg-N
+Cj_S  Cg_S  Cg_S  Ng_S   9    0.0    0.12552 2 ; 
+Cj_S  Cg_S  Cg_S  Ng_S   9    0.0   -0.92048 1 ; 
+ C_S  Cg_S  Cg_S  Cj_S   9    0.0   -1.75728 3 ; SCEE=1.0 SCNB=1.0 Lipids, from 3-buten-1-ol acetate
+ C_S  Cg_S  Cg_S  Cj_S   9    0.0    1.38072 2 ; 
+ C_S  Cg_S  Cg_S  Cj_S   9    0.0    1.67360 1 ; 
+ C_S  Cg_S  Cg_S  Ck_S   9    0.0   -1.75728 3 ; SCEE=1.0 SCNB=1.0 Lipids, from 3-buten-1-ol acetate
+ C_S  Cg_S  Cg_S  Ck_S   9    0.0    1.38072 2 ; 
+ C_S  Cg_S  Cg_S  Ck_S   9    0.0    1.67360 1 ; 
+H1_S  Cg_S  Cg_S  Ck_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Lipids, copy of Hc-Cg-Cg-Ck
+H1_S  Cg_S  Cg_S  Cj_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Lipids, copy of Hc-Cg-Cg-Cj
+Oh_S  Cg_S  Cg_S  Ck_S   9    0.0   -0.46024 3 ; SCEE=1.0 SCNB=1.0 Lipids, from 3-butenol
+Oh_S  Cg_S  Cg_S  Ck_S   9    0.0   -0.66944 2 ; 
+Oh_S  Cg_S  Cg_S  Ck_S   9    0.0   -4.43504 1 ; 
+Oh_S  Cg_S  Cg_S  Cj_S   9    0.0   -0.46024 3 ; SCEE=1.0 SCNB=1.0 Lipids, from 3-butenol
+Oh_S  Cg_S  Cg_S  Cj_S   9    0.0   -0.66944 2 ; 
+Oh_S  Cg_S  Cg_S  Cj_S   9    0.0   -4.43504 1 ; 
+Os_S  Cj_S  Cj_S  Cg_S   9    0.0  -54.39200 2 ; SCEE=1.0 SCNB=1.0 copy of Os-Ck-Ck-Cg
+Os_S  Ck_S  Ck_S  Cg_S   9    0.0  -54.39200 2 ; SCEE=1.0 SCNB=1.0 Lipids, from 1-propenylmethylether
+Ck_S  Cj_S  Cj_S  Ha_S   9    0.0  -62.76000 2 ; SCEE=1.0 SCNB=1.0 copy of Cj-Ck-Ck-Ha
+Cj_S  Ck_S  Ck_S  Ha_S   9    0.0  -62.76000 2 ; SCEE=1.0 SCNB=1.0
+Cg_S  Os_S  Cj_S  Ha_S   9    0.0    0.33472 3 ; SCEE=1.0 SCNB=1.0 copy of Cg-Os-Ck-Ha, coupled to Cg-Os-Cj-Cj
+Cg_S  Os_S  Cj_S  Ha_S   9    0.0    0.92048 2 ; 
+Cg_S  Os_S  Cj_S  Ha_S   9    0.0    1.67360 1 ; 
+Cg_S  Os_S  Ck_S  Ha_S   9    0.0    0.33472 3 ; SCEE=1.0 SCNB=1.0 Lipids, from methoxyethene, coupled to Cg-Os-Ck-Ck
+Cg_S  Os_S  Ck_S  Ha_S   9    0.0    0.92048 2 ; 
+Cg_S  Os_S  Ck_S  Ha_S   9    0.0    1.67360 1 ; 
+Os_S  Cj_S  Cj_S  Ha_S   9    0.0  -83.68000 2 ; SCEE=1.0 SCNB=1.0 copy of Os-Ck-Ck-Ha
+Os_S  Ck_S  Ck_S  Ha_S   9    0.0  -83.68000 2 ; SCEE=1.0 SCNB=1.0 Lipids, from methoxyethene
+H1_S  Cg_S  Os_S  Cj_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 copy of H1-Cg-Os-Ck
+H1_S  Cg_S  Os_S  Ck_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Lipids, from methoxyethene
+Cg_S  Cg_S  Os_S  Cj_S   9    0.0   -0.04184 3 ; SCEE=1.0 SCNB=1.0 copy of Cg-Cg-Os-Ck
+Cg_S  Cg_S  Os_S  Cj_S   9    0.0   -1.75728 2 ; 
+Cg_S  Cg_S  Os_S  Cj_S   9    0.0    0.92048 1 ; 
+Cg_S  Cg_S  Os_S  Ck_S   9    0.0   -0.04184 3 ; SCEE=1.0 SCNB=1.0 Lipids, from ethoxyethene
+Cg_S  Cg_S  Os_S  Ck_S   9    0.0   -1.75728 2 ; 
+Cg_S  Cg_S  Os_S  Ck_S   9    0.0    0.92048 1 ; 
+Cg_S  Os_S  Cj_S  Cj_S   9    0.0   -3.64008 3 ; SCEE=1.0 SCNB=1.0 copy of Cg-Os-Ck-Ck
+Cg_S  Os_S  Cj_S  Cj_S   9    0.0  -16.69416 2 ; 
+Cg_S  Os_S  Cj_S  Cj_S   9    0.0   -1.04600 1 ; 
+Cg_S  Os_S  Ck_S  Ck_S   9    0.0   -3.64008 3 ; SCEE=1.0 SCNB=1.0
+Cg_S  Os_S  Ck_S  Ck_S   9    0.0  -16.69416 2 ; 
+Cg_S  Os_S  Ck_S  Ck_S   9    0.0   -1.04600 1 ; 
+Cj_S  Ck_S  Ck_S  Cj_S   9    0.0   -8.36800 2 ; SCEE=1.0 SCNB=1.0
+Ck_S  Cj_S  Cj_S  Ck_S   9    0.0   -8.36800 2 ; SCEE=1.0 SCNB=1.0
+Ck_S  Cg_S  Ck_S  Ck_S   9    0.0   -0.16736 3 ; SCEE=1.0 SCNB=1.0 Lipids, from 1,4-Pentadiene
+Ck_S  Cg_S  Ck_S  Ck_S   9    0.0   -2.84512 2 ; 
+Ck_S  Cg_S  Ck_S  Ck_S   9    0.0   -0.87864 1 ; 
+Cj_S  Cg_S  Ck_S  Ck_S   9    0.0   -0.16736 3 ; SCEE=1.0 SCNB=1.0 Copy of Ck-Cg-Ck-Ck
+Cj_S  Cg_S  Ck_S  Ck_S   9    0.0   -2.84512 2 ; 
+Cj_S  Cg_S  Ck_S  Ck_S   9    0.0   -0.87864 1 ; 
+Ck_S  Cg_S  Cj_S  Cj_S   9    0.0   -0.16736 3 ; SCEE=1.0 SCNB=1.0 Copy of Ck-Cg-Ck-Ck
+Ck_S  Cg_S  Cj_S  Cj_S   9    0.0   -2.84512 2 ; 
+Ck_S  Cg_S  Cj_S  Cj_S   9    0.0   -0.87864 1 ; 
+Cj_S  Cg_S  Cj_S  Cj_S   9    0.0   -0.16736 3 ; SCEE=1.0 SCNB=1.0 Copy of Ck-Cg-Ck-Ck
+Cj_S  Cg_S  Cj_S  Cj_S   9    0.0   -2.84512 2 ; 
+Cj_S  Cg_S  Cj_S  Cj_S   9    0.0   -0.87864 1 ; 
+Ck_S  Cg_S  Ck_S  Ha_S   9    0.0    1.29704 3 ; SCEE=1.0 SCNB=1.0 Lipids, from 1,4-Pentadiene, coupled to Ck-Cg-Ck-Ck
+Ck_S  Cg_S  Ck_S  Ha_S   9    0.0    0.12552 2 ; 
+Ck_S  Cg_S  Ck_S  Ha_S   9    0.0    0.20920 1 ; 
+Cj_S  Cg_S  Ck_S  Ha_S   9    0.0    1.29704 3 ; SCEE=1.0 SCNB=1.0 Copy of Ck-Cg-Ck-Ha, coupled to Cj-Cg-Ck-Ck
+Cj_S  Cg_S  Ck_S  Ha_S   9    0.0    0.12552 2 ; 
+Cj_S  Cg_S  Ck_S  Ha_S   9    0.0    0.20920 1 ; 
+Ck_S  Cg_S  Cj_S  Ha_S   9    0.0    1.29704 3 ; SCEE=1.0 SCNB=1.0 Copy of Ck-Cg-Ck-Ha, coupled to Ck-Cg-Cj-Cj
+Ck_S  Cg_S  Cj_S  Ha_S   9    0.0    0.12552 2 ; 
+Ck_S  Cg_S  Cj_S  Ha_S   9    0.0    0.20920 1 ; 
+Cj_S  Cg_S  Cj_S  Ha_S   9    0.0    1.29704 3 ; SCEE=1.0 SCNB=1.0 Copy of Ck-Cg-Ck-Ha, coupled to Cj-Cg-Cj-Cj
+Cj_S  Cg_S  Cj_S  Ha_S   9    0.0    0.12552 2 ; 
+Cj_S  Cg_S  Cj_S  Ha_S   9    0.0    0.20920 1 ; 
+Cj_S  Ck_S  Ck_S  Cg_S   9    0.0  -14.64400 2 ; SCEE=1.0 SCNB=1.0 copy of Ck-Cj-Cj-Cg
+Ck_S  Cj_S  Cj_S  Cg_S   9    0.0  -14.64400 2 ; SCEE=1.0 SCNB=1.0 Lipids, from
+Cg_S  Cg_S  Cj_S  Cg_S   9    0.0   -0.04184 3 ; SCEE=1.0 SCNB=1.0 copy of Cg-Cg-Ck-Cg
+Cg_S  Cg_S  Cj_S  Cg_S   9    0.0   -1.42256 2 ; 
+Cg_S  Cg_S  Cj_S  Cg_S   9    0.0    1.21336 1 ; 
+Cg_S  Cg_S  Ck_S  Cg_S   9    0.0   -0.04184 3 ; SCEE=1.0 SCNB=1.0 Lipids
+Cg_S  Cg_S  Ck_S  Cg_S   9    0.0   -1.42256 2 ; 
+Cg_S  Cg_S  Ck_S  Cg_S   9    0.0    1.21336 1 ; 
+Hc_S  Cg_S  Cj_S  Cg_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 copy of Hc-Cg-Ck-Cg,no term necessary
+Hc_S  Cg_S  Ck_S  Cg_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Lipids, no term necessary
+Ha_S  Ck_S  Cj_S  Ha_S   9    0.0    2.88696 3 ; SCEE=1.0 SCNB=1.0 Lipids - 1,3-butadiene
+Ha_S  Ck_S  Cj_S  Ha_S   9    0.0   -7.32200 2 ; 
+Ha_S  Ck_S  Cj_S  Ha_S   9    0.0    3.84928 1 ; 
+Ha_S  Cj_S  Ck_S  Ck_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 copy of Ha-Ck-Cj-Cj
+Ha_S  Cj_S  Ck_S  Ck_S   9    0.0    1.67360 2 ; 
+Ha_S  Cj_S  Ck_S  Ck_S   9    0.0    2.88696 1 ; 
+Ha_S  Ck_S  Cj_S  Cj_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Lipids - 1,3-butadiene
+Ha_S  Ck_S  Cj_S  Cj_S   9    0.0    1.67360 2 ; 
+Ha_S  Ck_S  Cj_S  Cj_S   9    0.0    2.88696 1 ; 
+Cj_S  Cj_S  Ck_S  Ck_S   9    0.0    2.88696 3 ; SCEE=1.0 SCNB=1.0 Lipids - adjacent double-bonded carbons
+Cj_S  Cj_S  Ck_S  Ck_S   9    0.0   -7.32200 2 ; 
+Cj_S  Cj_S  Ck_S  Ck_S   9    0.0    3.84928 1 ; 
+Oh_S  Cg_S  Cj_S  Cj_S   9    0.0   -2.09200 3 ; SCEE=1.0 SCNB=1.0 copy of Oh-Cg-Ck-Ck
+Oh_S  Cg_S  Cj_S  Cj_S   9    0.0   -4.18400 2 ; 
+Oh_S  Cg_S  Cj_S  Cj_S   9    0.0   -2.09200 1 ; 
+Oh_S  Cg_S  Ck_S  Ck_S   9    0.0   -2.09200 3 ; SCEE=1.0 SCNB=1.0 Lipids
+Oh_S  Cg_S  Ck_S  Ck_S   9    0.0   -4.18400 2 ; 
+Oh_S  Cg_S  Ck_S  Ck_S   9    0.0   -2.09200 1 ; 
+Oh_S  Cg_S  Cj_S  Ha_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Coupled to Oh-Cg-Ck-Ck, copy of Oh-Cg-Ck-Ha
+Oh_S  Cg_S  Ck_S  Ha_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Coupled to Oh-Cg-Ck-Ck
+Ho_S  Oh_S  Cg_S  Cj_S   9    0.0    0.83680 3 ; SCEE=1.0 SCNB=1.0 copy of Ho-Oh-Cg-Ck
+Ho_S  Oh_S  Cg_S  Cj_S   9    0.0    2.42672 2 ; 
+Ho_S  Oh_S  Cg_S  Cj_S   9    0.0    1.58992 1 ; 
+Ho_S  Oh_S  Cg_S  Ck_S   9    0.0    0.83680 3 ; SCEE=1.0 SCNB=1.0 Lipids
+Ho_S  Oh_S  Cg_S  Ck_S   9    0.0    2.42672 2 ; 
+Ho_S  Oh_S  Cg_S  Ck_S   9    0.0    1.58992 1 ; 
+Cg_S  Cg_S  Cg_S  Cj_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 copy of Cg-Cg-Cg-Cj
+Cg_S  Cg_S  Cg_S  Ck_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Lipids
+Cg_S  Cg_S  Cj_S  Cj_S   9    0.0   -2.09200 3 ; SCEE=1.0 SCNB=1.0 copy of Cg-Cg-Ck-Ck
+Cg_S  Cg_S  Cj_S  Cj_S   9    0.0   -1.67360 2 ; 
+Cg_S  Cg_S  Ck_S  Ck_S   9    0.0   -2.09200 3 ; SCEE=1.0 SCNB=1.0 Lipids
+Cg_S  Cg_S  Ck_S  Ck_S   9    0.0   -1.67360 2 ; 
+Cg_S  Cg_S  Cj_S  Ha_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Lipids coupled to Cg-Cg-Ck-Ck, copy of Cg-Cg-Ck-Ha
+Cg_S  Cg_S  Ck_S  Ha_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Lipids coupled to Cg-Cg-Ck-Ck
+Cg_S  Cj_S  Cj_S  Cg_S   9    0.0  -62.76000 2 ; SCEE=1.0 SCNB=1.0 copy of Cg-Ck-Ck-Cg
+Cg_S  Cj_S  Cj_S  Cg_S   9    0.0    2.09200 1 ; 
+Cg_S  Ck_S  Ck_S  Cg_S   9    0.0  -62.76000 2 ; SCEE=1.0 SCNB=1.0 Lipids
+Cg_S  Ck_S  Ck_S  Cg_S   9    0.0    2.09200 1 ; 
+Hc_S  Cg_S  Cg_S  Cj_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 copy of Hc-Cg-Cg-Ck
+Hc_S  Cg_S  Cg_S  Ck_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Lipids
+H1_S  Cg_S  Cj_S  Cj_S   9    0.0   -1.38072 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Ck-Ck
+H1_S  Cg_S  Ck_S  Ck_S   9    0.0   -1.38072 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Ck-Ck
+Hc_S  Cg_S  Cj_S  Cj_S   9    0.0   -1.42256 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Ck-Ck
+Hc_S  Cg_S  Cj_S  Cj_S   9    0.0   -0.41840 2 ; 
+Hc_S  Cg_S  Cj_S  Cj_S   9    0.0    0.41840 1 ; 
+Hc_S  Cg_S  Ck_S  Ck_S   9    0.0   -1.42256 3 ; SCEE=1.0 SCNB=1.0 Lipids
+Hc_S  Cg_S  Ck_S  Ck_S   9    0.0   -0.41840 2 ; 
+Hc_S  Cg_S  Ck_S  Ck_S   9    0.0    0.41840 1 ; 
+Hc_S  Cg_S  Cj_S  Ha_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Lipids coupled to Hc-Cg-Cj-Cj
+Hc_S  Cg_S  Ck_S  Ha_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Lipids coupled to Hc-Cg-Ck-Ck
+H1_S  Cg_S  Cj_S  Ha_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Ck-Ha
+H1_S  Cg_S  Ck_S  Ha_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Ck-Ha
+Ha_S  Cj_S  Cj_S  Cg_S   9    0.0  -87.86400 2 ; SCEE=1.0 SCNB=1.0 copy of Ha-Ck-Ck-Cg
+Ha_S  Ck_S  Ck_S  Cg_S   9    0.0  -87.86400 2 ; SCEE=1.0 SCNB=1.0 Lipids
+Ha_S  Cj_S  Cj_S  Ha_S   9    0.0  -35.56400 2 ; SCEE=1.0 SCNB=1.0 copy of Ha-Ck-Ck-Ha
+Ha_S  Ck_S  Ck_S  Ha_S   9    0.0  -35.56400 2 ; SCEE=1.0 SCNB=1.0 Lipids
+Hp_S  Cg_S  Cp_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Cg-Os
+Hp_S  Cg_S  Cg_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Cg-Os
+Hp_S  Cg_S  Cp_S  H1_S   9    0.0    0.54392 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Cg-Hc
+Hp_S  Cg_S  Cg_S  H1_S   9    0.0    0.54392 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Cg-Hc
+Hp_S  Cg_S  Cg_S  Hc_S   9    0.0    0.54392 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Cg-Hc
+Hp_S  Cg_S  Cg_S  Cg_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Copy of Hc-Cg-Cg-Cg
+;Cg_S  N3_S  Cg_S  Cp_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-N3-Cg-Cg
+;Cg_S  N3_S  Cg_S  Cp_S   9    0.0   -0.83680 2 ; 
+;Cg_S  N3_S  Cg_S  Cp_S   9    0.0    0.41840 1 ; 
+;Cg_S  N3_S  Cg_S  Cg_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-methylethanaminium
+;Cg_S  N3_S  Cg_S  Cg_S   9    0.0   -0.83680 2 ; 
+;Cg_S  N3_S  Cg_S  Cg_S   9    0.0    0.41840 1 ; 
+Cg_S  NT_S  Cg_S  Cg_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-Ethyl N-Methyl amine
+Cg_S  NT_S  Cg_S  Cg_S   9    0.0   -0.83680 2 ; 
+Cg_S  NT_S  Cg_S  Cg_S   9    0.0    0.41840 1 ; 
+;N3_S  Cg_S  Cg_S  Cg_S   9    0.0    1.25520 3 ; SCEE=1.0 SCNB=1.0 Propanaminium
+;N3_S  Cg_S  Cg_S  Cg_S   9    0.0   -0.41840 2 ; 
+;N3_S  Cg_S  Cg_S  Cg_S   9    0.0    0.41840 1 ; 
+NT_S  Cg_S  Cg_S  Cg_S   9    0.0    1.25520 3 ; SCEE=1.0 SCNB=1.0 N-Propyl amine
+NT_S  Cg_S  Cg_S  Cg_S   9    0.0   -0.41840 2 ; 
+NT_S  Cg_S  Cg_S  Cg_S   9    0.0    0.41840 1 ; 
+NT_S  Cg_S  Cg_S  Hc_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-ethyl amine
+;N3_S  Cg_S  Cg_S  Hc_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Ethanaminium
+NT_S  Cg_S  Cg_S  H1_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-ethyl amine
+;N3_S  Cg_S  Cp_S  H1_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Copy of NT-Cg-Cg-H1
+;N3_S  Cg_S  Cg_S  H1_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Copy of NT-Cg-Cg-H1
+NT_S  Cg_S  Cg_S  Os_S   9    0.0    6.27600 3 ; SCEE=1.0 SCNB=1.0 2-Methoxy ethyl amine
+NT_S  Cg_S  Cg_S  Os_S   9    0.0    2.09200 2 ; 
+NT_S  Cg_S  Cg_S  Os_S   9    0.0   -2.09200 1 ; 
+;N3_S  Cg_S  Cp_S  Os_S   9    0.0    6.27600 3 ; SCEE=1.0 SCNB=1.0 2-Methoxyethanaminium
+;N3_S  Cg_S  Cp_S  Os_S   9    0.0    2.09200 2 ; 
+;N3_S  Cg_S  Cp_S  Os_S   9    0.0   -2.09200 1 ; 
+;N3_S  Cg_S  Cg_S  Os_S   9    0.0    6.27600 3 ; SCEE=1.0 SCNB=1.0 2-Methoxyethanaminium
+;N3_S  Cg_S  Cg_S  Os_S   9    0.0    2.09200 2 ; 
+;N3_S  Cg_S  Cg_S  Os_S   9    0.0   -2.09200 1 ; 
+NT_S  Cg_S  Cg_S  Oh_S   9    0.0    2.51040 3 ; SCEE=1.0 SCNB=1.0 2-Hydroxy ethyl amine
+NT_S  Cg_S  Cg_S  Oh_S   9    0.0    2.09200 2 ; 
+NT_S  Cg_S  Cg_S  Oh_S   9    0.0   -4.18400 1 ; 
+;N3_S  Cg_S  Cg_S  Oh_S   9    0.0    2.51040 3 ; SCEE=1.0 SCNB=1.0 2-Hydroxyethanaminium
+;N3_S  Cg_S  Cg_S  Oh_S   9    0.0    2.09200 2 ; 
+;N3_S  Cg_S  Cg_S  Oh_S   9    0.0   -4.18400 1 ; 
+Hp_S  Cg_S  N3_S  Cg_S   9    0.0    1.04600 3 ; SCEE=1.0 SCNB=1.0 Dimethylammonium
+H1_S  Cg_S  NT_S  Cg_S   9    0.0    1.04600 3 ; SCEE=1.0 SCNB=1.0 N,N-Dimethyl amine
+Hc_S  Cg_S  NT_S  Cg_S   9    0.0    1.04600 3 ; SCEE=1.0 SCNB=1.0 N,N-Dimethyl amine
+Os_S   C_S  Cg_S  Cg_S   9    0.0    0.83680 3 ; SCEE=1.0 SCNB=1.0 Methyl propanoate
+Cg_S  Cg_S  NT_S   H_S   9    0.0    0.83680 3 ; SCEE=1.0 SCNB=1.0 N-Ethyl amine
+H1_S  Cg_S  NT_S   H_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 N-Methyl amine
+Cp_S  Cg_S  Os_S   C_S   9    0.0   -0.16736 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Cg-Os-C
+Cp_S  Cg_S  Os_S   C_S   9    0.0    1.96648 1 ; 
+H1_S  Cg_S  Cp_S  H1_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-H1
+H1_S  Cg_S  Cp_S  Cg_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-Cg
+H1_S  Cg_S  Cg_S  Cp_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-Cg
+H1_S  Cp_S  Cg_S  Cg_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-Cg
+Os_S  Cg_S  Cp_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 Copy of Os-Cg-Cg-Cg
+Os_S  Cp_S  Cg_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 Copy of Os-Cg-Cg-Cg
+Os_S  Cg_S  Cg_S  Cp_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 Copy of Os-Cg-Cg-Cg
+Cg_S  Os_S  Cp_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Os-Cg-Cg
+Cg_S  Os_S  Cg_S  Cp_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Os-Cg-Cg
+Cp_S  Os_S  Cg_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Os-Cg-Cg
+Oh_S  Cg_S  Cg_S  Hp_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Tertbutanol
+Os_S  Cg_S  Cp_S  Os_S   9    0.0    1.67360 2 ; SCEE=1.0 SCNB=1.0 Copy of Os-Cg-Cg-Os
+H1_S  Cp_S  Cg_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-Os
+H1_S  Cg_S  Cp_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-Os
+Ng_S   C_S  Cg_S  Cg_S   9    0.0    0.83680 3 ; SCEE=1.0 SCNB=1.0 Propanamide
+Ng_S   C_S  Cg_S  Cg_S   9    0.0   -2.92880 2 ; 
+Ng_S   C_S  Cg_S  Cg_S   9    0.0    0.20920 1 ; 
+ O_S   C_S  Cg_S  Cg_S   9    0.0    2.09200 3 ; SCEE=1.0 SCNB=1.0 Propanamide (coupled to Ng-C -Cg-Cg)
+ O_S   C_S  Cg_S  Cg_S   9    0.0   -0.41840 2 ; 
+ O_S   C_S  Cg_S  Cg_S   9    0.0   -0.20920 1 ; 
+ C_S  Cg_S  Oh_S  Ho_S   9    0.0    3.76560 2 ; SCEE=1.0 SCNB=1.0 2-Hydroxy ethanamide
+ O_S   C_S  Cg_S  H1_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 2-Hydroxy ethanamide
+Ng_S   C_S  Cg_S  H1_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 2-Hydroxy ethanamide (coupled to O -C -Cg-H1)
+Ng_S   C_S  Cg_S  Oh_S   9    0.0    0.83680 3 ; SCEE=1.0 SCNB=1.0 2-Hydroxy ethanamide
+Ng_S   C_S  Cg_S  Oh_S   9    0.0   -9.24664 2 ; 
+Ng_S   C_S  Cg_S  Oh_S   9    0.0    9.37216 1 ; 
+ O_S   C_S  Cg_S  Oh_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 2-Hydroxy ethanamide (coupled to Ng-C -Cg-Oh)
+H1_S  Cp_S  Os_S   P_S   9    0.0    0.29288 3 ; SCEE=1.0 SCNB=1.0 Dimethyl phosphate
+Os_S   P_S  Os_S  Cp_S   9    0.0    2.09200 3 ; SCEE=1.0 SCNB=1.0 Dimethyl phosphate
+Os_S   P_S  Os_S  Cp_S   9    0.0    2.92880 2 ; 
+O2_S   P_S  Os_S  Cp_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Dimethyl phosphate
+O2_S   P_S  Os_S  Cp_S   9    0.0   -2.09200 2 ; 
+O2_S   P_S  Os_S  Cp_S   9    0.0    0.41840 1 ; 
+ P_S  Os_S  Cp_S  Cg_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Methyl ethyl phosphate
+ P_S  Os_S  Cp_S  Cg_S   9    0.0    0.20920 2 ; 
+ P_S  Os_S  Cp_S  Cg_S   9    0.0   -5.02080 1 ; 
+H2_S  Cp_S  Os_S   P_S   9    0.0    0.29288 3 ; SCEE=1.0 SCNB=1.0 Dimethyl phosphate
+Os_S  Cp_S  Os_S   P_S   9    0.0    1.67360 3 ; SCEE=1.0 SCNB=1.0 Methoxy methyl methyl phosphate
+Os_S  Cp_S  Os_S   P_S   9    0.0    1.67360 2 ; 
+Os_S  Cp_S  Os_S   P_S   9    0.0   -2.09200 1 ; 
+Cg_S  Os_S   S_S  O2_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Methyl sulphate - CH3OsO3
+H1_S  Cg_S  Os_S   S_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Methyl sulphate -CH3CH2OsO3
+Cg_S  Cg_S  Os_S   S_S   9    0.0   -5.02080 1 ; SCEE=1.0 SCNB=1.0 Ethyl sulphate - CH3OsO3
+Os_S  Cg_S  Cg_S   C_S   9    0.0   -0.41840 3 ; SCEE=1.0 SCNB=1.0 3-Methoxy propanoate
+Os_S  Cg_S  Cg_S   C_S   9    0.0    0.41840 2 ; 
+Os_S  Cg_S  Cg_S   C_S   9    0.0   -4.18400 1 ; 
+Oh_S  Cg_S  Cg_S   C_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 3-Hydroxy propanoate
+Oh_S  Cg_S  Cg_S   C_S   9    0.0    0.83680 2 ; 
+Oh_S  Cg_S  Cg_S   C_S   9    0.0  -10.46000 1 ; 
+Cg_S  Cg_S  Os_S   C_S   9    0.0   -0.04184 3 ; SCEE=1.0 SCNB=1.0 Ethyl acetate, 2-Methoxy 3-O-Acetyl THP
+Cg_S  Cg_S  Os_S   C_S   9    0.0    0.16736 2 ; 
+Cg_S  Cg_S  Os_S   C_S   9    0.0    0.50208 1 ; 
+Cg_S  Os_S   C_S   O_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Cyclohexyl acetate (axial and equatorial)
+Cg_S  Os_S   C_S   O_S   9    0.0  -12.13360 2 ; 
+Cg_S  Os_S   C_S   O_S   9    0.0    2.51040 1 ; 
+Cg_S   C_S  Os_S  Cg_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Cyclohexyl acetate (axial and equatorial)
+Cg_S   C_S  Os_S  Cg_S   9    0.0  -12.13360 2 ; 
+Cg_S   C_S  Os_S  Cg_S   9    0.0   -2.51040 1 ; 
+H1_S  Cg_S  Os_S   C_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Methyl acetate
+Os_S   C_S  Cg_S  Hc_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Methyl acetate
+Hc_S  Cg_S  Cg_S  Hc_S   9    0.0    0.54392 3 ; SCEE=1.0 SCNB=1.0 Ethane
+H1_S  Cg_S  Cg_S  Hc_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Ethanol, after H1-Cg-Cg-Cg
+H2_S  Cg_S  Cg_S  Hc_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Ethanol, after H1-Cg-Cg-Cg
+H1_S  Cg_S  Cg_S  H1_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Ethanol
+H1_S  Cg_S  Cp_S  H2_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Cg-H2
+H1_S  Cg_S  Cg_S  H2_S   9    0.0    0.71128 3 ; SCEE=1.0 SCNB=1.0 Ethanol
+Hc_S  Cg_S  Cg_S  Cg_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Propane
+H1_S  Cg_S  Cg_S  Cg_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 2,2-Dimethylbutanol
+H2_S  Cp_S  Cg_S  Cg_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 Copy of H2-Cg-Cg-Cg
+H2_S  Cg_S  Cg_S  Cg_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 2,2-Dimethylbutanol
+Ho_S  Oh_S  Cg_S  H1_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Methanol
+Ho_S  Oh_S  Cg_S  H2_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Copy of Ho-Oh-Cg-H1 (not derived)
+Ho_S  Oh_S  Cy_S  Oy_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 - sialic acid only
+Ho_S  Oh_S  Cy_S   C_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 - sialic acid only
+Ho_S  Oh_S  Cy_S  Cg_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 - sialic acid only
+Ho_S  Oh_S  Cg_S  Cg_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Ethanol, propan-2-ol (Isopropanol)
+Cg_S  Cg_S  Cp_S  Cg_S   9    0.0    1.88280 1 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Cg-Cg-Cg
+Cg_S  Cg_S  Cg_S  Cp_S   9    0.0    1.88280 1 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Cg-Cg-Cg
+Cg_S  Cg_S  Cg_S  Cg_S   9    0.0    1.88280 1 ; SCEE=1.0 SCNB=1.0 Butane
+Oh_S  Cg_S  Cg_S  Hc_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 tert-butanol
+Oh_S  Cg_S  Cg_S  H1_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 tert-butanol
+Oh_S  Cg_S  Cg_S  H2_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 tert-butanol
+Oh_S  Cg_S  Cg_S  Cp_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 2,3-Dimethylbutanol
+Oh_S  Cg_S  Cg_S  Cg_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 2,3-Dimethylbutanol
+Os_S  Cg_S  Cg_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 1-methoxypropane (Methylpropyl ether), 1-methoxy-2-methylpropane (Methyl 2-methylpropyl ether)
+Os_S  Cg_S  Cg_S  Cy_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 1-methoxypropane - sialic acid only 4-O link ABY 05/29/05
+Oy_S  Cg_S  Cg_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 1-methoxypropane - sialic acid only
+H1_S  Cg_S  Os_S  Cp_S   9    0.0    1.12968 3 ; SCEE=1.0 SCNB=1.0 Copy of H1-Cg-Os-Cg
+H1_S  Cg_S  Os_S  Cg_S   9    0.0    1.12968 3 ; SCEE=1.0 SCNB=1.0 Methoxymethane, 2-methoxy-2-methylpropane (Isobutyl methyl ether), etc
+Cg_S  Os_S  Cg_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane, 2-methoxypropane (Isopropyl methyl ether)
+Oh_S  Cg_S  Cg_S  Oh_S   9    0.0   -0.41840 1 ; SCEE=1.0 SCNB=1.0 2,3-propanediol, 2-methyl-2,3-butanediol, etc
+Oh_S  Cg_S  Cg_S  Oh_S   9    0.0    3.97480 2 ; 
+Oh_S  Cg_S  Cg_S  Oh_S   9    0.0    2.30120 3 ; 
+Oh_S  Cg_S  Cg_S  Os_S   9    0.0   -4.60240 1 ; SCEE=1.0 SCNB=1.0 Ether-Alcohols
+Oh_S  Cg_S  Cg_S  Os_S   9    0.0    1.04600 2 ; 
+Oh_S  Cg_S  Cg_S  Oy_S   9    0.0   -4.60240 1 ; SCEE=1.0 SCNB=1.0 Ether-Alcohols - sialic acid only
+Oh_S  Cg_S  Cg_S  Oy_S   9    0.0    1.04600 2 ; 
+H1_S  Cg_S  Cg_S  Oy_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 COPY OF H1-Cg-Cg-Os NOT DERIVED
+Os_S  Cg_S  Cg_S  Os_S   9    0.0    1.67360 2 ; SCEE=1.0 SCNB=1.0 DiEthers
+Os_S  Cg_S  Cg_S  Oy_S   9    0.0    3.43088 2 ; SCEE=1.0 SCNB=1.0 DiEthers - sialic acid only
+Os_S  Cg_S  Oh_S  Ho_S   9    0.0    0.75312 3 ; SCEE=1.0 SCNB=1.0 Copy of Ho-Oh-Cg-Cg (not derived)
+Os_S  Cp_S  Os_S  Cg_S   9    0.0    4.01664 3 ; SCEE=1.0 SCNB=1.0 Copy of Os-Cg-Os-Cg (not derived)
+Os_S  Cp_S  Os_S  Cg_S   9    0.0    5.77392 2 ; 
+Os_S  Cp_S  Os_S  Cg_S   9    0.0    4.51872 1 ; 
+Os_S  Cg_S  Os_S  Cg_S   9    0.0    4.01664 3 ; SCEE=1.0 SCNB=1.0 2,2-Dimethoxypropane
+Os_S  Cg_S  Os_S  Cg_S   9    0.0    5.77392 2 ; 
+Os_S  Cg_S  Os_S  Cg_S   9    0.0    4.51872 1 ; 
+Oh_S  Cg_S  Os_S  Cg_S   9    0.0    4.01664 3 ; SCEE=1.0 SCNB=1.0 Copy of Os-Cg-Os-Cg (not derived)
+Oh_S  Cg_S  Os_S  Cg_S   9    0.0    5.77392 2 ; 
+Oh_S  Cg_S  Os_S  Cg_S   9    0.0    4.51872 1 ; 
+H2_S  Cp_S  Os_S  Cg_S   9    0.0    2.51040 2 ; SCEE=1.0 SCNB=1.0 Copy of H2-Cg-Os-Cg
+H2_S  Cp_S  Os_S  Cg_S   9    0.0    0.41840 3 ; 
+H2_S  Cg_S  Os_S  Cg_S   9    0.0    2.51040 2 ; SCEE=1.0 SCNB=1.0 Dimethoxymethane, after Os-Cg-Os-Cg
+H2_S  Cg_S  Os_S  Cg_S   9    0.0    0.41840 3 ; 
+Hc_S  Cg_S  Cg_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane
+H1_S  Cg_S  Cg_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane
+H2_S  Cg_S  Cg_S  Os_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane
+ H_S  Ng_S   C_S  H1_S   9    0.0  -10.46000 2 ; SCEE=1.2 SCNB=2.0 Parm94 - Corrected to remove phase shift
+ H_S  Ng_S   C_S  Cg_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Ethanamide and N-Methylethanamide
+Hc_S  Cg_S   C_S   O_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Ethanamide
+Hc_S  Cg_S   C_S  Ng_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Ethanamide
+Cg_S  Os_S  Cg_S  Ng_S   9    0.0   -3.76560 1 ; SCEE=1.0 SCNB=1.0 N-(2-Methoxyisopropyl)-ethanamide, N-(2-Methoxyethyl)-ethanamide
+Os_S  Cp_S  Cg_S  Ng_S   9    0.0   -5.43920 1 ; SCEE=1.0 SCNB=1.0 N-(2-methoxyethyl)-ethanamide, N-(2-methyoxy-2-methyl-propyl)-ethanmide
+Os_S  Cg_S  Cg_S  Ng_S   9    0.0   -5.43920 1 ; SCEE=1.0 SCNB=1.0 N-(2-methoxyethyl)-ethanamide, N-(2-methyoxy-2-methyl-propyl)-ethanmide
+Oy_S  Cg_S  Cg_S  Ng_S   9    0.0   -5.43920 1 ; SCEE=1.0 SCNB=1.0 N-(2-methoxyethyl)-ethanamide - sialic acid only
+Oh_S  Cg_S  Cg_S  Ng_S   9    0.0   -6.27600 1 ; SCEE=1.0 SCNB=1.0 N-(2-hydroxyethyl)-ethanamide, N-(2-Hydroxy-2-methyl-propyl)-ethanmide
+Cp_S  Cg_S  Cg_S  Ng_S   9    0.0    1.67360 1 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Cg-Cg-N
+Cg_S  Cg_S  Cg_S  Ng_S   9    0.0    1.67360 1 ; SCEE=1.0 SCNB=1.0 N-(1,1,2,2-tetramethyl-propyl)-ethanamide, N-propyl-ethanamide
+Hc_S  Cg_S  Cg_S  Ng_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-tert-butylethanamide (N-isobutylethanamide)
+H1_S  Cg_S  Cg_S  Ng_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-tert-butylethanamide
+H2_S  Cp_S  Cg_S  Ng_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Copy of H2-Cg-Cg-N
+H2_S  Cg_S  Cg_S  Ng_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-tert-butylethanamide
+Ng_S  Cg_S  Cg_S  Ng_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 N-(N-ethylethanamide)-ethanamide
+Hc_S  Cg_S  Cg_S   C_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Propane
+H1_S  Cg_S  Cg_S   C_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Propane
+Cg_S  Cg_S  Cg_S   C_S   9    0.0    1.88280 1 ; SCEE=1.0 SCNB=1.0 Butane
+Cp_S  Cg_S  Ng_S   C_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Cg-Ng-C
+Cg_S  Cg_S  Ng_S   C_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 N-tert-butylethanamide, N-Isopropylethanamide
+Os_S  Cg_S  Ng_S   C_S   9    0.0    8.49352 2 ; SCEE=1.0 SCNB=1.0 Coupled to Os-Cg-N-H
+Os_S  Cg_S  Ng_S   C_S   9    0.0    4.18400 1 ; 
+Os_S  Cg_S  Ng_S   H_S   9    0.0   -1.79912 2 ; SCEE=1.0 SCNB=1.0 Coupled to Os-Cg-N-C
+Os_S  Cg_S  Ng_S   H_S   9    0.0    6.35968 1 ; 
+Cp_S  Cg_S  Ng_S   H_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Copy of Cg-Cg-Ng-H
+Cg_S  Cg_S  Ng_S   H_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 N-tert-butylethanamide, N-Isopropylethanamide
+H1_S  Cg_S  Ng_S  Cg_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 N,N-Dimethylethanamide coupled to H1-Cg-N-C
+H2_S  Cg_S  Ng_S  Cg_S   9    0.0    0.00000 3 ; SCEE=1.0 SCNB=1.0 N,N-Dimethylethanamide coupled to H1-Cg-N-C
+H1_S  Cg_S  Ng_S   H_S   9    0.0    4.18400 1 ; SCEE=1.0 SCNB=1.0 N-Isopropylethanamide Coupled to H1-Cg-N-C
+H2_S  Cg_S  Ng_S   H_S   9    0.0    4.18400 1 ; SCEE=1.0 SCNB=1.0 N-Isopropylethanamide Coupled to H1-Cg-N-C
+H1_S  Cg_S  Ng_S   C_S   9    0.0   -4.18400 1 ; SCEE=1.0 SCNB=1.0 N,N-Dimethylethanamide, N-Isopropylethanamide
+H2_S  Cg_S  Ng_S   C_S   9    0.0   -4.18400 1 ; SCEE=1.0 SCNB=1.0 N,N-Dimethylethanamide, N-Isopropylethanamide
+Cg_S  Ng_S   C_S   O_S   9    0.0  -11.71520 2 ; SCEE=1.0 SCNB=1.0 N-Methylethanamide, N-tert-butylethanamide
+Cg_S  Ng_S   C_S  Cg_S   9    0.0  -11.29680 2 ; SCEE=1.0 SCNB=1.0 N-Methylethanamide, N-tertbutylethanamide
+Hc_S  Cg_S   C_S  O2_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 Acetate
+Cg_S  Cg_S   C_S  O2_S   9    0.0    0.04184 3 ; SCEE=1.0 SCNB=1.0 Propanoate, 2-Methylpropanoate, 2-Dimethylpropanoate
+Cg_S  Cg_S   C_S  O2_S   9    0.0   -1.71544 2 ; 
+Cg_S  Cg_S   C_S  O2_S   9    0.0    0.02092 1 ; 
+H1_S  Cg_S   C_S  O2_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 2-Methylpropanoate
+H2_S  Cg_S   C_S  O2_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 1,1-Dimethoxyacetate
+Os_S  Cg_S   C_S  O2_S   9    0.0    0.08368 3 ; SCEE=1.0 SCNB=1.0 2-Methoxy-2-methylpropanoate
+Os_S  Cg_S   C_S  O2_S   9    0.0   -3.03340 2 ; 
+Os_S  Cg_S   C_S  O2_S   9    0.0    0.08368 1 ; 
+Cg_S  Os_S  Cg_S   C_S   9    0.0    1.33888 3 ; SCEE=1.0 SCNB=1.0 1-Methoxy-1-Acetate THP, 1-Methoxy-1-Acetate THP Neutralized w/ Hbond
+Cg_S  Os_S  Cg_S   C_S   9    0.0    1.88280 2 ; 
+Cg_S  Os_S  Cg_S   C_S   9    0.0   -2.51040 1 ; 
+Oy_S  Cy_S  Os_S  Cg_S   9    0.0    1.25520 1 ; SCEE=1.0 SCNB=1.0 1-Methoxy-1-Acetate THP - for sialic acid only!
+Oy_S  Cy_S  Os_S  Cg_S   9    0.0    5.31368 2 ; 
+Oy_S  Cy_S  Os_S  Cg_S   9    0.0    1.54808 3 ; 
+Oh_S  Cy_S  Oy_S  Cg_S   9    0.0    1.25520 1 ; SCEE=1.0 SCNB=1.0 - for sialic acid only!
+Oh_S  Cy_S  Oy_S  Cg_S   9    0.0    5.31368 2 ; 
+Oh_S  Cy_S  Oy_S  Cg_S   9    0.0    1.54808 3 ; 
+Os_S  Cy_S  Oy_S  Cg_S   9    0.0    1.25520 1 ; SCEE=1.0 SCNB=1.0 2,2-Dimethoxypropane - for sialic acid only!
+Os_S  Cy_S  Oy_S  Cg_S   9    0.0    5.31368 2 ; 
+Os_S  Cy_S  Oy_S  Cg_S   9    0.0    1.54808 3 ; 
+Oh_S  Cy_S  Cg_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 - for sialic acid only
+Os_S  Cy_S  Cg_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 1-methoxypropane, Methyl 2-methylpropyl ether (1-methoxy-2-methylpropane) - for sialic acid only!
+Oy_S  Cy_S  Cg_S  Cg_S   9    0.0   -1.12968 1 ; SCEE=1.0 SCNB=1.0 1-methoxypropane, 1-methoxy-2-methylpropane - for sialic acid only!
+Oh_S  Cy_S  Cg_S  Hc_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 - for sialic acid only!
+Os_S  Cy_S  Cg_S  Hc_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane - for sialic acid only!
+Oy_S  Cy_S  Cg_S  Hc_S   9    0.0    0.20920 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane - for sialic acid only!
+Cg_S  Os_S  Cy_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane, 2-methoxypropane - for sialic acid only!
+Cg_S  Oy_S  Cy_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane, 2-methoxypropane - for sialic acid only!
+Oh_S  Cy_S   C_S  O2_S   9    0.0   -4.70700 2 ; SCEE=1.0 SCNB=1.0 - for sialic acid only!
+Os_S  Cy_S   C_S  O2_S   9    0.0   -4.70700 2 ; SCEE=1.0 SCNB=1.0 2-Methoxy-2-methylpropanoate - for sialic acid only!
+Oy_S  Cy_S   C_S  O2_S   9    0.0   -4.70700 2 ; SCEE=1.0 SCNB=1.0 2-Methoxy-2-methylpropanoate - for sialic acid only!
+Cg_S  Cy_S   C_S  O2_S   9    0.0   -3.13800 2 ; SCEE=1.0 SCNB=1.0 Propanoate, 2-Methylpropanoate, 2-Dimethylpropanoate - for sialic acid only!
+Cg_S  Os_S  Cy_S   C_S   9    0.0    7.94960 1 ; SCEE=1.0 SCNB=1.0 1-Methoxy-1-Acetate THP, 1-Methoxy-1-Acetate THP Acid w/ Hbond - for sialic acid only!
+Cg_S  Oy_S  Cy_S   C_S   9    0.0    0.00000 1 ; SCEE=1.0 SCNB=1.0 1-Methoxy-1-Acetate THP, 1-Methoxy-1-Acetate THP Acid w/ Hbond - for sialic acid only!
+Hc_S  Cg_S  Cy_S   C_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Propane - for sialic acid only!
+Cg_S  Cg_S  Cy_S   C_S   9    0.0    1.88280 3 ; SCEE=1.0 SCNB=1.0 Butane - for sialic acid only!
+Cy_S  Os_S  Cg_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane, 2-methoxypropane - for sialic acid only!
+Cy_S  Oy_S  Cg_S  Cg_S   9    0.0    0.66944 3 ; SCEE=1.0 SCNB=1.0 Methoxyethane, 2-methoxypropane - for sialic acid only!
+Cy_S  Os_S  Cg_S  H1_S   9    0.0    1.12968 3 ; SCEE=1.0 SCNB=1.0 Methoxymethane, 2-methoxy-2-methylpropane, etc - for sialic acid only!
+Cy_S  Oy_S  Cg_S  H1_S   9    0.0    1.12968 3 ; SCEE=1.0 SCNB=1.0 Methoxymethane, 2-methoxy-2-methylpropane, etc - for sialic acid only!
+Cy_S  Cg_S  Cg_S  Cg_S   9    0.0    1.88280 1 ; SCEE=1.0 SCNB=1.0 Butane - for sialic acid only!
+Cy_S  Cg_S  Cg_S  Hc_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 Propane - for sialic acid only!
+Cy_S  Cg_S  Cg_S  H1_S   9    0.0    0.62760 3 ; SCEE=1.0 SCNB=1.0 2-Dimethylbutanol - for sialic acid only!
+Cy_S  Cg_S  Cg_S  Oh_S   9    0.0    0.41840 3 ; SCEE=1.0 SCNB=1.0 2,3-Dimethylbutanol - for sialic acid only!
+ H_S  Ng_S   C_S   O_S   9  180.0   10.46000 2 ; SCEE=1.2 SCNB=2.0 Copy of Parm99 JCC,7,(1986),230 J.C.cistrans-NMA DE
+ H_S  Ng_S   C_S   O_S   9    0.0    8.36800 1 ; 
+
+
+[ dihedraltypes ]
+;i  j   k  l   func
+Cg_S  Os_S   C_S   O_S   4  180.0   43.93200 2 ; Parm94
+Cg_S  Ng_S   C_S   O_S   4  180.0   43.93200 2 ; Parm94
+Os_S  Ng_S   C_S   O_S   4  180.0   43.93200 2 ; Parm94
+Ng_S  H2_S   C_S   O_S   4  180.0   43.93200 2 ; Parm94
+Cg_S  H1_S   C_S   O_S   4  180.0   43.93200 2 ; Parm94
+Os_S  H2_S   C_S   O_S   4  180.0   43.93200 2 ; Parm94
+Cg_S  O2_S   C_S  O2_S   4  180.0   43.93200 2 ; Parm94
+Cy_S  O2_S   C_S  O2_S   4  180.0   43.93200 2 ; Parm94
+Cg_S  O2_S   C_S  Oh_S   4  180.0   43.93200 2 ; X -O2-C -O2
+Cy_S  O2_S   C_S  Oh_S   4  180.0   43.93200 2 ; X -O2-C -O2
+ C_S   H_S  Ng_S  Cg_S   4  180.0    6.27600 2 ; X -X -Ng-H for GLYCAM 06
+ H_S   H_S  Ng_S  Cg_S   4  180.0    6.27600 2 ; X -X -Ng-H for GLYCAM 06
+ S_S  Cg_S  Ng_S   H_S   4  180.0   23.01200 2 ; GLYCAM 06 Sulfamates
+ S_S   H_S  Ng_S   H_S   4  180.0   23.01200 2 ; GLYCAM 06 Sulfamates
+Cg_S   S_S  Ng_S   H_S   4  180.0   23.01200 2 ; GLYCAM 06 Sulfamates

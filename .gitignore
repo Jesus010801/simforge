@@ -54,9 +54,10 @@ mdout.mdp
 *.ndx
 
 # ── Large / machine-local structures that must never be committed ───────────
+# configs/hmg.pdb is a small (chain-A, single-frame) test fixture and IS tracked.
+# The user's full multi-frame trajectory (~50 MB) lives outside the repo.
 GLP-1_R.pdb
 configs/GLP-1_R.pdb
-configs/hmg.pdb
 bilayer_x
 bilayer_y:
 
@@ -79,7 +80,16 @@ docs/audits/
 !tests/fixtures/**
 !examples/**
 !demo/**
+# Vendored membrane-pipeline assets (force field + reference bilayers). Needed
+# by the membrane test suite. Licensing status: see THIRD_PARTY_NOTICES.md.
+!docs/Prot-Memb_FILES/**
 
-# ── ...but never re-include caches under those trees ────────────────────────
+# ── ...but never re-include caches / local agent config under those trees ──
 __pycache__/
 *.py[cod]
+**/.claude/
+
+# Large unused OPLS-AAM pair tables (not #included by forcefield.itp)
+docs/Prot-Memb_FILES/oplsaa_membrane.ff/nb_params.itp
+docs/Prot-Memb_FILES/oplsaa_membrane.ff/pairtypes.itp
+docs/Prot-Memb_FILES/oplsaa_membrane.ff/*_old.itp
