@@ -19,6 +19,11 @@ TM-aware alignment (Phase 2):
 
 No gfortran or MoveMemb.f required.
 
+Box vector rule (Phase 3):
+    output system.gro uses bilayer GRO X/Y as the periodic cell dimensions;
+    Z is taken from the protein GRO (already accounts for bilayer thickness +
+    protein Z + solvent padding from match_box_to_bilayer / editconf).
+
 Guaranteed metadata keys on success:
     z_shift_nm          float       shift applied to all bilayer atoms (+ = upward)
     protein_z_min       float       protein Z minimum (nm)
@@ -34,6 +39,15 @@ Guaranteed metadata keys on success:
     atoms_protein       int         protein atom count
     atoms_bilayer       int         bilayer atom count
     atoms_total         int         combined atom count
+    protein_x           float       protein XY footprint X extent (nm)
+    protein_y           float       protein XY footprint Y extent (nm)
+    bilayer_x           float       bilayer box X (nm) — used for output XY
+    bilayer_y           float       bilayer box Y (nm) — used for output XY
+    required_margin_xy  float       minimum periodic-image margin per side (nm)
+    available_margin_x  float       (bilayer_x - protein_x) / 2 (nm)
+    available_margin_y  float       (bilayer_y - protein_y) / 2 (nm)
+    xy_authority        str         always "selected_bilayer"
+    xy_fit_status       str         "pass" | "fail"
 """
 
 from __future__ import annotations
@@ -211,33 +225,43 @@ class MoveMembAdapter(ExternalToolAdapter):
     def run(  # type: ignore[override]
         self,
         *,
-        protein_gro:  Path | str,
-        bilayer_gro:  Path | str,
-        gro_out:      Path | str,
-        z_shift_nm:   Optional[float] = None,
-        clearance_nm: float = 0.0,
-        tm_residues:  Optional[set[int]] = None,
+        protein_gro:        Path | str,
+        bilayer_gro:        Path | str,
+        gro_out:            Path | str,
+        z_shift_nm:         Optional[float] = None,
+        clearance_nm:       float = 0.0,
+        tm_residues:        Optional[set[int]] = None,
+        required_margin_nm: float = 1.0,
     ) -> AdapterResult:
         """
         Shift the bilayer in Z and write a combined protein+bilayer .gro.
 
         The output GRO contains all protein atoms first, followed by all
-        bilayer atoms with Z shifted by z_shift_nm.  Box dimensions are
-        taken from the protein GRO (which should already be sized to match
-        the bilayer XY footprint).
+        bilayer atoms with Z shifted by z_shift_nm.
+
+        Box dimensions of the output system.gro:
+          - X/Y: taken from the bilayer GRO (bilayer is authoritative for XY)
+          - Z:   taken from the protein GRO (protein-aware, already sized for
+                 bilayer thickness + protein Z + solvent padding)
+
+        This ensures the simulation box XY always matches the selected bilayer
+        patch regardless of the protein footprint.
 
         When tm_residues is provided the bilayer is aligned to the mean Z of
         CA atoms in those residues, not to the full protein Z-extent centre.
         This is the correct behaviour for proteins with large EC/IC domains.
 
         Args:
-            protein_gro:  Oriented + box-sized protein .gro.
-            bilayer_gro:  Pre-built equilibrated bilayer .gro.
-            gro_out:      Output combined system .gro.
-            z_shift_nm:   Explicit shift (nm).  None = auto-compute.
-            clearance_nm: Extra gap added to the shift (nm); normally 0.
-            tm_residues:  Set of residue numbers annotated as TM.  When None
-                          the full protein Z-centre is used as fallback.
+            protein_gro:        Oriented + box-sized protein .gro.
+            bilayer_gro:        Pre-built equilibrated bilayer .gro.
+            gro_out:            Output combined system .gro.
+            z_shift_nm:         Explicit shift (nm).  None = auto-compute.
+            clearance_nm:       Extra gap added to the shift (nm); normally 0.
+            tm_residues:        Set of residue numbers annotated as TM.  When
+                                None the full protein Z-centre is used.
+            required_margin_nm: Minimum periodic-image margin (nm, each side).
+                                Recorded in metadata; does not block on failure
+                                (box_match_helper blocks if protein does not fit).
         """
         started_at = datetime.now()
         self.assert_available()
@@ -251,7 +275,7 @@ class MoveMembAdapter(ExternalToolAdapter):
 
         try:
             prot_title, prot_lines, prot_box = _parse_gro(protein_gro)
-            _,          bil_lines,  _         = _parse_gro(bilayer_gro)
+            _,          bil_lines,  bil_box   = _parse_gro(bilayer_gro)
 
             prot_z_min, prot_z_max = _z_extents(prot_lines)
             bil_z_min,  bil_z_max  = _z_extents(bil_lines)
@@ -284,8 +308,33 @@ class MoveMembAdapter(ExternalToolAdapter):
             combined = _renumber_atoms(prot_lines + shifted_bil, start=1)
             n_total  = len(combined)
 
+            # ── Box vectors: bilayer is authoritative for XY; protein for Z ──
+            # The bilayer XY defines the periodic cell in the membrane plane.
+            # The protein-boxed GRO Z already accounts for bilayer thickness +
+            # protein Z extent + solvent padding from match_box_to_bilayer.
+            out_box_x = bil_box[0]
+            out_box_y = bil_box[1]
+            out_box_z = prot_box[2]
+
+            # ── Protein XY footprint (for margin metadata) ────────────────────
+            try:
+                prot_xs    = [float(l[20:28]) for l in prot_lines if len(l) >= 44]
+                prot_ys    = [float(l[28:36]) for l in prot_lines if len(l) >= 44]
+                prot_x_ext = max(prot_xs) - min(prot_xs) if prot_xs else 0.0
+                prot_y_ext = max(prot_ys) - min(prot_ys) if prot_ys else 0.0
+            except (ValueError, IndexError):
+                prot_x_ext, prot_y_ext = 0.0, 0.0
+
+            avail_margin_x = (out_box_x - prot_x_ext) / 2.0
+            avail_margin_y = (out_box_y - prot_y_ext) / 2.0
+            xy_fit = (
+                "pass"
+                if avail_margin_x >= required_margin_nm and avail_margin_y >= required_margin_nm
+                else "fail"
+            )
+
             title = f"Protein + bilayer (dz={z_shift_nm:+.3f} nm, method={alignment_method})"
-            box_str = "  ".join(f"{v:.5f}" for v in prot_box)
+            box_str = f"{out_box_x:.5f}  {out_box_y:.5f}  {out_box_z:.5f}"
             lines   = [title, f"{n_total}", *combined, box_str]
             gro_out.write_text("\n".join(lines) + "\n")
 
@@ -314,6 +363,11 @@ class MoveMembAdapter(ExternalToolAdapter):
             f"[{prot_z_min:.3f}, {prot_z_max:.3f}]",
             f"Bilayer midplane:   {bil_z_mid:.3f} nm  "
             f"[{bil_z_min:.3f}, {bil_z_max:.3f}]",
+            f"Box XY (bilayer):   {out_box_x:.5f} × {out_box_y:.5f} nm  "
+            f"[xy_authority=selected_bilayer]",
+            f"Box Z  (protein):   {out_box_z:.5f} nm",
+            f"XY margin X/Y:      {avail_margin_x:.3f} / {avail_margin_y:.3f} nm  "
+            f"[fit={xy_fit}]",
             f"Combined atoms:     {n_total}",
         ]
 
@@ -340,5 +394,15 @@ class MoveMembAdapter(ExternalToolAdapter):
                 "atoms_protein":       len(prot_lines),
                 "atoms_bilayer":       len(bil_lines),
                 "atoms_total":         n_total,
+                # Phase 3: bilayer XY authority fields
+                "protein_x":          round(prot_x_ext, 4),
+                "protein_y":          round(prot_y_ext, 4),
+                "bilayer_x":          round(out_box_x, 5),
+                "bilayer_y":          round(out_box_y, 5),
+                "required_margin_xy": required_margin_nm,
+                "available_margin_x": round(avail_margin_x, 4),
+                "available_margin_y": round(avail_margin_y, 4),
+                "xy_authority":       "selected_bilayer",
+                "xy_fit_status":      xy_fit,
             },
         )

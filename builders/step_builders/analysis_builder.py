@@ -14,8 +14,11 @@ from builders.step_builders._utils import rel as _rel
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # GROMACS built-in group numbers (standard pdb2gmx output)
+# WARNING: groups 11+ vary by system. Protein-in-water: 13=SOL.
+# Membrane systems: groups 11+ include lipid residues before SOL.
+# Always verify with: echo "q" | gmx make_ndx -f md.tpr -o /dev/null
 _GROMACS_DEFAULT_GROUPS = """\
-# GROMACS default groups (pdb2gmx standard output):
+# GROMACS default groups (pdb2gmx standard output — protein-in-water):
 #   0  System          — all atoms
 #   1  Protein         — protein atoms
 #   2  Protein-H       — protein heavy atoms
@@ -27,11 +30,12 @@ _GROMACS_DEFAULT_GROUPS = """\
 #   8  SideChain       — side chain atoms
 #   9  SideChain-H     — side chain heavy atoms
 #  10  Prot-Masses     — protein with masses
-#  11  non-Protein     — water + ions + ligands
-#  12  Other           — non-protein non-water
-#  13  SOL             — water molecules
-#  14  non-Water       — everything except water
-#  15+ NA, CL ...      — individual ion species (if present)
+#  11  non-Protein     — non-protein atoms (water+ions+lipids)
+#  12  Other/Lipid     — non-protein non-water (in membrane systems: lipid residues)
+#  ...                 — individual residue types (DPPC, NA, CL, ...)
+#  N   SOL/Water       — water molecules (position varies; check make_ndx output)
+#  NOTE: for membrane systems, SOL group number shifts due to lipid groups.
+#        Run: echo 'q' | gmx make_ndx -f md.tpr -o /dev/null
 """
 
 
@@ -202,8 +206,8 @@ echo "1 1" | gmx hbond \\
     -num tables/hbnum_protein.xvg \\
     -dist tables/hbdist_protein.xvg
 
-# Protein–solvent H-bonds
-echo "1 13" | gmx hbond \\
+# Protein–solvent H-bonds (use group name "SOL" — group number varies by system)
+echo "Protein SOL" | gmx hbond \\
     -s "$PROD_DIR/md.tpr" \\
     -f "$PROD_DIR/md.xtc" \\
     -num tables/hbnum_protein_sol.xvg
@@ -302,12 +306,13 @@ echo "Distance analysis complete → tables/distance_avg.xvg"
 # ─── Energy terms ────────────────────────────────────────────────────────────
 # Extracts: Potential, Kinetic En., Total Energy, Temperature, Pressure.
 # No group selection needed — reads directly from .edr.
+# gmx energy reads one term name per line; terminate selection with 0.
 
 PROD_DIR="{prod_ref}"
 
 mkdir -p tables
 
-echo "Potential Kinetic-En. Total-Energy Temperature Pressure" | gmx energy \\
+printf "Potential\\nKinetic-En.\\nTotal-Energy\\nTemperature\\nPressure\\n0\\n" | gmx energy \\
     -f "$PROD_DIR/md.edr" \\
     -o tables/energy.xvg
 

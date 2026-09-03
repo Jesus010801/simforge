@@ -563,6 +563,7 @@ class MembraneWorkflowOPLSAA(BasePipeline):
                 "ref_atom":    atom_names.headgroup_ref,
                 "middle_atom": atom_names.tail_middle,
                 "nwater":      3,
+                "tm_residues": tm_residues,
             },
         ))
 

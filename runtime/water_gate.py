@@ -40,27 +40,54 @@ def evaluate_water_gate(step_dir: Path) -> GateResult | None:
 
 
 def _evaluate_clean_water_report(path: Path) -> GateResult | None:
-    """Read clean_water_report.json and produce a GateResult."""
+    """Read clean_water_report.json and produce a GateResult.
+
+    Uses 'n_water_oxygens_remaining_in_core' (written by assembly_builder ≥ v3)
+    which counts only OW atoms inside the hydrophobic core after deletion.
+    Falls back to the legacy 'final_water_count' field with a warning, because
+    that field is the total remaining waters in the system (not just core waters)
+    and will produce false positives for any large solvated membrane system.
+    """
     try:
         data = json.loads(path.read_text())
     except Exception:
         return None
 
-    n_remain = data.get("final_water_count", 0)
     errors:   list[str] = []
     warnings: list[str] = []
 
+    # Prefer the precise core-water count written by assembly_builder ≥ v3
+    if "n_water_oxygens_remaining_in_core" in data:
+        n_remain = data["n_water_oxygens_remaining_in_core"]
+    else:
+        # Legacy: final_water_count = total waters remaining in whole system — not core-only.
+        # This will be a very large number for solvated membrane systems and is NOT
+        # a reliable gate signal.  Treat as advisory only (never block on it).
+        n_remain = 0
+        legacy   = data.get("final_water_count", 0)
+        if legacy > 0:
+            warnings.append(
+                f"clean_water_report.json uses legacy 'final_water_count' ({legacy} total "
+                "waters in system — not waters in core); gate cannot evaluate cleanup accuracy. "
+                "Recompile workspace to regenerate run_clean_water.py with core-water reporting."
+            )
+
     if n_remain > _WARN_THRESHOLD:
         errors.append(
-            f"{n_remain} water molecule(s) remain in bilayer core after cleanup"
+            f"{n_remain} water oxygen(s) remain in bilayer hydrophobic core after cleanup"
         )
     elif n_remain > 0:
         warnings.append(
-            f"{n_remain} water molecule(s) near bilayer boundary after cleanup"
+            f"{n_remain} water oxygen(s) near bilayer core boundary after cleanup"
         )
 
+    # Surface metadata fields for structured reporting
+    core_z_min = data.get("core_z_min")
+    core_z_max = data.get("core_z_max")
+    cleanup_passed = data.get("cleanup_passed", n_remain == 0)
+
     return GateResult(
-        passed     = n_remain == 0,
+        passed     = cleanup_passed and n_remain == 0,
         blocked    = len(errors) > 0,
         confidence = 1.0,
         errors     = errors,
