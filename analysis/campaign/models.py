@@ -424,6 +424,7 @@ class TrajectoryInspection:
     end_time_ps: Optional[float] = None
     dt_ps: Optional[float] = None
     total_duration_ps: Optional[float] = None
+    tpr_duration_ps: Optional[float] = None
 
     box_present: Optional[bool] = None
     box_vectors: Optional[list[float]] = None
@@ -456,6 +457,7 @@ class TrajectoryInspection:
             "end_time_ps": self.end_time_ps,
             "dt_ps": self.dt_ps,
             "total_duration_ps": self.total_duration_ps,
+            "tpr_duration_ps": self.tpr_duration_ps,
             "box_present": self.box_present,
             "box_vectors": self.box_vectors,
             "precision": self.precision,
@@ -484,6 +486,7 @@ class TrajectoryInspection:
             end_time_ps=d.get("end_time_ps"),
             dt_ps=d.get("dt_ps"),
             total_duration_ps=d.get("total_duration_ps"),
+            tpr_duration_ps=d.get("tpr_duration_ps"),
             box_present=d.get("box_present"),
             box_vectors=d.get("box_vectors"),
             precision=d.get("precision"),
@@ -665,6 +668,7 @@ class SystemRecord:
     classification_state: str = ClassificationState.UNKNOWN
     warnings: list[CampaignWarning] = field(default_factory=list)
     user_overridden: bool = False
+    legacy_study: dict = field(default_factory=dict)
 
     # -- helpers ----------------------------------------------------------------
     @property
@@ -724,6 +728,7 @@ class SystemRecord:
             "association_evidence": self.association_evidence,
             "classification_state": self.classification_state,
             "user_overridden": self.user_overridden,
+            "legacy_study": self.legacy_study,
             "warnings": [w.to_dict() for w in self.warnings],
         }
 
@@ -763,6 +768,7 @@ class SystemRecord:
             classification_state=d.get("classification_state", ClassificationState.UNKNOWN),
             warnings=[CampaignWarning.from_dict(w) for w in d.get("warnings", [])],
             user_overridden=d.get("user_overridden", False),
+            legacy_study=dict(d.get("legacy_study", {})),
         )
 
 
@@ -1002,6 +1008,7 @@ class CampaignRunResult:
             "study_root": self.study_root,
             "output_dir": self.output_dir,
             "manifest_stats": self.manifest.stats() if self.manifest else None,
+            "legacy_systems": [s.legacy_study for s in self.manifest.systems] if self.manifest else [],
             "validation": self.validation.to_dict() if self.validation else None,
             "requested_analyses": self.requested_analyses,
             "results": [r.to_dict() for r in self.results],

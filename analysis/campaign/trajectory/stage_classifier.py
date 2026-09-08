@@ -39,7 +39,7 @@ _STEM_RULES: list[tuple[re.Pattern, str, float]] = [
 ]
 _DERIVED_MARKERS = (
     "nojump", "nopbc", "no_pbc", "_pbc", "-pbc", "whole", "center", "centered",
-    "_fit", "-fit", "fitted", "_mol", "aligned", "wrapped", "skip", "_dt",
+    "_fit", "-fit", "mdfit", "fitted", "_mol", "aligned", "wrapped", "skip", "_dt",
 )
 _PART_RE = re.compile(r"(?:part|seg|chunk|cont|restart|extend)[\-_.]?(\d+)", re.I)
 

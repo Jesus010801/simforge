@@ -3,14 +3,15 @@
 Uses ``gmx check`` (O(1) memory, streams the trajectory once) to record frame
 count, timestep, time range, atom count, box presence and precision.  The
 reference-structure atom count is used as the topology atom count for the
-compatibility check (cheap and reliable; ``gmx dump`` on a multi-GB ``.tpr`` is
-avoided per the performance rules).
+compatibility check. When a TPR is supplied, ``gmx dump`` also records its
+intended production duration for comparison with measured trajectory timing.
 
 Nothing here transforms coordinates.  Original files are only read.
 """
 from __future__ import annotations
 
 import re
+import math
 from pathlib import Path
 from typing import Optional
 
@@ -110,6 +111,24 @@ def inspect_trajectory(
         _record_segments(insp, traj_paths, fingerprint_segments)
         return insp
 
+    if topology_path and Path(topology_path).suffix.lower() == ".tpr":
+        result = run_gmx(["dump", "-s", str(topology_path)], gmx=gmx, timeout=120)
+        params = {}
+        if result.ok:
+            for key in ("dt", "nsteps"):
+                match = re.search(r"^\s*" + key + r"\s*=\s*([-+\d.eE]+)", result.stdout, re.M)
+                if match:
+                    try:
+                        params[key] = float(match[1])
+                    except ValueError:
+                        pass
+        duration = params.get("dt", 0) * params.get("nsteps", 0)
+        if math.isfinite(duration) and duration > 0:
+            insp.tpr_duration_ps = duration
+        else:
+            insp.warnings.append(CampaignWarning(
+                "tpr_timing_unavailable", "TPR intended duration could not be read with gmx dump.", Severity.WARN))
+
     per_segment: list[dict] = []
     combined_out: list[str] = []
     for tp in traj_paths:
@@ -128,10 +147,15 @@ def inspect_trajectory(
                 f"{res.stderr.strip()[-300:]}",
                 Severity.WARN,
             ))
-        per_segment.append(_parse_gmx_check(res.stderr + "\n" + res.stdout))
+        parsed = _parse_gmx_check(res.stderr + "\n" + res.stdout) if res.returncode == 0 else {}
+        if res.returncode == 0 and (not parsed.get("n_frames") or parsed.get("start_time_ps") is None
+                                  or (parsed.get("end_time_ps") is None and parsed.get("dt_ps") is None)):
+            insp.warnings.append(CampaignWarning(
+                "gmx_check_incomplete", f"gmx check did not provide complete frame timing for {tp}", Severity.REVIEW))
+        per_segment.append(parsed)
 
     insp.raw_tool_output = "\n\n".join(combined_out)[-20000:]
-    insp.inspected = True
+    insp.inspected = bool(per_segment) and not any(w.code in ("gmx_check_failed", "gmx_check_incomplete") for w in insp.warnings)
 
     # ── segments ────────────────────────────────────────────────────────────
     _record_segments(insp, traj_paths, fingerprint_segments, per_segment)
@@ -172,7 +196,7 @@ def inspect_trajectory(
         insp.start_time_ps = min(starts)
     if ends:
         insp.end_time_ps = max(ends)
-    if insp.start_time_ps is not None and insp.end_time_ps is not None:
+    if insp.inspected and insp.start_time_ps is not None and insp.end_time_ps is not None:
         insp.total_duration_ps = insp.end_time_ps - insp.start_time_ps
 
     box_ok = [d for d in per_segment if d.get("box_frames") and d.get("n_frames")]

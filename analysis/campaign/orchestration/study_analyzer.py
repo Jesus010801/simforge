@@ -1,8 +1,8 @@
 """Top-level orchestration for the study-campaign layer.
 
 ``run_inspect``  – discovery -> manifest -> component inference -> trajectory
-                   inspection -> validation.  Writes the manifest + validation
-                   report.  Runs **no** scientific observables.
+                   inspection -> validation.  Exports reports only when an
+                   output directory is explicitly supplied.  Runs **no** scientific observables.
 
 ``run_analyze``  – reuses the exact same manifest/validation pipeline, then
                    executes **only** the explicitly requested analyses,
@@ -58,25 +58,28 @@ def run_inspect(
 ) -> CampaignRunResult:
     study_root = Path(study_root).resolve()
     out_dir = Path(output_dir) if output_dir else study_root / DEFAULT_OUTPUT_DIRNAME
-    out_dir.mkdir(parents=True, exist_ok=True)
-
     manifest = _prepare_manifest(
         study_root, manifest_path=manifest_path, gmx=gmx,
         strong_fingerprint=strong_fingerprint, inspect_trajectories=inspect_trajectories,
     )
-    paths = write_manifest(manifest, out_dir)
-
     validation = validate_study(manifest, [])
-    (out_dir / "validation_report.json").write_text(
-        json.dumps(validation.to_dict(), indent=2) + "\n")
-    (out_dir / "validation_report.txt").write_text("\n".join(validation.lines) + "\n")
+    output_files = []
+    if output_dir is not None:
+        destinations = [out_dir / n for n in (
+            'study_manifest.yaml', 'study_manifest.json',
+            'validation_report.json', 'validation_report.txt')]
+        if any(p.exists() or p.is_symlink() for p in destinations):
+            raise FileExistsError(f'inspection output already exists in {out_dir}')
+        out_dir.mkdir(parents=True, exist_ok=True)
+        paths = write_manifest(manifest, out_dir)
+        destinations[2].write_text(json.dumps(validation.to_dict(), indent=2) + '\n')
+        destinations[3].write_text('\n'.join(validation.lines) + '\n')
+        output_files = [paths['yaml'], paths['json'], str(destinations[2]), str(destinations[3])]
 
     result = CampaignRunResult(
         study_root=str(study_root), output_dir=str(out_dir),
         manifest=manifest, validation=validation, requested_analyses=[],
-        output_files=[paths["yaml"], paths["json"],
-                      str(out_dir / "validation_report.json"),
-                      str(out_dir / "validation_report.txt")],
+        output_files=output_files,
         warnings=list(manifest.warnings),
     )
     return result

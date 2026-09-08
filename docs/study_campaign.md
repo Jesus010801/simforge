@@ -484,3 +484,112 @@ This layer discovers, validates and computes **per-system observables** with
 provenance. Cross-condition comparison, statistical testing and figures are
 Phase 2 / Phase 3 and are not produced. For a comparative report today, the
 legacy `simforge study <xvgdir>` XVG mode still applies.
+
+## Legacy MD selection inspection and planning
+
+The campaign manifest now includes `systems[].legacy_study`, using the existing
+trajectory discovery and production-stage classification. No new executable
+observables are registered by this extension.
+
+```bash
+simforge study selections /home/jesusxd/Escritorio/Nuevos_sistemas
+simforge study plan /home/jesusxd/Escritorio/Nuevos_sistemas --json
+simforge study plan ROOT --inspect-trajectories  # optional read-only gmx check
+```
+
+`selections` and `plan` write nothing and run no analyses or preprocessing.
+`inspect` is now also read-only by default; `--output DIR` explicitly exports
+manifest and validation reports and refuses to overwrite existing reports.
+This supersedes the default-output behavior described earlier in this document.
+
+Legacy annotations contain compound, target, approximate production duration,
+profile, confidence/provenance, all original index header positions, semantic
+roles, recovered GRO residue numbers, existing results, and per-analysis plans.
+The profiles are `xanthone_short` (positive duration up to 50 ns), `mechanistic`
+(at least 100 ns), and `mechanistic_cofactor` (detected cofactor component).
+Intermediate/unknown durations and conflicting identities require review.
+Cofactor systems always require dedicated mapping and produce no ligand-only plan.
+MDP duration is explicitly **intended**, not a measured trajectory duration;
+folder-only identities/durations remain review-required. Optional `gmx check`
+uses the existing production inspection pipeline. Derived-only projects remain
+inspectable, but their folder duration is not promoted to measured evidence.
+
+`resolve_index_group(path, name, aliases=())` in
+`analysis/campaign/structure/index_groups.py` returns an `IndexGroup` with
+`name`, zero-based `group_id`, and atom IDs. Exact matching precedes explicitly
+supplied aliases; duplicate matches raise `ValueError`, missing groups return
+`None`. No numeric positions are assumed. Multiple candidate indices remain
+unresolved; GROMACS backups such as `#index.ndx.1#` are excluded. Original
+indices are never changed. GRO atom **positions**, rather than wrapped serial
+numbers, recover residues. Historical residue lists are comparison references,
+not automatically created selections; different numbering is reported without
+rewriting the selection.
+
+Existing local XVG results need matching scientific headers and at least two
+finite, consistently shaped numeric rows. MM-PBSA summaries need recognizable
+energy/solvation fields and numeric rows; component MM/polar/apolar files alone
+do not complete MM-PBSA. Decomposition is tracked separately. PCA needs both
+validated eigenvalues and projections. Existing validated results have status
+`existing` and are excluded from missing work. This is format/content validation,
+not proof of the original time window, convergence, or parameter provenance.
+No planned capability is executable through `study plan`.
+
+Validation against `Nuevos_sistemas` found eight systems: three unambiguous short
+systems (AA-A6, AG-A6, LP-A6), A3-HMG-R with intended 200 ns, HMG-R-200ns-A6
+with incomplete identity/duration evidence, HMG-R-25ns-A6 with **200 ns MDP
+settings conflicting with its name**, and two separate COA systems. The latter
+have `COA` at index position 14, missing site groups, and unresolved biological
+target identity from their generic protein labels. Six systems contain validated
+MM-PBSA and decomposition summaries. These uncertainties are exposed for review,
+not silently resolved from directory names.
+
+## Controlled execution — `simforge study run` (xanthone_short core)
+
+```bash
+simforge study run ROOT --profile xanthone_short --missing-only
+simforge study run ROOT --profile xanthone_short --dry-run          # commands only
+simforge study run ROOT --profile xanthone_short --system AA-A6 --force
+```
+
+`run` is the **only** command in this layer that invokes GROMACS against
+scientific data, and it is opt-in: `inspect` / `selections` / `plan` stay
+read-only. It executes exactly five analyses and no others — protein RMSD,
+ligand RMSD, ligand-active-site minimum distance, ligand-active-site contacts
+(`-d 0.6`), and ligand-catalytic-site COM distance
+(`gmx distance -select 'com of group "LIG" plus com of group "Catalytic_*"'`).
+
+**Analysis window vs. production duration.** Production duration and analysis
+window are independent. The window is always `-b 0 -e 25000` (ps); a 200 ns
+production trajectory validly supports the 0-25 ns thesis-compatible scope. The
+original trajectory is never truncated or rewritten — only read.
+
+**Semantic groups.** `Protein` / `LIG` / `ActiveSite_*` / `Catalytic_*` are
+resolved by name from each system's own `index.ndx`. Numeric group ids are
+recorded for provenance but never passed to GROMACS.
+
+**Eligibility.** A system runs the explicit core only when compound (structural,
+≥0.9) and biological target (index-header, ≥0.85) identity are established, a
+single canonical `index.ndx` resolves, the `Protein` and `LIG` groups resolve,
+a readable production trajectory exists, and `gmx check` confirms ≥25 000 ps of
+coverage. A folder whose name claims ≤50 ns scope (e.g. `HMG-R-25ns-A6`) may run
+under an explicit `--profile xanthone_short` **override** even when its MDP
+settings show a longer production, provided identity and groups are otherwise
+high-confidence; the naming/duration discrepancy is recorded as `waived`. If
+identity is only a folder hint (e.g. `HMG-R-200ns-A6`), the system stays
+`REVIEW_REQUIRED` and the report names the missing evidence.
+
+**Missing-only state machine** (per analysis): existing valid result →
+`SKIP_EXISTING`; missing → `EXECUTED`; blocked by identity/selection/coverage →
+`REVIEW_REQUIRED`; GROMACS failure → `FAILED`. A validated result is never
+overwritten without `--force`. "Existing" means a valid result already in the
+source directory *or* in the managed output tree.
+
+**Output isolation.** Results are written to `./analysis_outputs/xanthone_short/`
+(or `--output DIR`), one subdirectory per system, never inside the scientific
+source tree; an output path that overlaps the dataset is refused. Per analysis
+the tree holds the XVG(s), a `gmx.log`, and a `provenance.<analysis>.json`
+recording source trajectory / TPR / index, resolved semantic group names and
+numeric ids, the analysis window, the full argv and stdin, GROMACS version,
+timestamp, output SHA-256, and protocol version. `run_report.{json,md}` and
+`source_integrity.json` (file inventory + `index.ndx` SHA-256, before and after)
+are written at the study level.

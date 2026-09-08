@@ -330,6 +330,18 @@ def _resolve_production(
                     Severity.WARN, scope=str(sim_dir)))
             return []
 
+    # Legacy runs commonly retain both compressed and full-precision output
+    # with the same production stem. Select the compressed stream explicitly;
+    # this is a format preference, not evidence for concatenation/equivalence.
+    compressed = {Path(a.path).stem for a in prod if Path(a.path).suffix == '.xtc'}
+    alternatives = [a for a in prod if Path(a.path).suffix == '.trr'
+                    and Path(a.path).stem in compressed]
+    if alternatives:
+        cand.discovery_evidence.append(
+            'selected .xtc over same-stem .trr output; retained alternate artifacts: '
+            + str([a.path for a in alternatives]))
+        prod = [a for a in prod if a not in alternatives]
+
     if len(prod) == 1:
         return [prod[0].path]
 
@@ -386,6 +398,13 @@ def discover_study(
         if f.suffix.lower() in _TRAJ_SUFFIXES:
             traj_by_dir.setdefault(f.parent, []).append(f)
 
+    # Keep incomplete legacy production directories visible for review. Require
+    # both a canonical production artifact and a local index: standalone
+    # preparation/topology directories must not become speculative systems.
+    for f in all_files:
+        if f.name in ('md.tpr', 'md.gro') and (f.parent / 'index.ndx').is_file():
+            traj_by_dir.setdefault(f.parent, [])
+
     if not traj_by_dir:
         hint = ""
         if list(root.rglob("*.xvg")):
@@ -412,10 +431,22 @@ def discover_study(
                                    TrajectoryStage.UNKNOWN)]
 
         cand = SystemCandidate(sim_dir=str(sim_dir), trajectory_artifacts=artifacts)
+        if not trajs:
+            cand.warnings.append(CampaignWarning(
+                'no_production_trajectory',
+                f'{sim_dir.name}: production artifacts and index found, but no trajectory',
+                'review_required', scope=str(sim_dir)))
 
         # ── resolve the production trajectory / segment collection ─────────
         prod_paths = _resolve_production(prod, non_prod, cand, sim_dir)
         cand.production_trajectory_paths = prod_paths
+        for path in prod_paths:
+            if Path(path).stat().st_size == 0:
+                cand.warnings.append(CampaignWarning(
+                    'empty_production_trajectory',
+                    f'{Path(path).name}: selected production trajectory is empty; '
+                    'alternate streams are not assumed equivalent',
+                    'review_required', scope=str(sim_dir)))
         prod_stems = [Path(p).stem.lower() for p in prod_paths]
 
         # recompute after _resolve_production may have promoted UNKNOWN -> PRODUCTION
@@ -487,8 +518,14 @@ def discover_study(
         # ── index ─────────────────────────────────────────────────────────
         ndx_hits = _find_nearby(sim_dir, root, {".ndx"})
         if ndx_hits:
-            cand.index_path = str(ndx_hits[0][0])
-            cand.association_evidence.append(f"user_index:{ndx_hits[0][1]}")
+            nearest = [p for p, scope in ndx_hits if scope == ndx_hits[0][1]]
+            if len(nearest) == 1:
+                cand.index_path = str(nearest[0])
+                cand.association_evidence.append(f"user_index:{ndx_hits[0][1]}")
+            else:
+                cand.warnings.append(CampaignWarning(
+                    'ambiguous_index', f'multiple index candidates: {[str(p) for p in nearest]}',
+                    'review_required', scope=str(sim_dir)))
 
         # ── condition dimensions from directory structure ─────────────────
         _condition_from_segments(cand, root)

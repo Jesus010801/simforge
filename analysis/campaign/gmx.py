@@ -122,8 +122,12 @@ def run_gmx(
             gmx_version=gmx_version(gmx),
         )
     except subprocess.TimeoutExpired as exc:
+        # TimeoutExpired can carry bytes even with text=True. Metadata inspection
+        # must report a failed check rather than crash while joining its output.
+        def decoded(value):
+            return value.decode('utf-8', errors='replace') if isinstance(value, bytes) else value or ''
         return GmxResult(
-            argv=argv, returncode=124, stdout=exc.stdout or "", stderr=exc.stderr or "",
+            argv=argv, returncode=124, stdout=decoded(exc.stdout), stderr=decoded(exc.stderr),
             stdin_text=stdin, duration_s=time.time() - started,
             gmx_version=gmx_version(gmx),
             warnings=[f"gmx command timed out after {timeout:.0f}s"],

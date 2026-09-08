@@ -1,0 +1,6437 @@
+{
+  "analysis_window_ps": [
+    0.0,
+    25000.0
+  ],
+  "contact_cutoff_nm": 0.6,
+  "counts": {
+    "EXECUTED": 0,
+    "FAILED": 0,
+    "PLANNED": 0,
+    "REVIEW_REQUIRED": 0,
+    "SKIP_EXISTING": 5
+  },
+  "dry_run": true,
+  "gromacs_version": "2025.2",
+  "output_dir": "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short",
+  "profile": "xanthone_short",
+  "protocol_version": "xanthone_short/1.0",
+  "skipped_systems": [
+    {
+      "reason": "not in --system filter",
+      "system": "A3-HMG-R"
+    },
+    {
+      "reason": "not in --system filter",
+      "system": "AG-A6"
+    },
+    {
+      "reason": "not in --system filter",
+      "system": "HMG-R-200ns-A6"
+    },
+    {
+      "reason": "not in --system filter",
+      "system": "HMG-R-25ns-A6"
+    },
+    {
+      "reason": "not in --system filter",
+      "system": "LP-A6"
+    },
+    {
+      "reason": "not in --system filter",
+      "system": "system_A3_COA"
+    },
+    {
+      "reason": "not in --system filter",
+      "system": "system_A6_COA"
+    }
+  ],
+  "source_integrity": {
+    "after": {
+      "files": {
+        "A3-HMG-R/#index.ndx.1#": [
+          4306493,
+          1788312793617590507
+        ],
+        "A3-HMG-R/A3.itp": [
+          18084,
+          1752133927952168102
+        ],
+        "A3-HMG-R/aaions.gro": [
+          5965494,
+          1787295051406798286
+        ],
+        "A3-HMG-R/aasolv.gro": [
+          5988796,
+          1787295039462903578
+        ],
+        "A3-HMG-R/ab.gro": [
+          1090590,
+          1787295035869935858
+        ],
+        "A3-HMG-R/apolar.xvg": [
+          18209,
+          1788350644144904641
+        ],
+        "A3-HMG-R/binding_energy.xvg": [
+          15317,
+          1788350644144904641
+        ],
+        "A3-HMG-R/complex.gro": [
+          1090590,
+          1787294948788810305
+        ],
+        "A3-HMG-R/contrib_MM.dat": [
+          6097417,
+          1788350644143904601
+        ],
+        "A3-HMG-R/contrib_apol.dat": [
+          6097417,
+          1788350644144904641
+        ],
+        "A3-HMG-R/contrib_pol.dat": [
+          6097417,
+          1788350644144904641
+        ],
+        "A3-HMG-R/em.edr": [
+          25776,
+          1787295069713642804
+        ],
+        "A3-HMG-R/em.gro": [
+          5965494,
+          1787295069764642380
+        ],
+        "A3-HMG-R/em.log": [
+          77733,
+          1787295069820641915
+        ],
+        "A3-HMG-R/em.mdp": [
+          1210,
+          1770957489473751905
+        ],
+        "A3-HMG-R/em.tpr": [
+          6903488,
+          1787295061235713932
+        ],
+        "A3-HMG-R/em.trr": [
+          1590900,
+          1787295069720642746
+        ],
+        "A3-HMG-R/energy.pdb": [
+          10472858,
+          1788350644344912651
+        ],
+        "A3-HMG-R/energy_MM.xvg": [
+          22481,
+          1788350644144904641
+        ],
+        "A3-HMG-R/energy_summary.csv": [
+          177,
+          1788350644144904641
+        ],
+        "A3-HMG-R/index.ndx": [
+          4311264,
+          1788756576674307491
+        ],
+        "A3-HMG-R/ions.mdp": [
+          1046,
+          1770957489473751905
+        ],
+        "A3-HMG-R/ions.tpr": [
+          6907508,
+          1787295046106844625
+        ],
+        "A3-HMG-R/ligand_atomtypes.itp": [
+          2534,
+          1787295001871255709
+        ],
+        "A3-HMG-R/md.cpt": [
+          3183808,
+          1787654332770366899
+        ],
+        "A3-HMG-R/md.edr": [
+          13441484,
+          1787654332864365877
+        ],
+        "A3-HMG-R/md.gro": [
+          9147054,
+          1787654332862365899
+        ],
+        "A3-HMG-R/md.log": [
+          13316732,
+          1787654332919365280
+        ],
+        "A3-HMG-R/md.mdp": [
+          2719,
+          1770958016791852736
+        ],
+        "A3-HMG-R/md.tpr": [
+          8494076,
+          1787295571246400397
+        ],
+        "A3-HMG-R/md.trr": [
+          6365190900,
+          1787654332778366812
+        ],
+        "A3-HMG-R/md.xtc": [
+          9906897616,
+          1787654332782366769
+        ],
+        "A3-HMG-R/md_prev.cpt": [
+          3183808,
+          1787654332771366888
+        ],
+        "A3-HMG-R/mdcenter.xtc": [
+          9795881916,
+          1788312385831249607
+        ],
+        "A3-HMG-R/mdfit.xtc": [
+          9949275744,
+          1788312553319596030
+        ],
+        "A3-HMG-R/mdout.mdp": [
+          11009,
+          1787295570504401662
+        ],
+        "A3-HMG-R/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "A3-HMG-R/npt.cpt": [
+          3183796,
+          1787295532692471922
+        ],
+        "A3-HMG-R/npt.edr": [
+          8204,
+          1787295532792471720
+        ],
+        "A3-HMG-R/npt.gro": [
+          9147054,
+          1787295532789471726
+        ],
+        "A3-HMG-R/npt.log": [
+          38025,
+          1787295532866471571
+        ],
+        "A3-HMG-R/npt.mdp": [
+          11769,
+          1751567194000000000
+        ],
+        "A3-HMG-R/npt.tpr": [
+          8494076,
+          1787295232747536770
+        ],
+        "A3-HMG-R/npt.xtc": [
+          248354360,
+          1787295532713471879
+        ],
+        "A3-HMG-R/nvt.cpt": [
+          3183424,
+          1787295222666592169
+        ],
+        "A3-HMG-R/nvt.edr": [
+          139212,
+          1787295222765591617
+        ],
+        "A3-HMG-R/nvt.gro": [
+          9147054,
+          1787295222763591629
+        ],
+        "A3-HMG-R/nvt.log": [
+          58801,
+          1787295222823591294
+        ],
+        "A3-HMG-R/nvt.mdp": [
+          11889,
+          1770957489473751905
+        ],
+        "A3-HMG-R/nvt.tpr": [
+          8494076,
+          1787295078510570568
+        ],
+        "A3-HMG-R/nvt.xtc": [
+          1240752872,
+          1787295222686592058
+        ],
+        "A3-HMG-R/polar.xvg": [
+          11798,
+          1788350644144904641
+        ],
+        "A3-HMG-R/posre_Protein_chain_A.itp": [
+          94668,
+          1787292855523954973
+        ],
+        "A3-HMG-R/posre_Protein_chain_B.itp": [
+          93614,
+          1787292855589957569
+        ],
+        "A3-HMG-R/posre_Protein_chain_C.itp": [
+          93645,
+          1787292855654960126
+        ],
+        "A3-HMG-R/posre_Protein_chain_D.itp": [
+          91599,
+          1787292855717962605
+        ],
+        "A3-HMG-R/protein.gro": [
+          1089027,
+          1787292855725962919
+        ],
+        "A3-HMG-R/residues_energy_summary.csv": [
+          116527,
+          1788350644364913452
+        ],
+        "A3-HMG-R/step8b_n1.pdb": [
+          1317939,
+          1787295067143664207
+        ],
+        "A3-HMG-R/step8c_n1.pdb": [
+          1317950,
+          1787295067153664123
+        ],
+        "A3-HMG-R/topol.top": [
+          846,
+          1787295051285799337
+        ],
+        "A3-HMG-R/topol_Protein_chain_A.itp": [
+          1722061,
+          1787292855523954973
+        ],
+        "A3-HMG-R/topol_Protein_chain_B.itp": [
+          1703393,
+          1787292855589957569
+        ],
+        "A3-HMG-R/topol_Protein_chain_C.itp": [
+          1704502,
+          1787292855654960126
+        ],
+        "A3-HMG-R/topol_Protein_chain_D.itp": [
+          1664498,
+          1787292855717962605
+        ],
+        "AA-A6/A6.itp": [
+          17309,
+          1787699520091751198
+        ],
+        "AA-A6/aaions.gro": [
+          2508819,
+          1787699675248614794
+        ],
+        "AA-A6/aasolv.gro": [
+          2518620,
+          1787699659762757444
+        ],
+        "AA-A6/ab.gro": [
+          346065,
+          1787699655124553368
+        ],
+        "AA-A6/apolar.xvg": [
+          2920,
+          1788293662402514643
+        ],
+        "AA-A6/assembly_report.yaml": [
+          1189,
+          1787699520413753062
+        ],
+        "AA-A6/binding_energy.xvg": [
+          2503,
+          1788293662402514643
+        ],
+        "AA-A6/complex.gro": [
+          346065,
+          1787699520119751360
+        ],
+        "AA-A6/contrib_MM.dat": [
+          197726,
+          1788293662402514643
+        ],
+        "AA-A6/contrib_apol.dat": [
+          197726,
+          1788293662402514643
+        ],
+        "AA-A6/contrib_pol.dat": [
+          197726,
+          1788293662402514643
+        ],
+        "AA-A6/em.edr": [
+          3976,
+          1787699686342204126
+        ],
+        "AA-A6/em.gro": [
+          2508819,
+          1787699686364219506
+        ],
+        "AA-A6/em.log": [
+          26748,
+          1787699686485304092
+        ],
+        "AA-A6/em.mdp": [
+          1210,
+          1751570471656552000
+        ],
+        "AA-A6/em.tpr": [
+          2372380,
+          1787699680486994591
+        ],
+        "AA-A6/em.trr": [
+          669120,
+          1787699686345206224
+        ],
+        "AA-A6/energy.pdb": [
+          4404438,
+          1788293662448514560
+        ],
+        "AA-A6/energy_MM.xvg": [
+          3263,
+          1788293662402514643
+        ],
+        "AA-A6/energy_summary.csv": [
+          175,
+          1788293662402514643
+        ],
+        "AA-A6/index.ndx": [
+          1686006,
+          1788757168745699802
+        ],
+        "AA-A6/ions.mdp": [
+          1046,
+          1709324723000000000
+        ],
+        "AA-A6/ions.tpr": [
+          2372752,
+          1787699665844841934
+        ],
+        "AA-A6/ligand_atomtypes.itp": [
+          2678,
+          1787699520091751198
+        ],
+        "AA-A6/md.cpt": [
+          1340248,
+          1787712220153402726
+        ],
+        "AA-A6/md.edr": [
+          1681484,
+          1787712220190406096
+        ],
+        "AA-A6/md.gro": [
+          3846819,
+          1787712220188405914
+        ],
+        "AA-A6/md.log": [
+          1683337,
+          1787712220246411197
+        ],
+        "AA-A6/md.mdp": [
+          2718,
+          1751567223125708000
+        ],
+        "AA-A6/md.tpr": [
+          3041296,
+          1787699975492933070
+        ],
+        "AA-A6/md.trr": [
+          1673469120,
+          1787712220157403090
+        ],
+        "AA-A6/md.xtc": [
+          516690612,
+          1787712220158403181
+        ],
+        "AA-A6/md_prev.cpt": [
+          1340248,
+          1787712220154402817
+        ],
+        "AA-A6/mdcenter.xtc": [
+          509101216,
+          1788293166065003551
+        ],
+        "AA-A6/mdfit.xtc": [
+          515634024,
+          1788293176666754980
+        ],
+        "AA-A6/mdout.mdp": [
+          11030,
+          1787699974956971520
+        ],
+        "AA-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "AA-A6/npt.cpt": [
+          1340248,
+          1787699958181242693
+        ],
+        "AA-A6/npt.edr": [
+          8204,
+          1787699958231238704
+        ],
+        "AA-A6/npt.gro": [
+          3846819,
+          1787699958231238704
+        ],
+        "AA-A6/npt.log": [
+          40551,
+          1787699958393225778
+        ],
+        "AA-A6/npt.mdp": [
+          11769,
+          1751567194173531000
+        ],
+        "AA-A6/npt.tpr": [
+          3041296,
+          1787699846105967674
+        ],
+        "AA-A6/npt.xtc": [
+          103592644,
+          1787699958191241895
+        ],
+        "AA-A6/nvt.cpt": [
+          1339876,
+          1787699816560916321
+        ],
+        "AA-A6/nvt.edr": [
+          139212,
+          1787699816610897941
+        ],
+        "AA-A6/nvt.gro": [
+          3846819,
+          1787699816609898309
+        ],
+        "AA-A6/nvt.log": [
+          66527,
+          1787699816667876989
+        ],
+        "AA-A6/nvt.mdp": [
+          11889,
+          1751567203721589000
+        ],
+        "AA-A6/nvt.tpr": [
+          3041296,
+          1787699697434765443
+        ],
+        "AA-A6/nvt.xtc": [
+          517511860,
+          1787699816573911542
+        ],
+        "AA-A6/polar.xvg": [
+          2134,
+          1788293662402514643
+        ],
+        "AA-A6/posre.itp": [
+          122351,
+          1787699520079751129
+        ],
+        "AA-A6/protein.gro": [
+          344412,
+          1787699520082751146
+        ],
+        "AA-A6/protein.itp": [
+          2166677,
+          1787699520099751244
+        ],
+        "AA-A6/residues_energy_summary.csv": [
+          35691,
+          1788293662451514554
+        ],
+        "AA-A6/step7b_n3.pdb": [
+          553219,
+          1787699686295171270
+        ],
+        "AA-A6/step7c_n3.pdb": [
+          553230,
+          1787699686299174067
+        ],
+        "AA-A6/topol.top": [
+          727,
+          1787699675221618074
+        ],
+        "AG-A6/#index.ndx.1#": [
+          3887019,
+          1788293596805692334
+        ],
+        "AG-A6/A6.itp": [
+          17309,
+          1787699447450331033
+        ],
+        "AG-A6/aaions.gro": [
+          5541055,
+          1787699672166997869
+        ],
+        "AG-A6/aasolv.gro": [
+          5563996,
+          1787699660745600830
+        ],
+        "AG-A6/ab.gro": [
+          670785,
+          1787699653327891731
+        ],
+        "AG-A6/apolar.xvg": [
+          2927,
+          1788298203464250184
+        ],
+        "AG-A6/assembly_report.yaml": [
+          1175,
+          1787699447923333766
+        ],
+        "AG-A6/binding_energy.xvg": [
+          2510,
+          1788298203464250184
+        ],
+        "AG-A6/complex.gro": [
+          670785,
+          1787699447505331351
+        ],
+        "AG-A6/contrib_MM.dat": [
+          376426,
+          1788298203463250154
+        ],
+        "AG-A6/contrib_apol.dat": [
+          376426,
+          1788298203463250154
+        ],
+        "AG-A6/contrib_pol.dat": [
+          376426,
+          1788298203464250184
+        ],
+        "AG-A6/em.edr": [
+          17576,
+          1787699690630018291
+        ],
+        "AG-A6/em.gro": [
+          5541055,
+          1787699690677047215
+        ],
+        "AG-A6/em.log": [
+          58553,
+          1787699690730079831
+        ],
+        "AG-A6/em.mdp": [
+          1210,
+          1751570471656552000
+        ],
+        "AG-A6/em.tpr": [
+          4769856,
+          1787699681954826362
+        ],
+        "AG-A6/em.trr": [
+          1477716,
+          1787699690636021984
+        ],
+        "AG-A6/energy.pdb": [
+          9727695,
+          1788298203568253253
+        ],
+        "AG-A6/energy_MM.xvg": [
+          3374,
+          1788298203464250184
+        ],
+        "AG-A6/energy_summary.csv": [
+          174,
+          1788298203464250184
+        ],
+        "AG-A6/index.ndx": [
+          3887924,
+          1788756981130301136
+        ],
+        "AG-A6/ions.mdp": [
+          1046,
+          1709324723000000000
+        ],
+        "AG-A6/ions.tpr": [
+          4773736,
+          1787699665358910929
+        ],
+        "AG-A6/ligand_atomtypes.itp": [
+          2678,
+          1787699447450331033
+        ],
+        "AG-A6/md.cpt": [
+          2957428,
+          1787722707404940654
+        ],
+        "AG-A6/md.edr": [
+          1681484,
+          1787722707483941171
+        ],
+        "AG-A6/md.gro": [
+          8496247,
+          1787722707482941164
+        ],
+        "AG-A6/md.log": [
+          1684286,
+          1787722707536941518
+        ],
+        "AG-A6/md.mdp": [
+          2718,
+          1751567223125708000
+        ],
+        "AG-A6/md.tpr": [
+          6247368,
+          1787700103568179464
+        ],
+        "AG-A6/md.trr": [
+          3695767716,
+          1787722707411940699
+        ],
+        "AG-A6/md.xtc": [
+          1148822852,
+          1787722707413940713
+        ],
+        "AG-A6/md_prev.cpt": [
+          2957428,
+          1787722707405940660
+        ],
+        "AG-A6/mdcenter.xtc": [
+          1135176880,
+          1788293451142572393
+        ],
+        "AG-A6/mdfit.xtc": [
+          1145563876,
+          1788293587598727184
+        ],
+        "AG-A6/mdout.mdp": [
+          11002,
+          1787700102952202223
+        ],
+        "AG-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "AG-A6/npt.cpt": [
+          2957428,
+          1787700094589508947
+        ],
+        "AG-A6/npt.edr": [
+          8204,
+          1787700094686505414
+        ],
+        "AG-A6/npt.gro": [
+          8496247,
+          1787700094681505597
+        ],
+        "AG-A6/npt.log": [
+          34345,
+          1787700094764502573
+        ],
+        "AG-A6/npt.mdp": [
+          11769,
+          1751567194173531000
+        ],
+        "AG-A6/npt.tpr": [
+          6247368,
+          1787699874249094119
+        ],
+        "AG-A6/npt.xtc": [
+          230305312,
+          1787700094609508219
+        ],
+        "AG-A6/nvt.cpt": [
+          2957056,
+          1787699841257206739
+        ],
+        "AG-A6/nvt.edr": [
+          139212,
+          1787699841344183882
+        ],
+        "AG-A6/nvt.gro": [
+          8496247,
+          1787699841343184145
+        ],
+        "AG-A6/nvt.log": [
+          58089,
+          1787699841396170221
+        ],
+        "AG-A6/nvt.mdp": [
+          11889,
+          1751567203721589000
+        ],
+        "AG-A6/nvt.tpr": [
+          6247368,
+          1787699698439252907
+        ],
+        "AG-A6/nvt.xtc": [
+          1150638700,
+          1787699841275202010
+        ],
+        "AG-A6/polar.xvg": [
+          2141,
+          1788298203464250184
+        ],
+        "AG-A6/posre.itp": [
+          234385,
+          1787699447421330866
+        ],
+        "AG-A6/protein.gro": [
+          669116,
+          1787699447427330900
+        ],
+        "AG-A6/protein.itp": [
+          4212435,
+          1787699447465331120
+        ],
+        "AG-A6/residues_energy_summary.csv": [
+          68049,
+          1788298203572253371
+        ],
+        "AG-A6/topol.top": [
+          721,
+          1787699672086008101
+        ],
+        "HMG-R-200ns-A6/#index.ndx.1#": [
+          4303308,
+          1788294850308152851
+        ],
+        "HMG-R-200ns-A6/apolar.xvg": [
+          4606,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/binding_energy.xvg": [
+          3914,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/contrib_MM.dat": [
+          1249217,
+          1788369593700246969
+        ],
+        "HMG-R-200ns-A6/contrib_apol.dat": [
+          1249217,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/contrib_pol.dat": [
+          1249217,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/energy.pdb": [
+          10465671,
+          1788369593820246230
+        ],
+        "HMG-R-200ns-A6/energy_MM.xvg": [
+          5478,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/energy_summary.csv": [
+          178,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/index.ndx": [
+          4308079,
+          1788756611209559458
+        ],
+        "HMG-R-200ns-A6/md.tpr": [
+          8491596,
+          1787293665800587140
+        ],
+        "HMG-R-200ns-A6/mdcenter.xtc": [
+          9789005460,
+          1788293584175740793
+        ],
+        "HMG-R-200ns-A6/mdfit.xtc": [
+          99770880,
+          1788357986095454206
+        ],
+        "HMG-R-200ns-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "HMG-R-200ns-A6/npt.gro": [
+          9140775,
+          1787293656236309370
+        ],
+        "HMG-R-200ns-A6/polar.xvg": [
+          3195,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/residues_energy_summary.csv": [
+          116451,
+          1788369593825246199
+        ],
+        "HMG-R-25ns-A6/#index.ndx.1#": [
+          4303308,
+          1788294850308152851
+        ],
+        "HMG-R-25ns-A6/A6.itp": [
+          17309,
+          1787292855727962998
+        ],
+        "HMG-R-25ns-A6/aaions.gro": [
+          5961399,
+          1787293184908788189
+        ],
+        "HMG-R-25ns-A6/aasolv.gro": [
+          5984701,
+          1787293169213265876
+        ],
+        "HMG-R-25ns-A6/ab.gro": [
+          1090680,
+          1787293135885145428
+        ],
+        "HMG-R-25ns-A6/apolar.xvg": [
+          2925,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/assembly_report.yaml": [
+          1395,
+          1787292856355987693
+        ],
+        "HMG-R-25ns-A6/binding_energy.xvg": [
+          2508,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/complex.gro": [
+          1090680,
+          1787292855768964611
+        ],
+        "HMG-R-25ns-A6/contrib_MM.dat": [
+          643192,
+          1788296531810481754
+        ],
+        "HMG-R-25ns-A6/contrib_apol.dat": [
+          643192,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/contrib_pol.dat": [
+          643192,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/em.edr": [
+          19776,
+          1787293204527436449
+        ],
+        "HMG-R-25ns-A6/em.gro": [
+          5961399,
+          1787293204582438260
+        ],
+        "HMG-R-25ns-A6/em.log": [
+          63711,
+          1787293204693441913
+        ],
+        "HMG-R-25ns-A6/em.mdp": [
+          1210,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/em.tpr": [
+          6902112,
+          1787293197230195913
+        ],
+        "HMG-R-25ns-A6/em.trr": [
+          1589808,
+          1787293204534436680
+        ],
+        "HMG-R-25ns-A6/energy.pdb": [
+          10465671,
+          1788296531923483114
+        ],
+        "HMG-R-25ns-A6/energy_MM.xvg": [
+          3372,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/energy_summary.csv": [
+          175,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/index.ndx": [
+          4308079,
+          1788756626972681318
+        ],
+        "HMG-R-25ns-A6/ions.mdp": [
+          1046,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/ions.tpr": [
+          6906132,
+          1787293175583478264
+        ],
+        "HMG-R-25ns-A6/ligand_atomtypes.itp": [
+          2678,
+          1787292855726962958
+        ],
+        "HMG-R-25ns-A6/md.cpt": [
+          3181612,
+          1787670520565184326
+        ],
+        "HMG-R-25ns-A6/md.edr": [
+          13441484,
+          1787670520646185300
+        ],
+        "HMG-R-25ns-A6/md.gro": [
+          9140775,
+          1787670520645185288
+        ],
+        "HMG-R-25ns-A6/md.log": [
+          13324569,
+          1787670520710186071
+        ],
+        "HMG-R-25ns-A6/md.mdp": [
+          2719,
+          1770958016791852736
+        ],
+        "HMG-R-25ns-A6/md.tpr": [
+          8491596,
+          1787293665800587140
+        ],
+        "HMG-R-25ns-A6/md.trr": [
+          6360821808,
+          1787670520572184410
+        ],
+        "HMG-R-25ns-A6/md.xtc": [
+          9899197968,
+          1787670520574184434
+        ],
+        "HMG-R-25ns-A6/md_prev.cpt": [
+          3181612,
+          1787670520566184338
+        ],
+        "HMG-R-25ns-A6/mdcenter.xtc": [
+          9789005460,
+          1788293584175740793
+        ],
+        "HMG-R-25ns-A6/mdfit.xtc": [
+          1232788836,
+          1788293633007579405
+        ],
+        "HMG-R-25ns-A6/mdout.mdp": [
+          11033,
+          1787293664784557655
+        ],
+        "HMG-R-25ns-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "HMG-R-25ns-A6/npt.cpt": [
+          3181624,
+          1787293656131306318
+        ],
+        "HMG-R-25ns-A6/npt.edr": [
+          8204,
+          1787293656237309399
+        ],
+        "HMG-R-25ns-A6/npt.gro": [
+          9140775,
+          1787293656236309370
+        ],
+        "HMG-R-25ns-A6/npt.log": [
+          39566,
+          1787293656316311695
+        ],
+        "HMG-R-25ns-A6/npt.mdp": [
+          11769,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/npt.tpr": [
+          8491596,
+          1787293392195413053
+        ],
+        "HMG-R-25ns-A6/npt.xtc": [
+          248189580,
+          1787293656153306957
+        ],
+        "HMG-R-25ns-A6/nvt.cpt": [
+          3181252,
+          1787293372811812396
+        ],
+        "HMG-R-25ns-A6/nvt.edr": [
+          139212,
+          1787293372915815628
+        ],
+        "HMG-R-25ns-A6/nvt.gro": [
+          9140775,
+          1787293372915815628
+        ],
+        "HMG-R-25ns-A6/nvt.log": [
+          66340,
+          1787293373039819482
+        ],
+        "HMG-R-25ns-A6/nvt.mdp": [
+          11889,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/nvt.tpr": [
+          8491596,
+          1787293217603865781
+        ],
+        "HMG-R-25ns-A6/nvt.xtc": [
+          1239931752,
+          1787293372834813111
+        ],
+        "HMG-R-25ns-A6/polar.xvg": [
+          2139,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_A.itp": [
+          94668,
+          1787292855523954973
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_B.itp": [
+          93614,
+          1787292855589957569
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_C.itp": [
+          93645,
+          1787292855654960126
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_D.itp": [
+          91599,
+          1787292855717962605
+        ],
+        "HMG-R-25ns-A6/protein.gro": [
+          1089027,
+          1787292855725962919
+        ],
+        "HMG-R-25ns-A6/residues_energy_summary.csv": [
+          116373,
+          1788296531927483162
+        ],
+        "HMG-R-25ns-A6/step8b_n1.pdb": [
+          1320151,
+          1787293202947384426
+        ],
+        "HMG-R-25ns-A6/step8c_n1.pdb": [
+          1320162,
+          1787293202958384788
+        ],
+        "HMG-R-25ns-A6/topol.top": [
+          845,
+          1787293184788784208
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_A.itp": [
+          1722061,
+          1787292855523954973
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_B.itp": [
+          1703393,
+          1787292855589957569
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_C.itp": [
+          1704502,
+          1787292855654960126
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_D.itp": [
+          1664498,
+          1787292855717962605
+        ],
+        "LP-A6/#index.ndx.1#": [
+          1695384,
+          1788293594211701895
+        ],
+        "LP-A6/A6.itp": [
+          17309,
+          1787706899180488401
+        ],
+        "LP-A6/aaions.gro": [
+          2534379,
+          1787707029678734228
+        ],
+        "LP-A6/aasolv.gro": [
+          2544450,
+          1787706965782647796
+        ],
+        "LP-A6/ab.gro": [
+          309660,
+          1787706962459590629
+        ],
+        "LP-A6/apolar.xvg": [
+          2912,
+          1788299785358960641
+        ],
+        "LP-A6/assembly_report.yaml": [
+          1189,
+          1787706899598495771
+        ],
+        "LP-A6/binding_energy.xvg": [
+          2495,
+          1788299785358960641
+        ],
+        "LP-A6/complex.gro": [
+          309660,
+          1787706899211488948
+        ],
+        "LP-A6/contrib_MM.dat": [
+          179415,
+          1788299785357960622
+        ],
+        "LP-A6/contrib_apol.dat": [
+          179415,
+          1788299785358960641
+        ],
+        "LP-A6/contrib_pol.dat": [
+          179415,
+          1788299785358960641
+        ],
+        "LP-A6/em.edr": [
+          9776,
+          1787707042168943907
+        ],
+        "LP-A6/em.gro": [
+          2534379,
+          1787707042192944309
+        ],
+        "LP-A6/em.log": [
+          40333,
+          1787707042250945280
+        ],
+        "LP-A6/em.mdp": [
+          1210,
+          1751570471656552000
+        ],
+        "LP-A6/em.tpr": [
+          2206260,
+          1787707034600816957
+        ],
+        "LP-A6/em.trr": [
+          675936,
+          1787707042171943957
+        ],
+        "LP-A6/energy.pdb": [
+          4449347,
+          1788299785404961515
+        ],
+        "LP-A6/energy_MM.xvg": [
+          3255,
+          1788299785358960641
+        ],
+        "LP-A6/energy_summary.csv": [
+          176,
+          1788299785358960641
+        ],
+        "LP-A6/index.ndx": [
+          1696880,
+          1788756602514494046
+        ],
+        "LP-A6/ions.mdp": [
+          1046,
+          1709324723000000000
+        ],
+        "LP-A6/ions.tpr": [
+          2206708,
+          1787707020825585091
+        ],
+        "LP-A6/ligand_atomtypes.itp": [
+          2678,
+          1787706899180488401
+        ],
+        "LP-A6/md.cpt": [
+          1353880,
+          1787728866740384956
+        ],
+        "LP-A6/md.edr": [
+          1681484,
+          1787728866775385305
+        ],
+        "LP-A6/md.gro": [
+          3886011,
+          1787728866774385295
+        ],
+        "LP-A6/md.log": [
+          1683434,
+          1787728866829385844
+        ],
+        "LP-A6/md.mdp": [
+          2718,
+          1751567223125708000
+        ],
+        "LP-A6/md.tpr": [
+          2881992,
+          1787717178487697718
+        ],
+        "LP-A6/md.trr": [
+          1690515936,
+          1787728866743384986
+        ],
+        "LP-A6/md.xtc": [
+          521771640,
+          1787728866744384996
+        ],
+        "LP-A6/md_prev.cpt": [
+          1353880,
+          1787728866740384956
+        ],
+        "LP-A6/mdcenter.xtc": [
+          514048156,
+          1788293442313650540
+        ],
+        "LP-A6/mdfit.xtc": [
+          519578464,
+          1788293582037749474
+        ],
+        "LP-A6/mdout.mdp": [
+          11029,
+          1787717178085693958
+        ],
+        "LP-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "LP-A6/npt.cpt": [
+          1353880,
+          1787717154760476867
+        ],
+        "LP-A6/npt.edr": [
+          8204,
+          1787717154801477247
+        ],
+        "LP-A6/npt.gro": [
+          3886011,
+          1787717154800477237
+        ],
+        "LP-A6/npt.log": [
+          44524,
+          1787717154861477802
+        ],
+        "LP-A6/npt.mdp": [
+          11769,
+          1751567194173531000
+        ],
+        "LP-A6/npt.tpr": [
+          2881992,
+          1787717002435117072
+        ],
+        "LP-A6/npt.xtc": [
+          104634332,
+          1787717154769476950
+        ],
+        "LP-A6/npt_prev.cpt": [
+          1353880,
+          1787717154760476867
+        ],
+        "LP-A6/nvt.cpt": [
+          1353508,
+          1787717000500100523
+        ],
+        "LP-A6/nvt.edr": [
+          139212,
+          1787717000542100882
+        ],
+        "LP-A6/nvt.gro": [
+          3886011,
+          1787717000541100873
+        ],
+        "LP-A6/nvt.log": [
+          68417,
+          1787717000601101386
+        ],
+        "LP-A6/nvt.mdp": [
+          11889,
+          1751567203721589000
+        ],
+        "LP-A6/nvt.tpr": [
+          2881992,
+          1787716878400100313
+        ],
+        "LP-A6/nvt.xtc": [
+          522676408,
+          1787717000510100608
+        ],
+        "LP-A6/polar.xvg": [
+          2126,
+          1788299785358960641
+        ],
+        "LP-A6/posre.itp": [
+          108494,
+          1787706899170488225
+        ],
+        "LP-A6/protein.gro": [
+          308029,
+          1787706899173488278
+        ],
+        "LP-A6/protein.itp": [
+          1941223,
+          1787706899189488560
+        ],
+        "LP-A6/residues_energy_summary.csv": [
+          32438,
+          1788299785407961572
+        ],
+        "LP-A6/topol.top": [
+          727,
+          1787707029648733723
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1_rmsd_ligand.xvg": [
+          67075,
+          1772750965250523308
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1contacts_lig_active.xvg": [
+          58276,
+          1772700665556060350
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1dist_lig_catalytic.xvg": [
+          53150,
+          1772700663737049438
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1mindist_lig_active.xvg": [
+          68276,
+          1772700665556060350
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1rmsd_protein.xvg": [
+          67103,
+          1772697188617759196
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2_rmsd_ligand.xvg": [
+          67085,
+          1772750965252523294
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2contacts_lig_active.xvg": [
+          58272,
+          1772699551613329976
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2dist_lig_catalytic.xvg": [
+          53149,
+          1772699549760459502
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2mindist_lig_active.xvg": [
+          68272,
+          1772699551613329976
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2rmsd_protein.xvg": [
+          67098,
+          1772697192524931468
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3_rmsd_ligand.xvg": [
+          67094,
+          1772750965254523280
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3contacts_lig_active.xvg": [
+          58272,
+          1772699556766972700
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3dist_lig_catalytic.xvg": [
+          53146,
+          1772699554879103057
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3mindist_lig_active.xvg": [
+          68272,
+          1772699556766972700
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3rmsd_protein.xvg": [
+          67082,
+          1772697199721248826
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4_rmsd_ligand.xvg": [
+          67062,
+          1772750965256523265
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4contacts_lig_active.xvg": [
+          58272,
+          1772699562052610831
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4dist_lig_catalytic.xvg": [
+          53160,
+          1772699560166739419
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4mindist_lig_active.xvg": [
+          68272,
+          1772699562052610831
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4rmsd_protein.xvg": [
+          67084,
+          1772697203475414416
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5_rmsd_ligand.xvg": [
+          67091,
+          1772750965258523251
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5contacts_lig_active.xvg": [
+          58244,
+          1772699567310255439
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5dist_lig_catalytic.xvg": [
+          53149,
+          1772699565466379572
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5mindist_lig_active.xvg": [
+          68244,
+          1772699567310255439
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5rmsd_protein.xvg": [
+          67086,
+          1772697207237580382
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-LIG-rmsd": [
+          207569,
+          1772751380339480945
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-LIG-rmsd.svg": [
+          250053,
+          1772773985510902303
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-dist.svg": [
+          251371,
+          1772774009312239055
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-dist.xvg": [
+          157539,
+          1772753933655695273
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-rmsd.svg": [
+          250568,
+          1772773869463262408
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-rmsd.xvg": [
+          207556,
+          1772703291430845753
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1_rmsd_ligand.xvg": [
+          67103,
+          1772750965260523237
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1contacts_lig_active.xvg": [
+          58254,
+          1772699501594034957
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1dist_lig_catalytic.xvg": [
+          53139,
+          1772699497426363858
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1mindist_lig_active.xvg": [
+          68254,
+          1772699501594034957
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1rmsd_protein.xvg": [
+          67080,
+          1772697144380810465
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2_rmsd_ligand.xvg": [
+          67090,
+          1772750965262523222
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2contacts_lig_active.xvg": [
+          58257,
+          1772699512736171292
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2dist_lig_catalytic.xvg": [
+          53133,
+          1772699508713480496
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2mindist_lig_active.xvg": [
+          68257,
+          1772699512736171292
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2rmsd_protein.xvg": [
+          67091,
+          1772697160408516143
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3_rmsd_ligand.xvg": [
+          67057,
+          1772750965263523215
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3contacts_lig_active.xvg": [
+          58255,
+          1772699524725266963
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3dist_lig_catalytic.xvg": [
+          53133,
+          1772699520498582863
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3mindist_lig_active.xvg": [
+          68255,
+          1772699524725266963
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3rmsd_protein.xvg": [
+          67072,
+          1772697169036896218
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4contacts_lig_active.xvg": [
+          12237,
+          1772754401614447866
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4dist_lig_catalytic.xvg": [
+          11132,
+          1772754401195442557
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4mindist_lig_active.xvg": [
+          14237,
+          1772754401614447866
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4rmsd_ligand.xvg": [
+          13584,
+          1772751489396169175
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4rmsd_protein.xvg": [
+          13615,
+          1761262123165417307
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5_rmsd_ligand.xvg": [
+          65621,
+          1772751776692793381
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5contacts_lig_active.xvg": [
+          58268,
+          1772699546228707995
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5dist_lig_catalytic.xvg": [
+          53151,
+          1772699542055004363
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5mindist_lig_active.xvg": [
+          68268,
+          1772699546228707995
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5rmsd_protein.xvg": [
+          67091,
+          1772697184744588446
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-dist.svg": [
+          212295,
+          1772778670915138860
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-dist.xvg": [
+          134589,
+          1772778658129989290
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd-ligand.svg": [
+          211480,
+          1772773809793420672
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd-ligand.xvg": [
+          186838,
+          1772751981340150602
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd.svg": [
+          211895,
+          1772773748934563363
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd.xvg": [
+          178328,
+          1772703481051869615
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1contacts_lig_active.xvg": [
+          58287,
+          1772699580035413681
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1dist_lig_catalytic.xvg": [
+          53163,
+          1772699575475712338
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1mindist_lig_active.xvg": [
+          68287,
+          1772699580035413681
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1rmsd_protein.xvg": [
+          67084,
+          1772697216863005099
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2contacts_lig_active.xvg": [
+          58280,
+          1772699587025962202
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2dist_lig_catalytic.xvg": [
+          53155,
+          1772699584575119632
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2mindist_lig_active.xvg": [
+          68280,
+          1772699587025962202
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2rmsd_protein.xvg": [
+          67093,
+          1772697222041233644
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3contacts_lig_active.xvg": [
+          58263,
+          1772699593980520606
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3dist_lig_catalytic.xvg": [
+          53147,
+          1772699591539674758
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3mindist_lig_active.xvg": [
+          68263,
+          1772699593980520606
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3rmsd_protein.xvg": [
+          67084,
+          1772697227244463332
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4contacts_lig_active.xvg": [
+          58278,
+          1772699600818093702
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4dist_lig_catalytic.xvg": [
+          53148,
+          1772699598362246221
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4mindist_lig_active.xvg": [
+          68278,
+          1772699600818093702
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4rmsd_ligand.xvg": [
+          67092,
+          1772752446670333758
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4rmsd_protein.xvg": [
+          67077,
+          1772703697103516083
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5contacts_lig_active.xvg": [
+          58286,
+          1772755366940943448
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5dist_lig_catalytic.xvg": [
+          53157,
+          1772755366940943448
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5mindist_lig_active.xvg": [
+          68286,
+          1772755366940943448
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5rmsd_ligand.xvg": [
+          67070,
+          1772752475476740113
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5rmsd_protein.xvg": [
+          67075,
+          1772703759613406726
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-dist.svg": [
+          250903,
+          1772773665663392575
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-dist.xvg": [
+          157652,
+          1772755535037779847
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-rmsd-ligand.xvg": [
+          224618,
+          1772752686077762651
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-rmsd.xvg": [
+          207602,
+          1772776636097205896
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A1_rmsd_ligand.xvg": [
+          67096,
+          1772750965268523179
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A2_rmsd_ligand.xvg": [
+          67092,
+          1772750965278523107
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A3_rmsd_ligand.xvg": [
+          67089,
+          1772750965280523093
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A4_rmsd_ligand.xvg": [
+          65606,
+          1772752411143835400
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A5_rmsd_ligand.xvg": [
+          65618,
+          1772752423310005705
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1_rmsd_ligand.xvg": [
+          67092,
+          1772750965284523064
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1contacts_lig_active.xvg": [
+          58260,
+          1772699612909356066
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1dist_lig_catalytic.xvg": [
+          53142,
+          1772699611023469671
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1mindist_lig_active.xvg": [
+          68260,
+          1772699612909356066
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1rmsd_protein.xvg": [
+          67094,
+          1772697241528094064
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2_rmsd-ligand.xvg": [
+          65585,
+          1772752918231991361
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2contacts_lig_active.xvg": [
+          58259,
+          1772701295903446869
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2dist_lig_catalytic.xvg": [
+          53149,
+          1772701294021422651
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2mindist_lig_active.xvg": [
+          68259,
+          1772701295903446869
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2rmsd_protein.xvg": [
+          67081,
+          1772697245473268326
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3_rmsd-ligand.xvg": [
+          65600,
+          1772752960432113657
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3contacts_lig_active.xvg": [
+          58260,
+          1772699618280035416
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3dist_lig_catalytic.xvg": [
+          53147,
+          1772699616407146758
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3mindist_lig_active.xvg": [
+          68260,
+          1772699618280035416
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3rmsd_protein.xvg": [
+          67097,
+          1772697249298437308
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4_rmsd-ligand.xvg": [
+          65605,
+          1772752927688015604
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4contacts_lig_active.xvg": [
+          58284,
+          1772699623409733096
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4dist_lig_catalytic.xvg": [
+          53142,
+          1772699621511844503
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4mindist_lig_active.xvg": [
+          68284,
+          1772699623409733096
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4rmsd_protein.xvg": [
+          67091,
+          1772697253135606840
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5_rmsd_ligand.xvg": [
+          67076,
+          1772750965292523007
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5contacts_lig_active.xvg": [
+          58272,
+          1772699628716424361
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5dist_lig_catalytic.xvg": [
+          53150,
+          1772699626800535351
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5mindist_lig_active.xvg": [
+          68272,
+          1772699628716424361
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5rmsd_protein.xvg": [
+          67084,
+          1772697257124783112
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-dist.svg": [
+          250200,
+          1772772986248369365
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-dist.xvg": [
+          157546,
+          1772776859944685931
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd-ligand.svg": [
+          250051,
+          1772773250640614215
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd-ligand.xvg": [
+          233100,
+          1772753180639255154
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd.svg": [
+          250072,
+          1772773167438419781
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd.xvg": [
+          207547,
+          1772776951953949225
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/extract_stats.sh": [
+          227,
+          1772766124253679041
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/resumen.txt": [
+          4487,
+          1772766196240447208
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-LIG-rmsd.svg": [
+          250053,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-dist.svg": [
+          251371,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-rmsd.svg": [
+          250568,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-dist.svg": [
+          212295,
+          1772778670915138860
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-rmsd-ligand.svg": [
+          211480,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-rmsd.svg": [
+          211895,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Dist.pdf": [
+          293260,
+          1772778785496447401
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-dist.svg": [
+          250903,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-rmsd-ligand.svg": [
+          249920,
+          1772776142242560275
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-rmsd.svg": [
+          250465,
+          1772776652365231497
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-dist.svg": [
+          250185,
+          1772777078215357218
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-rmsd-ligand.svg": [
+          250051,
+          1772776142242560275
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-rmsd.svg": [
+          250072,
+          1772776971467009004
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Rmsd-Dist.pdf": [
+          318040,
+          1773379909181128809
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Rmsd-ligand.pdf": [
+          334997,
+          1772778034590217614
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Rmsd.pdf": [
+          331536,
+          1772777804062666069
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/dist.svg": [
+          733232,
+          1772778775871339526
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/rmsd-lig.svg": [
+          745569,
+          1772778822653860667
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/rmsd.svg": [
+          740587,
+          1772777811339827520
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-SASA.xvg": [
+          105700,
+          1772601731129562810
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-gyrate.xvg": [
+          240791,
+          1772601731128562807
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-hbonds_internal.xvg": [
+          115706,
+          1772601731128562807
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-rmsd.xvg": [
+          269547,
+          1772607980992896260
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-rmsf.xvg": [
+          7981,
+          1772601731129562810
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-gyrate.xvg": [
+          96815,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-hbonds_internal.xvg": [
+          46735,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-rmsd.xvg": [
+          52596,
+          1752217256587838418
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-rmsf.xvg": [
+          14682,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-sasa.xvg": [
+          42704,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-gygarate-rmsd.pdf": [
+          211397,
+          1772610754935096221
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-gygarate.svg": [
+          275592,
+          1772609627230486835
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-rmsd.pdf": [
+          123977,
+          1772609175581206095
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-rmsd.svg": [
+          373694,
+          1772608917646178832
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-rmsd.xvg": [
+          317474,
+          1772608674915388276
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All.svg": [
+          490040,
+          1772610783739611793
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-SASA.xvg": [
+          42696,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-gyrate.xvg": [
+          96816,
+          1772601801278807706
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-hbonds_internal.xvg": [
+          46723,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-rmsd.xvg": [
+          54396,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-rmsf.xvg": [
+          24746,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-SASA.xvg": [
+          105736,
+          1772589150286940873
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-gyrate.xvg": [
+          240839,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-hbonds_internal.xvg": [
+          115749,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-rmsd.xvg": [
+          135103,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-rmsf.xvg": [
+          8566,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/All-BF.pdf": [
+          9861049,
+          1773377569597926957
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/All-BF.svg": [
+          11054418,
+          1773377605215968460
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-A1.png": [
+          2014850,
+          1773376728354124214
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-APO.png": [
+          2015096,
+          1773376867335067692
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-COMP.png": [
+          2055734,
+          1773376769618871947
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-CoA.png": [
+          2091193,
+          1773376693163483624
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM.pdf": [
+          36292387,
+          1773371223290062880
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM.svg": [
+          35904846,
+          1773377749420375239
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_A1-1.png": [
+          6367247,
+          1773369363703701327
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_A1.pdf": [
+          6451428,
+          1773368647506525248
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_APO-1.png": [
+          6484689,
+          1773369366696752816
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_APO.pdf": [
+          6587521,
+          1773368647504525203
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_COMP-1.png": [
+          5884974,
+          1773369372255848690
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_COMP.pdf": [
+          5999504,
+          1773368647502525158
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_CoA-1.png": [
+          7833807,
+          1773369368529784395
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_CoA.pdf": [
+          7755084,
+          1773368630378138619
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DIST.svg": [
+          509838,
+          1773379052755034389
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DIST.xvg": [
+          333484,
+          1773378778056943289
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL.pdf": [
+          2440513,
+          1773370698570180043
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_A1-1.png": [
+          744603,
+          1773369372833858676
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_A1.pdf": [
+          153453,
+          1773368647506525248
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_APO-1.png": [
+          914956,
+          1773369373521870568
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_APO.pdf": [
+          179342,
+          1773368647502525158
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COA-1.png": [
+          766609,
+          1773369374193882188
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COA.pdf": [
+          114493,
+          1773368647499525090
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COMP-1.png": [
+          918944,
+          1773369374893894296
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COMP.pdf": [
+          190868,
+          1773368647500525112
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_A1.xvg": [
+          46704,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_APO.xvg": [
+          92739,
+          1773120087215069626
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_COA.xvg": [
+          230703,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_COMP.xvg": [
+          168199,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA.pdf": [
+          2335649,
+          1773370232099000339
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_A1-1.png": [
+          508223,
+          1773369375481904472
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_A1.pdf": [
+          50486,
+          1773368647506525248
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_APO-1.png": [
+          712643,
+          1773369376270918130
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_APO.pdf": [
+          79074,
+          1773368647502525158
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COA-1.png": [
+          726251,
+          1773369377398937669
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COA.pdf": [
+          137011,
+          1773368694542949663
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COMP-1.png": [
+          916227,
+          1773369378442955764
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COMP.pdf": [
+          127092,
+          1773368647500525112
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG.svg": [
+          449753,
+          1773379011001251598
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG.xvg": [
+          373603,
+          1773378344620607738
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_A1.xvg": [
+          42713,
+          1773120838979711672
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_APO.xvg": [
+          192856,
+          1773121269478300814
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_COA.xvg": [
+          210738,
+          1773120907486710100
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_COMP.xvg": [
+          153659,
+          1773120936371138019
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSD.svg": [
+          453771,
+          1773378981760950516
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSD.xvg": [
+          453492,
+          1773378242805693795
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSD_RG.pdf": [
+          286990,
+          1773379375180472224
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_A1.xvg": [
+          363494,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_APO.xvg": [
+          363503,
+          1773120067797665365
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_COA.xvg": [
+          363498,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_COMP.xvg": [
+          363500,
+          1773117647409497852
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/Rmsd-Dist.pdf": [
+          318040,
+          1773379956462165690
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_A1.xvg": [
+          42705,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_APO.xvg": [
+          84721,
+          1773120067797665365
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_COA.xvg": [
+          210723,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_COMP.xvg": [
+          153615,
+          1773117647409497852
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_COA-COMP_active.xvg": [
+          168242,
+          1773125569956686055
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_COA_active.xvg": [
+          230785,
+          1773124995612146758
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_lig-COMP_active.xvg": [
+          168246,
+          1773124984228010283
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_lig_active.xvg": [
+          46760,
+          1773124681987707990
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_COA-COMP_catalytic.xvg": [
+          153571,
+          1773125066451011195
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_COA_catalytic.xvg": [
+          210659,
+          1773124977366928377
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_lig-COMP_catalytic.xvg": [
+          153567,
+          1773124733749221574
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_lig_catalytic.xvg": [
+          42611,
+          1773124674462635498
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/extract_stats.sh": [
+          227,
+          1772766124253679041
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_COA-COMP_active.xvg": [
+          197370,
+          1773125569956686055
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_COA_active.xvg": [
+          270789,
+          1773124995612146758
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_lig-COMP_active.xvg": [
+          197374,
+          1773124984228010283
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_lig_active.xvg": [
+          54760,
+          1773124681987707990
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/extract_stats.sh": [
+          227,
+          1772766124253679041
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd-Dist.svg": [
+          761704,
+          1773379928465553998
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-A1.xvg": [
+          52565,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-APO.xvg": [
+          104626,
+          1772219101174724344
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-COA.xvg": [
+          275117,
+          1772221053080320317
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-Competitive.xvg": [
+          202273,
+          1771884740134889004
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_A1-COMP.xvg": [
+          189931,
+          1773181310742457003
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_A1-HMG.xvg": [
+          52594,
+          1773181243842502534
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_A1.xvg": [
+          52587,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_APO.xvg": [
+          104610,
+          1773120067797665365
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COA-COMP.xvg": [
+          189911,
+          1773181509468294651
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COA-HMG.xvg": [
+          260622,
+          1773181278827001603
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COA.xvg": [
+          260605,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COMP.xvg": [
+          189930,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd_ligand.svg": [
+          513270,
+          1773379076308003419
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd_ligand.xvg": [
+          515392,
+          1773378782655991998
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd_rg.svg": [
+          675853,
+          1773379404887365505
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AA-All-dock.png": [
+          914990,
+          1772674227703520520
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AA-dock-zoom.png": [
+          1752463,
+          1772674482026201724
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AA-dock.png": [
+          1382740,
+          1772674431044707135
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AG-All-dock.png": [
+          2547751,
+          1772673597330025963
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AG-dock-zoom.png": [
+          2227714,
+          1772673941145919715
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AG-dock.png": [
+          1816082,
+          1772673868725259558
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-BF.pdf": [
+          9861049,
+          1773377569597926957
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock-zoom.pdf": [
+          34959463,
+          1772684414414012050
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock-zoom.svg": [
+          35950411,
+          1772687658932062302
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock.pdf": [
+          23934122,
+          1772679085775971589
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock.svg": [
+          22564964,
+          1772679114793138330
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-gygarate.xvg": [
+          216273,
+          1772609554430778051
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/HMG-All-dock.png": [
+          7101142,
+          1772674875814465885
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/HMG-dock-zoom.png": [
+          5322979,
+          1772675182986294525
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/HMG-dock.png": [
+          5193693,
+          1772675123054645279
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/LP-All-dock.png": [
+          6135010,
+          1772676549866283067
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/LP-dock-zoom.png": [
+          4687160,
+          1772676300272944017
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/LP-dock.png": [
+          4216774,
+          1772676255597784753
+        ],
+        "system_A3_COA/#topol.top.1#": [
+          957,
+          1787779252253558016
+        ],
+        "system_A3_COA/#topol.top.2#": [
+          988,
+          1787781133064141725
+        ],
+        "system_A3_COA/A3-MMPBSA/apolar.xvg": [
+          4648,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/binding_energy.xvg": [
+          3956,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/contrib_MM.dat": [
+          1249219,
+          1788451576796371768
+        ],
+        "system_A3_COA/A3-MMPBSA/contrib_apol.dat": [
+          1249219,
+          1788451576796371768
+        ],
+        "system_A3_COA/A3-MMPBSA/contrib_pol.dat": [
+          1249219,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/energy.pdb": [
+          11180979,
+          1788451576924373424
+        ],
+        "system_A3_COA/A3-MMPBSA/energy_MM.xvg": [
+          5520,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/energy_summary.csv": [
+          176,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/polar.xvg": [
+          3237,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/residues_energy_summary.csv": [
+          116471,
+          1788451576929373488
+        ],
+        "system_A3_COA/A3.itp": [
+          18180,
+          1787779252246557736
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/apolar.xvg": [
+          4533,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/binding_energy.xvg": [
+          3959,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/contrib_MM.dat": [
+          2370,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/contrib_apol.dat": [
+          2370,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/contrib_pol.dat": [
+          2370,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/energy.pdb": [
+          11180979,
+          1788460598108580624
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/energy_MM.xvg": [
+          5095,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/energy_summary.csv": [
+          168,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/polar.xvg": [
+          3093,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/residues_energy_summary.csv": [
+          267,
+          1788460598113580642
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/apolar.xvg": [
+          4648,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/binding_energy.xvg": [
+          3956,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/contrib_MM.dat": [
+          1249219,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/contrib_apol.dat": [
+          1249219,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/contrib_pol.dat": [
+          1249219,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/energy.pdb": [
+          11181001,
+          1788459311607226988
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/energy_MM.xvg": [
+          5571,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/energy_summary.csv": [
+          181,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/polar.xvg": [
+          3265,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/residues_energy_summary.csv": [
+          116447,
+          1788459311612227068
+        ],
+        "system_A3_COA/COA_original.itp": [
+          36916,
+          1787779252253558016
+        ],
+        "system_A3_COA/aaions.gro": [
+          6368878,
+          1787781153000754444
+        ],
+        "system_A3_COA/aasolv.gro": [
+          6393616,
+          1787781132951143967
+        ],
+        "system_A3_COA/ab.gro": [
+          1094190,
+          1787781099834824591
+        ],
+        "system_A3_COA/assembly_report.yaml": [
+          3487,
+          1787779252867582615
+        ],
+        "system_A3_COA/complex.gro": [
+          1094190,
+          1787779252292559579
+        ],
+        "system_A3_COA/component_atomtypes.itp": [
+          7138,
+          1787779252241557535
+        ],
+        "system_A3_COA/em.edr": [
+          15576,
+          1787781198794924573
+        ],
+        "system_A3_COA/em.gro": [
+          6368878,
+          1787781198849923623
+        ],
+        "system_A3_COA/em.log": [
+          53951,
+          1787781198965921621
+        ],
+        "system_A3_COA/em.mdp": [
+          1210,
+          1787780748599814887
+        ],
+        "system_A3_COA/em.tpr": [
+          7038440,
+          1787781194162004895
+        ],
+        "system_A3_COA/em.trr": [
+          1698468,
+          1787781198800924469
+        ],
+        "system_A3_COA/index.ndx": [
+          4620353,
+          1788386446507763694
+        ],
+        "system_A3_COA/ions.mdp": [
+          1046,
+          1787780748599814887
+        ],
+        "system_A3_COA/ions.tpr": [
+          7042604,
+          1787781141791970170
+        ],
+        "system_A3_COA/md.cpt": [
+          3398932,
+          1787994659702520196
+        ],
+        "system_A3_COA/md.edr": [
+          6721484,
+          1787994659792522817
+        ],
+        "system_A3_COA/md.gro": [
+          9765574,
+          1787994659791522788
+        ],
+        "system_A3_COA/md.log": [
+          6671093,
+          1787994659850524506
+        ],
+        "system_A3_COA/md.mdp": [
+          2725,
+          1787780748599814887
+        ],
+        "system_A3_COA/md.tpr": [
+          8736556,
+          1787781862142981663
+        ],
+        "system_A3_COA/md.trr": [
+          6795570468,
+          1787994659710520429
+        ],
+        "system_A3_COA/md.xtc": [
+          5285293708,
+          1787994659712520487
+        ],
+        "system_A3_COA/md_prev.cpt": [
+          3398932,
+          1787994659703520225
+        ],
+        "system_A3_COA/mdcenter.xtc": [
+          523166620,
+          1788385842981838538
+        ],
+        "system_A3_COA/mdfit.xtc": [
+          531189704,
+          1788386412351805945
+        ],
+        "system_A3_COA/mdout.mdp": [
+          11041,
+          1787781861324984569
+        ],
+        "system_A3_COA/mmpbsa.mdp": [
+          2937,
+          1765362185590258395
+        ],
+        "system_A3_COA/npt.cpt": [
+          3398932,
+          1787781728694553269
+        ],
+        "system_A3_COA/npt.edr": [
+          8204,
+          1787781728791552775
+        ],
+        "system_A3_COA/npt.gro": [
+          9765574,
+          1787781728790552780
+        ],
+        "system_A3_COA/npt.log": [
+          33096,
+          1787781728866552393
+        ],
+        "system_A3_COA/npt.mdp": [
+          11769,
+          1787780748599814887
+        ],
+        "system_A3_COA/npt.tpr": [
+          8736556,
+          1787781462142466037
+        ],
+        "system_A3_COA/npt.trr": [
+          56046804,
+          1787781728712553177
+        ],
+        "system_A3_COA/npt.xtc": [
+          265008356,
+          1787781728714553167
+        ],
+        "system_A3_COA/nvt.cpt": [
+          3398560,
+          1787781392644193268
+        ],
+        "system_A3_COA/nvt.edr": [
+          139212,
+          1787781392830191165
+        ],
+        "system_A3_COA/nvt.gro": [
+          9765574,
+          1787781392826191210
+        ],
+        "system_A3_COA/nvt.log": [
+          58611,
+          1787781392913190227
+        ],
+        "system_A3_COA/nvt.mdp": [
+          11889,
+          1787780748599814887
+        ],
+        "system_A3_COA/nvt.tpr": [
+          8736556,
+          1787781214347660674
+        ],
+        "system_A3_COA/nvt.trr": [
+          30570984,
+          1787781392678192883
+        ],
+        "system_A3_COA/nvt.xtc": [
+          1324068064,
+          1787781392683192827
+        ],
+        "system_A3_COA/posre_Protein_chain_A.itp": [
+          94668,
+          1787779252227556975
+        ],
+        "system_A3_COA/posre_Protein_chain_B.itp": [
+          93614,
+          1787779252228557014
+        ],
+        "system_A3_COA/posre_Protein_chain_C.itp": [
+          93645,
+          1787779252228557014
+        ],
+        "system_A3_COA/posre_Protein_chain_D.itp": [
+          91599,
+          1787779252228557014
+        ],
+        "system_A3_COA/protein.gro": [
+          1089022,
+          1787779252221556734
+        ],
+        "system_A3_COA/step8b_n4.pdb": [
+          1403417,
+          1787781197967938850
+        ],
+        "system_A3_COA/step8c_n4.pdb": [
+          1403428,
+          1787781197982938591
+        ],
+        "system_A3_COA/topol.top": [
+          1026,
+          1787781152882756691
+        ],
+        "system_A3_COA/topol_Protein_chain_A.itp": [
+          1721760,
+          1787779252222556774
+        ],
+        "system_A3_COA/topol_Protein_chain_B.itp": [
+          1703092,
+          1787779252224556854
+        ],
+        "system_A3_COA/topol_Protein_chain_C.itp": [
+          1704201,
+          1787779252225556894
+        ],
+        "system_A3_COA/topol_Protein_chain_D.itp": [
+          1664197,
+          1787779252227556975
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/apolar.xvg": [
+          4531,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/binding_energy.xvg": [
+          3957,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/contrib_MM.dat": [
+          2370,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/contrib_apol.dat": [
+          2370,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/contrib_pol.dat": [
+          2370,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/energy.pdb": [
+          11181137,
+          1788478691367762859
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/energy_MM.xvg": [
+          5093,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/energy_summary.csv": [
+          169,
+          1788478691238766137
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/polar.xvg": [
+          3085,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/residues_energy_summary.csv": [
+          271,
+          1788478691373762706
+        ],
+        "system_A6_COA/A6-MMPBSA/apolar.xvg": [
+          18241,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/binding_energy.xvg": [
+          15349,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/contrib_MM.dat": [
+          6097419,
+          1788425578871574677
+        ],
+        "system_A6_COA/A6-MMPBSA/contrib_apol.dat": [
+          6097419,
+          1788425578871574677
+        ],
+        "system_A6_COA/A6-MMPBSA/contrib_pol.dat": [
+          6097419,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/energy.pdb": [
+          11181174,
+          1788425579077569831
+        ],
+        "system_A6_COA/A6-MMPBSA/energy_MM.xvg": [
+          22513,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/energy_summary.csv": [
+          178,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/polar.xvg": [
+          11830,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/residues_energy_summary.csv": [
+          116406,
+          1788425579096569384
+        ],
+        "system_A6_COA/A6.itp": [
+          17417,
+          1787779248888422845
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/apolar.xvg": [
+          4640,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/binding_energy.xvg": [
+          3948,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/contrib_MM.dat": [
+          1249219,
+          1788468363784965400
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/contrib_apol.dat": [
+          1249219,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/contrib_pol.dat": [
+          1249219,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/energy.pdb": [
+          11181137,
+          1788468363912959585
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/energy_MM.xvg": [
+          5563,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/energy_summary.csv": [
+          180,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/polar.xvg": [
+          3255,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/residues_energy_summary.csv": [
+          116632,
+          1788468363918959312
+        ],
+        "system_A6_COA/COA_original.itp": [
+          36968,
+          1787779248897423207
+        ],
+        "system_A6_COA/aaions.gro": [
+          6368968,
+          1787781149357824000
+        ],
+        "system_A6_COA/aasolv.gro": [
+          6393706,
+          1787781137210059839
+        ],
+        "system_A6_COA/ab.gro": [
+          1094280,
+          1787781098253858288
+        ],
+        "system_A6_COA/assembly_report.yaml": [
+          3735,
+          1787779249518448196
+        ],
+        "system_A6_COA/complex.gro": [
+          1094280,
+          1787779248935424738
+        ],
+        "system_A6_COA/component_atomtypes.itp": [
+          7412,
+          1787779248884422684
+        ],
+        "system_A6_COA/em.edr": [
+          10176,
+          1787781164816532526
+        ],
+        "system_A6_COA/em.gro": [
+          6368968,
+          1787781164869531543
+        ],
+        "system_A6_COA/em.log": [
+          41271,
+          1787781164921530578
+        ],
+        "system_A6_COA/em.mdp": [
+          1210,
+          1787780730769611368
+        ],
+        "system_A6_COA/em.tpr": [
+          7038272,
+          1787781158607648449
+        ],
+        "system_A6_COA/em.trr": [
+          1698492,
+          1787781164823532396
+        ],
+        "system_A6_COA/index.ndx": [
+          4620423,
+          1788386444880670465
+        ],
+        "system_A6_COA/ions.mdp": [
+          1046,
+          1787780730769611368
+        ],
+        "system_A6_COA/ions.tpr": [
+          7042440,
+          1787781141194981804
+        ],
+        "system_A6_COA/md.cpt": [
+          3398992,
+          1788006530352014166
+        ],
+        "system_A6_COA/md.edr": [
+          6721484,
+          1788006530438020184
+        ],
+        "system_A6_COA/md.gro": [
+          9765712,
+          1788006530437020114
+        ],
+        "system_A6_COA/md.log": [
+          6672209,
+          1788006530497024313
+        ],
+        "system_A6_COA/md.mdp": [
+          2725,
+          1787780730769611368
+        ],
+        "system_A6_COA/md.tpr": [
+          8736400,
+          1787781862943978824
+        ],
+        "system_A6_COA/md.trr": [
+          6795666492,
+          1788006530360014726
+        ],
+        "system_A6_COA/md.xtc": [
+          5285333240,
+          1788006530363014936
+        ],
+        "system_A6_COA/md_prev.cpt": [
+          3398992,
+          1788006530353014236
+        ],
+        "system_A6_COA/mdcenter.xtc": [
+          523208876,
+          1788385840743707120
+        ],
+        "system_A6_COA/mdfit.xtc": [
+          532072732,
+          1788386418775174232
+        ],
+        "system_A6_COA/mdout.mdp": [
+          11069,
+          1787781861887982568
+        ],
+        "system_A6_COA/mmpbsa.mdp": [
+          2937,
+          1765362185590258395
+        ],
+        "system_A6_COA/npt.cpt": [
+          3398992,
+          1787781720430595742
+        ],
+        "system_A6_COA/npt.edr": [
+          8204,
+          1787781720591594906
+        ],
+        "system_A6_COA/npt.gro": [
+          9765712,
+          1787781720588594921
+        ],
+        "system_A6_COA/npt.log": [
+          32594,
+          1787781720689594397
+        ],
+        "system_A6_COA/npt.mdp": [
+          11769,
+          1787780730769611368
+        ],
+        "system_A6_COA/npt.tpr": [
+          8736400,
+          1787781462963458110
+        ],
+        "system_A6_COA/npt.trr": [
+          56047596,
+          1787781720458595596
+        ],
+        "system_A6_COA/npt.xtc": [
+          265003928,
+          1787781720464595565
+        ],
+        "system_A6_COA/nvt.cpt": [
+          3398620,
+          1787781394364173865
+        ],
+        "system_A6_COA/nvt.edr": [
+          139212,
+          1787781394464172739
+        ],
+        "system_A6_COA/nvt.gro": [
+          9765712,
+          1787781394462172761
+        ],
+        "system_A6_COA/nvt.log": [
+          58821,
+          1787781394528172019
+        ],
+        "system_A6_COA/nvt.mdp": [
+          11889,
+          1787780730769611368
+        ],
+        "system_A6_COA/nvt.tpr": [
+          8736400,
+          1787781207809770540
+        ],
+        "system_A6_COA/nvt.trr": [
+          30571416,
+          1787781394384173639
+        ],
+        "system_A6_COA/nvt.xtc": [
+          1323971068,
+          1787781394387173606
+        ],
+        "system_A6_COA/nvt_prev.cpt": [
+          3398620,
+          1787781394365173853
+        ],
+        "system_A6_COA/plbS7DYA.in": [
+          845,
+          1788386563857479575
+        ],
+        "system_A6_COA/plbS7DYA.pqr": [
+          1766527,
+          1788386563939484263
+        ],
+        "system_A6_COA/posre_Protein_chain_A.itp": [
+          94668,
+          1787779248870422120
+        ],
+        "system_A6_COA/posre_Protein_chain_B.itp": [
+          93614,
+          1787779248871422160
+        ],
+        "system_A6_COA/posre_Protein_chain_C.itp": [
+          93645,
+          1787779248871422160
+        ],
+        "system_A6_COA/posre_Protein_chain_D.itp": [
+          91599,
+          1787779248871422160
+        ],
+        "system_A6_COA/protein.gro": [
+          1089022,
+          1787779248865421918
+        ],
+        "system_A6_COA/step11b_n1.pdb": [
+          1387933,
+          1787781164304542029
+        ],
+        "system_A6_COA/step11c_n1.pdb": [
+          1387944,
+          1787781164314541843
+        ],
+        "system_A6_COA/topol.top": [
+          1026,
+          1787781149242826203
+        ],
+        "system_A6_COA/topol_Protein_chain_A.itp": [
+          1721760,
+          1787779248866421958
+        ],
+        "system_A6_COA/topol_Protein_chain_B.itp": [
+          1703092,
+          1787779248867421999
+        ],
+        "system_A6_COA/topol_Protein_chain_C.itp": [
+          1704201,
+          1787779248869422079
+        ],
+        "system_A6_COA/topol_Protein_chain_D.itp": [
+          1664197,
+          1787779248870422120
+        ]
+      },
+      "index_sha256": {
+        "A3-HMG-R/index.ndx": "7a822a8e7cf206db4c86c8ae646b9f0012667b6a871787465ab69111a1e3e01d",
+        "AA-A6/index.ndx": "0dbdfd727b2d8a51aadb1eefa9a259b052f7af08580a001016b1669063a985b2",
+        "AG-A6/index.ndx": "5f3891e5cd308a5f92d8237fdfcd83f3368d4d5eff8910bccefe66fe4f245b1c",
+        "HMG-R-200ns-A6/index.ndx": "a1b2e8d51cb06629bab9551d963949931acefaecb6308fde86708492afd92164",
+        "HMG-R-25ns-A6/index.ndx": "a1b2e8d51cb06629bab9551d963949931acefaecb6308fde86708492afd92164",
+        "LP-A6/index.ndx": "89c54716349d5ff90ff9120afa6e81b6220bbbcf75be3983d4e875ae6f388048",
+        "system_A3_COA/index.ndx": "1cce9cc4bf25ae8c9f5e0eb29d4554947f531168a46bc43da76b8024dcd8ee7e",
+        "system_A6_COA/index.ndx": "fe48605f77ceebadd5b2e26bcfdf13119dedeef259e3b6651907213d8b4e67b5"
+      },
+      "n_files": 782,
+      "root": "/home/jesusxd/Escritorio/Nuevos_sistemas"
+    },
+    "before": {
+      "files": {
+        "A3-HMG-R/#index.ndx.1#": [
+          4306493,
+          1788312793617590507
+        ],
+        "A3-HMG-R/A3.itp": [
+          18084,
+          1752133927952168102
+        ],
+        "A3-HMG-R/aaions.gro": [
+          5965494,
+          1787295051406798286
+        ],
+        "A3-HMG-R/aasolv.gro": [
+          5988796,
+          1787295039462903578
+        ],
+        "A3-HMG-R/ab.gro": [
+          1090590,
+          1787295035869935858
+        ],
+        "A3-HMG-R/apolar.xvg": [
+          18209,
+          1788350644144904641
+        ],
+        "A3-HMG-R/binding_energy.xvg": [
+          15317,
+          1788350644144904641
+        ],
+        "A3-HMG-R/complex.gro": [
+          1090590,
+          1787294948788810305
+        ],
+        "A3-HMG-R/contrib_MM.dat": [
+          6097417,
+          1788350644143904601
+        ],
+        "A3-HMG-R/contrib_apol.dat": [
+          6097417,
+          1788350644144904641
+        ],
+        "A3-HMG-R/contrib_pol.dat": [
+          6097417,
+          1788350644144904641
+        ],
+        "A3-HMG-R/em.edr": [
+          25776,
+          1787295069713642804
+        ],
+        "A3-HMG-R/em.gro": [
+          5965494,
+          1787295069764642380
+        ],
+        "A3-HMG-R/em.log": [
+          77733,
+          1787295069820641915
+        ],
+        "A3-HMG-R/em.mdp": [
+          1210,
+          1770957489473751905
+        ],
+        "A3-HMG-R/em.tpr": [
+          6903488,
+          1787295061235713932
+        ],
+        "A3-HMG-R/em.trr": [
+          1590900,
+          1787295069720642746
+        ],
+        "A3-HMG-R/energy.pdb": [
+          10472858,
+          1788350644344912651
+        ],
+        "A3-HMG-R/energy_MM.xvg": [
+          22481,
+          1788350644144904641
+        ],
+        "A3-HMG-R/energy_summary.csv": [
+          177,
+          1788350644144904641
+        ],
+        "A3-HMG-R/index.ndx": [
+          4311264,
+          1788756576674307491
+        ],
+        "A3-HMG-R/ions.mdp": [
+          1046,
+          1770957489473751905
+        ],
+        "A3-HMG-R/ions.tpr": [
+          6907508,
+          1787295046106844625
+        ],
+        "A3-HMG-R/ligand_atomtypes.itp": [
+          2534,
+          1787295001871255709
+        ],
+        "A3-HMG-R/md.cpt": [
+          3183808,
+          1787654332770366899
+        ],
+        "A3-HMG-R/md.edr": [
+          13441484,
+          1787654332864365877
+        ],
+        "A3-HMG-R/md.gro": [
+          9147054,
+          1787654332862365899
+        ],
+        "A3-HMG-R/md.log": [
+          13316732,
+          1787654332919365280
+        ],
+        "A3-HMG-R/md.mdp": [
+          2719,
+          1770958016791852736
+        ],
+        "A3-HMG-R/md.tpr": [
+          8494076,
+          1787295571246400397
+        ],
+        "A3-HMG-R/md.trr": [
+          6365190900,
+          1787654332778366812
+        ],
+        "A3-HMG-R/md.xtc": [
+          9906897616,
+          1787654332782366769
+        ],
+        "A3-HMG-R/md_prev.cpt": [
+          3183808,
+          1787654332771366888
+        ],
+        "A3-HMG-R/mdcenter.xtc": [
+          9795881916,
+          1788312385831249607
+        ],
+        "A3-HMG-R/mdfit.xtc": [
+          9949275744,
+          1788312553319596030
+        ],
+        "A3-HMG-R/mdout.mdp": [
+          11009,
+          1787295570504401662
+        ],
+        "A3-HMG-R/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "A3-HMG-R/npt.cpt": [
+          3183796,
+          1787295532692471922
+        ],
+        "A3-HMG-R/npt.edr": [
+          8204,
+          1787295532792471720
+        ],
+        "A3-HMG-R/npt.gro": [
+          9147054,
+          1787295532789471726
+        ],
+        "A3-HMG-R/npt.log": [
+          38025,
+          1787295532866471571
+        ],
+        "A3-HMG-R/npt.mdp": [
+          11769,
+          1751567194000000000
+        ],
+        "A3-HMG-R/npt.tpr": [
+          8494076,
+          1787295232747536770
+        ],
+        "A3-HMG-R/npt.xtc": [
+          248354360,
+          1787295532713471879
+        ],
+        "A3-HMG-R/nvt.cpt": [
+          3183424,
+          1787295222666592169
+        ],
+        "A3-HMG-R/nvt.edr": [
+          139212,
+          1787295222765591617
+        ],
+        "A3-HMG-R/nvt.gro": [
+          9147054,
+          1787295222763591629
+        ],
+        "A3-HMG-R/nvt.log": [
+          58801,
+          1787295222823591294
+        ],
+        "A3-HMG-R/nvt.mdp": [
+          11889,
+          1770957489473751905
+        ],
+        "A3-HMG-R/nvt.tpr": [
+          8494076,
+          1787295078510570568
+        ],
+        "A3-HMG-R/nvt.xtc": [
+          1240752872,
+          1787295222686592058
+        ],
+        "A3-HMG-R/polar.xvg": [
+          11798,
+          1788350644144904641
+        ],
+        "A3-HMG-R/posre_Protein_chain_A.itp": [
+          94668,
+          1787292855523954973
+        ],
+        "A3-HMG-R/posre_Protein_chain_B.itp": [
+          93614,
+          1787292855589957569
+        ],
+        "A3-HMG-R/posre_Protein_chain_C.itp": [
+          93645,
+          1787292855654960126
+        ],
+        "A3-HMG-R/posre_Protein_chain_D.itp": [
+          91599,
+          1787292855717962605
+        ],
+        "A3-HMG-R/protein.gro": [
+          1089027,
+          1787292855725962919
+        ],
+        "A3-HMG-R/residues_energy_summary.csv": [
+          116527,
+          1788350644364913452
+        ],
+        "A3-HMG-R/step8b_n1.pdb": [
+          1317939,
+          1787295067143664207
+        ],
+        "A3-HMG-R/step8c_n1.pdb": [
+          1317950,
+          1787295067153664123
+        ],
+        "A3-HMG-R/topol.top": [
+          846,
+          1787295051285799337
+        ],
+        "A3-HMG-R/topol_Protein_chain_A.itp": [
+          1722061,
+          1787292855523954973
+        ],
+        "A3-HMG-R/topol_Protein_chain_B.itp": [
+          1703393,
+          1787292855589957569
+        ],
+        "A3-HMG-R/topol_Protein_chain_C.itp": [
+          1704502,
+          1787292855654960126
+        ],
+        "A3-HMG-R/topol_Protein_chain_D.itp": [
+          1664498,
+          1787292855717962605
+        ],
+        "AA-A6/A6.itp": [
+          17309,
+          1787699520091751198
+        ],
+        "AA-A6/aaions.gro": [
+          2508819,
+          1787699675248614794
+        ],
+        "AA-A6/aasolv.gro": [
+          2518620,
+          1787699659762757444
+        ],
+        "AA-A6/ab.gro": [
+          346065,
+          1787699655124553368
+        ],
+        "AA-A6/apolar.xvg": [
+          2920,
+          1788293662402514643
+        ],
+        "AA-A6/assembly_report.yaml": [
+          1189,
+          1787699520413753062
+        ],
+        "AA-A6/binding_energy.xvg": [
+          2503,
+          1788293662402514643
+        ],
+        "AA-A6/complex.gro": [
+          346065,
+          1787699520119751360
+        ],
+        "AA-A6/contrib_MM.dat": [
+          197726,
+          1788293662402514643
+        ],
+        "AA-A6/contrib_apol.dat": [
+          197726,
+          1788293662402514643
+        ],
+        "AA-A6/contrib_pol.dat": [
+          197726,
+          1788293662402514643
+        ],
+        "AA-A6/em.edr": [
+          3976,
+          1787699686342204126
+        ],
+        "AA-A6/em.gro": [
+          2508819,
+          1787699686364219506
+        ],
+        "AA-A6/em.log": [
+          26748,
+          1787699686485304092
+        ],
+        "AA-A6/em.mdp": [
+          1210,
+          1751570471656552000
+        ],
+        "AA-A6/em.tpr": [
+          2372380,
+          1787699680486994591
+        ],
+        "AA-A6/em.trr": [
+          669120,
+          1787699686345206224
+        ],
+        "AA-A6/energy.pdb": [
+          4404438,
+          1788293662448514560
+        ],
+        "AA-A6/energy_MM.xvg": [
+          3263,
+          1788293662402514643
+        ],
+        "AA-A6/energy_summary.csv": [
+          175,
+          1788293662402514643
+        ],
+        "AA-A6/index.ndx": [
+          1686006,
+          1788757168745699802
+        ],
+        "AA-A6/ions.mdp": [
+          1046,
+          1709324723000000000
+        ],
+        "AA-A6/ions.tpr": [
+          2372752,
+          1787699665844841934
+        ],
+        "AA-A6/ligand_atomtypes.itp": [
+          2678,
+          1787699520091751198
+        ],
+        "AA-A6/md.cpt": [
+          1340248,
+          1787712220153402726
+        ],
+        "AA-A6/md.edr": [
+          1681484,
+          1787712220190406096
+        ],
+        "AA-A6/md.gro": [
+          3846819,
+          1787712220188405914
+        ],
+        "AA-A6/md.log": [
+          1683337,
+          1787712220246411197
+        ],
+        "AA-A6/md.mdp": [
+          2718,
+          1751567223125708000
+        ],
+        "AA-A6/md.tpr": [
+          3041296,
+          1787699975492933070
+        ],
+        "AA-A6/md.trr": [
+          1673469120,
+          1787712220157403090
+        ],
+        "AA-A6/md.xtc": [
+          516690612,
+          1787712220158403181
+        ],
+        "AA-A6/md_prev.cpt": [
+          1340248,
+          1787712220154402817
+        ],
+        "AA-A6/mdcenter.xtc": [
+          509101216,
+          1788293166065003551
+        ],
+        "AA-A6/mdfit.xtc": [
+          515634024,
+          1788293176666754980
+        ],
+        "AA-A6/mdout.mdp": [
+          11030,
+          1787699974956971520
+        ],
+        "AA-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "AA-A6/npt.cpt": [
+          1340248,
+          1787699958181242693
+        ],
+        "AA-A6/npt.edr": [
+          8204,
+          1787699958231238704
+        ],
+        "AA-A6/npt.gro": [
+          3846819,
+          1787699958231238704
+        ],
+        "AA-A6/npt.log": [
+          40551,
+          1787699958393225778
+        ],
+        "AA-A6/npt.mdp": [
+          11769,
+          1751567194173531000
+        ],
+        "AA-A6/npt.tpr": [
+          3041296,
+          1787699846105967674
+        ],
+        "AA-A6/npt.xtc": [
+          103592644,
+          1787699958191241895
+        ],
+        "AA-A6/nvt.cpt": [
+          1339876,
+          1787699816560916321
+        ],
+        "AA-A6/nvt.edr": [
+          139212,
+          1787699816610897941
+        ],
+        "AA-A6/nvt.gro": [
+          3846819,
+          1787699816609898309
+        ],
+        "AA-A6/nvt.log": [
+          66527,
+          1787699816667876989
+        ],
+        "AA-A6/nvt.mdp": [
+          11889,
+          1751567203721589000
+        ],
+        "AA-A6/nvt.tpr": [
+          3041296,
+          1787699697434765443
+        ],
+        "AA-A6/nvt.xtc": [
+          517511860,
+          1787699816573911542
+        ],
+        "AA-A6/polar.xvg": [
+          2134,
+          1788293662402514643
+        ],
+        "AA-A6/posre.itp": [
+          122351,
+          1787699520079751129
+        ],
+        "AA-A6/protein.gro": [
+          344412,
+          1787699520082751146
+        ],
+        "AA-A6/protein.itp": [
+          2166677,
+          1787699520099751244
+        ],
+        "AA-A6/residues_energy_summary.csv": [
+          35691,
+          1788293662451514554
+        ],
+        "AA-A6/step7b_n3.pdb": [
+          553219,
+          1787699686295171270
+        ],
+        "AA-A6/step7c_n3.pdb": [
+          553230,
+          1787699686299174067
+        ],
+        "AA-A6/topol.top": [
+          727,
+          1787699675221618074
+        ],
+        "AG-A6/#index.ndx.1#": [
+          3887019,
+          1788293596805692334
+        ],
+        "AG-A6/A6.itp": [
+          17309,
+          1787699447450331033
+        ],
+        "AG-A6/aaions.gro": [
+          5541055,
+          1787699672166997869
+        ],
+        "AG-A6/aasolv.gro": [
+          5563996,
+          1787699660745600830
+        ],
+        "AG-A6/ab.gro": [
+          670785,
+          1787699653327891731
+        ],
+        "AG-A6/apolar.xvg": [
+          2927,
+          1788298203464250184
+        ],
+        "AG-A6/assembly_report.yaml": [
+          1175,
+          1787699447923333766
+        ],
+        "AG-A6/binding_energy.xvg": [
+          2510,
+          1788298203464250184
+        ],
+        "AG-A6/complex.gro": [
+          670785,
+          1787699447505331351
+        ],
+        "AG-A6/contrib_MM.dat": [
+          376426,
+          1788298203463250154
+        ],
+        "AG-A6/contrib_apol.dat": [
+          376426,
+          1788298203463250154
+        ],
+        "AG-A6/contrib_pol.dat": [
+          376426,
+          1788298203464250184
+        ],
+        "AG-A6/em.edr": [
+          17576,
+          1787699690630018291
+        ],
+        "AG-A6/em.gro": [
+          5541055,
+          1787699690677047215
+        ],
+        "AG-A6/em.log": [
+          58553,
+          1787699690730079831
+        ],
+        "AG-A6/em.mdp": [
+          1210,
+          1751570471656552000
+        ],
+        "AG-A6/em.tpr": [
+          4769856,
+          1787699681954826362
+        ],
+        "AG-A6/em.trr": [
+          1477716,
+          1787699690636021984
+        ],
+        "AG-A6/energy.pdb": [
+          9727695,
+          1788298203568253253
+        ],
+        "AG-A6/energy_MM.xvg": [
+          3374,
+          1788298203464250184
+        ],
+        "AG-A6/energy_summary.csv": [
+          174,
+          1788298203464250184
+        ],
+        "AG-A6/index.ndx": [
+          3887924,
+          1788756981130301136
+        ],
+        "AG-A6/ions.mdp": [
+          1046,
+          1709324723000000000
+        ],
+        "AG-A6/ions.tpr": [
+          4773736,
+          1787699665358910929
+        ],
+        "AG-A6/ligand_atomtypes.itp": [
+          2678,
+          1787699447450331033
+        ],
+        "AG-A6/md.cpt": [
+          2957428,
+          1787722707404940654
+        ],
+        "AG-A6/md.edr": [
+          1681484,
+          1787722707483941171
+        ],
+        "AG-A6/md.gro": [
+          8496247,
+          1787722707482941164
+        ],
+        "AG-A6/md.log": [
+          1684286,
+          1787722707536941518
+        ],
+        "AG-A6/md.mdp": [
+          2718,
+          1751567223125708000
+        ],
+        "AG-A6/md.tpr": [
+          6247368,
+          1787700103568179464
+        ],
+        "AG-A6/md.trr": [
+          3695767716,
+          1787722707411940699
+        ],
+        "AG-A6/md.xtc": [
+          1148822852,
+          1787722707413940713
+        ],
+        "AG-A6/md_prev.cpt": [
+          2957428,
+          1787722707405940660
+        ],
+        "AG-A6/mdcenter.xtc": [
+          1135176880,
+          1788293451142572393
+        ],
+        "AG-A6/mdfit.xtc": [
+          1145563876,
+          1788293587598727184
+        ],
+        "AG-A6/mdout.mdp": [
+          11002,
+          1787700102952202223
+        ],
+        "AG-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "AG-A6/npt.cpt": [
+          2957428,
+          1787700094589508947
+        ],
+        "AG-A6/npt.edr": [
+          8204,
+          1787700094686505414
+        ],
+        "AG-A6/npt.gro": [
+          8496247,
+          1787700094681505597
+        ],
+        "AG-A6/npt.log": [
+          34345,
+          1787700094764502573
+        ],
+        "AG-A6/npt.mdp": [
+          11769,
+          1751567194173531000
+        ],
+        "AG-A6/npt.tpr": [
+          6247368,
+          1787699874249094119
+        ],
+        "AG-A6/npt.xtc": [
+          230305312,
+          1787700094609508219
+        ],
+        "AG-A6/nvt.cpt": [
+          2957056,
+          1787699841257206739
+        ],
+        "AG-A6/nvt.edr": [
+          139212,
+          1787699841344183882
+        ],
+        "AG-A6/nvt.gro": [
+          8496247,
+          1787699841343184145
+        ],
+        "AG-A6/nvt.log": [
+          58089,
+          1787699841396170221
+        ],
+        "AG-A6/nvt.mdp": [
+          11889,
+          1751567203721589000
+        ],
+        "AG-A6/nvt.tpr": [
+          6247368,
+          1787699698439252907
+        ],
+        "AG-A6/nvt.xtc": [
+          1150638700,
+          1787699841275202010
+        ],
+        "AG-A6/polar.xvg": [
+          2141,
+          1788298203464250184
+        ],
+        "AG-A6/posre.itp": [
+          234385,
+          1787699447421330866
+        ],
+        "AG-A6/protein.gro": [
+          669116,
+          1787699447427330900
+        ],
+        "AG-A6/protein.itp": [
+          4212435,
+          1787699447465331120
+        ],
+        "AG-A6/residues_energy_summary.csv": [
+          68049,
+          1788298203572253371
+        ],
+        "AG-A6/topol.top": [
+          721,
+          1787699672086008101
+        ],
+        "HMG-R-200ns-A6/#index.ndx.1#": [
+          4303308,
+          1788294850308152851
+        ],
+        "HMG-R-200ns-A6/apolar.xvg": [
+          4606,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/binding_energy.xvg": [
+          3914,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/contrib_MM.dat": [
+          1249217,
+          1788369593700246969
+        ],
+        "HMG-R-200ns-A6/contrib_apol.dat": [
+          1249217,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/contrib_pol.dat": [
+          1249217,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/energy.pdb": [
+          10465671,
+          1788369593820246230
+        ],
+        "HMG-R-200ns-A6/energy_MM.xvg": [
+          5478,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/energy_summary.csv": [
+          178,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/index.ndx": [
+          4308079,
+          1788756611209559458
+        ],
+        "HMG-R-200ns-A6/md.tpr": [
+          8491596,
+          1787293665800587140
+        ],
+        "HMG-R-200ns-A6/mdcenter.xtc": [
+          9789005460,
+          1788293584175740793
+        ],
+        "HMG-R-200ns-A6/mdfit.xtc": [
+          99770880,
+          1788357986095454206
+        ],
+        "HMG-R-200ns-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "HMG-R-200ns-A6/npt.gro": [
+          9140775,
+          1787293656236309370
+        ],
+        "HMG-R-200ns-A6/polar.xvg": [
+          3195,
+          1788369593701246963
+        ],
+        "HMG-R-200ns-A6/residues_energy_summary.csv": [
+          116451,
+          1788369593825246199
+        ],
+        "HMG-R-25ns-A6/#index.ndx.1#": [
+          4303308,
+          1788294850308152851
+        ],
+        "HMG-R-25ns-A6/A6.itp": [
+          17309,
+          1787292855727962998
+        ],
+        "HMG-R-25ns-A6/aaions.gro": [
+          5961399,
+          1787293184908788189
+        ],
+        "HMG-R-25ns-A6/aasolv.gro": [
+          5984701,
+          1787293169213265876
+        ],
+        "HMG-R-25ns-A6/ab.gro": [
+          1090680,
+          1787293135885145428
+        ],
+        "HMG-R-25ns-A6/apolar.xvg": [
+          2925,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/assembly_report.yaml": [
+          1395,
+          1787292856355987693
+        ],
+        "HMG-R-25ns-A6/binding_energy.xvg": [
+          2508,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/complex.gro": [
+          1090680,
+          1787292855768964611
+        ],
+        "HMG-R-25ns-A6/contrib_MM.dat": [
+          643192,
+          1788296531810481754
+        ],
+        "HMG-R-25ns-A6/contrib_apol.dat": [
+          643192,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/contrib_pol.dat": [
+          643192,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/em.edr": [
+          19776,
+          1787293204527436449
+        ],
+        "HMG-R-25ns-A6/em.gro": [
+          5961399,
+          1787293204582438260
+        ],
+        "HMG-R-25ns-A6/em.log": [
+          63711,
+          1787293204693441913
+        ],
+        "HMG-R-25ns-A6/em.mdp": [
+          1210,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/em.tpr": [
+          6902112,
+          1787293197230195913
+        ],
+        "HMG-R-25ns-A6/em.trr": [
+          1589808,
+          1787293204534436680
+        ],
+        "HMG-R-25ns-A6/energy.pdb": [
+          10465671,
+          1788296531923483114
+        ],
+        "HMG-R-25ns-A6/energy_MM.xvg": [
+          3372,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/energy_summary.csv": [
+          175,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/index.ndx": [
+          4308079,
+          1788756626972681318
+        ],
+        "HMG-R-25ns-A6/ions.mdp": [
+          1046,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/ions.tpr": [
+          6906132,
+          1787293175583478264
+        ],
+        "HMG-R-25ns-A6/ligand_atomtypes.itp": [
+          2678,
+          1787292855726962958
+        ],
+        "HMG-R-25ns-A6/md.cpt": [
+          3181612,
+          1787670520565184326
+        ],
+        "HMG-R-25ns-A6/md.edr": [
+          13441484,
+          1787670520646185300
+        ],
+        "HMG-R-25ns-A6/md.gro": [
+          9140775,
+          1787670520645185288
+        ],
+        "HMG-R-25ns-A6/md.log": [
+          13324569,
+          1787670520710186071
+        ],
+        "HMG-R-25ns-A6/md.mdp": [
+          2719,
+          1770958016791852736
+        ],
+        "HMG-R-25ns-A6/md.tpr": [
+          8491596,
+          1787293665800587140
+        ],
+        "HMG-R-25ns-A6/md.trr": [
+          6360821808,
+          1787670520572184410
+        ],
+        "HMG-R-25ns-A6/md.xtc": [
+          9899197968,
+          1787670520574184434
+        ],
+        "HMG-R-25ns-A6/md_prev.cpt": [
+          3181612,
+          1787670520566184338
+        ],
+        "HMG-R-25ns-A6/mdcenter.xtc": [
+          9789005460,
+          1788293584175740793
+        ],
+        "HMG-R-25ns-A6/mdfit.xtc": [
+          1232788836,
+          1788293633007579405
+        ],
+        "HMG-R-25ns-A6/mdout.mdp": [
+          11033,
+          1787293664784557655
+        ],
+        "HMG-R-25ns-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "HMG-R-25ns-A6/npt.cpt": [
+          3181624,
+          1787293656131306318
+        ],
+        "HMG-R-25ns-A6/npt.edr": [
+          8204,
+          1787293656237309399
+        ],
+        "HMG-R-25ns-A6/npt.gro": [
+          9140775,
+          1787293656236309370
+        ],
+        "HMG-R-25ns-A6/npt.log": [
+          39566,
+          1787293656316311695
+        ],
+        "HMG-R-25ns-A6/npt.mdp": [
+          11769,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/npt.tpr": [
+          8491596,
+          1787293392195413053
+        ],
+        "HMG-R-25ns-A6/npt.xtc": [
+          248189580,
+          1787293656153306957
+        ],
+        "HMG-R-25ns-A6/nvt.cpt": [
+          3181252,
+          1787293372811812396
+        ],
+        "HMG-R-25ns-A6/nvt.edr": [
+          139212,
+          1787293372915815628
+        ],
+        "HMG-R-25ns-A6/nvt.gro": [
+          9140775,
+          1787293372915815628
+        ],
+        "HMG-R-25ns-A6/nvt.log": [
+          66340,
+          1787293373039819482
+        ],
+        "HMG-R-25ns-A6/nvt.mdp": [
+          11889,
+          1770957489473751905
+        ],
+        "HMG-R-25ns-A6/nvt.tpr": [
+          8491596,
+          1787293217603865781
+        ],
+        "HMG-R-25ns-A6/nvt.xtc": [
+          1239931752,
+          1787293372834813111
+        ],
+        "HMG-R-25ns-A6/polar.xvg": [
+          2139,
+          1788296531811481766
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_A.itp": [
+          94668,
+          1787292855523954973
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_B.itp": [
+          93614,
+          1787292855589957569
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_C.itp": [
+          93645,
+          1787292855654960126
+        ],
+        "HMG-R-25ns-A6/posre_Protein_chain_D.itp": [
+          91599,
+          1787292855717962605
+        ],
+        "HMG-R-25ns-A6/protein.gro": [
+          1089027,
+          1787292855725962919
+        ],
+        "HMG-R-25ns-A6/residues_energy_summary.csv": [
+          116373,
+          1788296531927483162
+        ],
+        "HMG-R-25ns-A6/step8b_n1.pdb": [
+          1320151,
+          1787293202947384426
+        ],
+        "HMG-R-25ns-A6/step8c_n1.pdb": [
+          1320162,
+          1787293202958384788
+        ],
+        "HMG-R-25ns-A6/topol.top": [
+          845,
+          1787293184788784208
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_A.itp": [
+          1722061,
+          1787292855523954973
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_B.itp": [
+          1703393,
+          1787292855589957569
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_C.itp": [
+          1704502,
+          1787292855654960126
+        ],
+        "HMG-R-25ns-A6/topol_Protein_chain_D.itp": [
+          1664498,
+          1787292855717962605
+        ],
+        "LP-A6/#index.ndx.1#": [
+          1695384,
+          1788293594211701895
+        ],
+        "LP-A6/A6.itp": [
+          17309,
+          1787706899180488401
+        ],
+        "LP-A6/aaions.gro": [
+          2534379,
+          1787707029678734228
+        ],
+        "LP-A6/aasolv.gro": [
+          2544450,
+          1787706965782647796
+        ],
+        "LP-A6/ab.gro": [
+          309660,
+          1787706962459590629
+        ],
+        "LP-A6/apolar.xvg": [
+          2912,
+          1788299785358960641
+        ],
+        "LP-A6/assembly_report.yaml": [
+          1189,
+          1787706899598495771
+        ],
+        "LP-A6/binding_energy.xvg": [
+          2495,
+          1788299785358960641
+        ],
+        "LP-A6/complex.gro": [
+          309660,
+          1787706899211488948
+        ],
+        "LP-A6/contrib_MM.dat": [
+          179415,
+          1788299785357960622
+        ],
+        "LP-A6/contrib_apol.dat": [
+          179415,
+          1788299785358960641
+        ],
+        "LP-A6/contrib_pol.dat": [
+          179415,
+          1788299785358960641
+        ],
+        "LP-A6/em.edr": [
+          9776,
+          1787707042168943907
+        ],
+        "LP-A6/em.gro": [
+          2534379,
+          1787707042192944309
+        ],
+        "LP-A6/em.log": [
+          40333,
+          1787707042250945280
+        ],
+        "LP-A6/em.mdp": [
+          1210,
+          1751570471656552000
+        ],
+        "LP-A6/em.tpr": [
+          2206260,
+          1787707034600816957
+        ],
+        "LP-A6/em.trr": [
+          675936,
+          1787707042171943957
+        ],
+        "LP-A6/energy.pdb": [
+          4449347,
+          1788299785404961515
+        ],
+        "LP-A6/energy_MM.xvg": [
+          3255,
+          1788299785358960641
+        ],
+        "LP-A6/energy_summary.csv": [
+          176,
+          1788299785358960641
+        ],
+        "LP-A6/index.ndx": [
+          1696880,
+          1788756602514494046
+        ],
+        "LP-A6/ions.mdp": [
+          1046,
+          1709324723000000000
+        ],
+        "LP-A6/ions.tpr": [
+          2206708,
+          1787707020825585091
+        ],
+        "LP-A6/ligand_atomtypes.itp": [
+          2678,
+          1787706899180488401
+        ],
+        "LP-A6/md.cpt": [
+          1353880,
+          1787728866740384956
+        ],
+        "LP-A6/md.edr": [
+          1681484,
+          1787728866775385305
+        ],
+        "LP-A6/md.gro": [
+          3886011,
+          1787728866774385295
+        ],
+        "LP-A6/md.log": [
+          1683434,
+          1787728866829385844
+        ],
+        "LP-A6/md.mdp": [
+          2718,
+          1751567223125708000
+        ],
+        "LP-A6/md.tpr": [
+          2881992,
+          1787717178487697718
+        ],
+        "LP-A6/md.trr": [
+          1690515936,
+          1787728866743384986
+        ],
+        "LP-A6/md.xtc": [
+          521771640,
+          1787728866744384996
+        ],
+        "LP-A6/md_prev.cpt": [
+          1353880,
+          1787728866740384956
+        ],
+        "LP-A6/mdcenter.xtc": [
+          514048156,
+          1788293442313650540
+        ],
+        "LP-A6/mdfit.xtc": [
+          519578464,
+          1788293582037749474
+        ],
+        "LP-A6/mdout.mdp": [
+          11029,
+          1787717178085693958
+        ],
+        "LP-A6/mmpbsa.mdp": [
+          2937,
+          1752034516302455000
+        ],
+        "LP-A6/npt.cpt": [
+          1353880,
+          1787717154760476867
+        ],
+        "LP-A6/npt.edr": [
+          8204,
+          1787717154801477247
+        ],
+        "LP-A6/npt.gro": [
+          3886011,
+          1787717154800477237
+        ],
+        "LP-A6/npt.log": [
+          44524,
+          1787717154861477802
+        ],
+        "LP-A6/npt.mdp": [
+          11769,
+          1751567194173531000
+        ],
+        "LP-A6/npt.tpr": [
+          2881992,
+          1787717002435117072
+        ],
+        "LP-A6/npt.xtc": [
+          104634332,
+          1787717154769476950
+        ],
+        "LP-A6/npt_prev.cpt": [
+          1353880,
+          1787717154760476867
+        ],
+        "LP-A6/nvt.cpt": [
+          1353508,
+          1787717000500100523
+        ],
+        "LP-A6/nvt.edr": [
+          139212,
+          1787717000542100882
+        ],
+        "LP-A6/nvt.gro": [
+          3886011,
+          1787717000541100873
+        ],
+        "LP-A6/nvt.log": [
+          68417,
+          1787717000601101386
+        ],
+        "LP-A6/nvt.mdp": [
+          11889,
+          1751567203721589000
+        ],
+        "LP-A6/nvt.tpr": [
+          2881992,
+          1787716878400100313
+        ],
+        "LP-A6/nvt.xtc": [
+          522676408,
+          1787717000510100608
+        ],
+        "LP-A6/polar.xvg": [
+          2126,
+          1788299785358960641
+        ],
+        "LP-A6/posre.itp": [
+          108494,
+          1787706899170488225
+        ],
+        "LP-A6/protein.gro": [
+          308029,
+          1787706899173488278
+        ],
+        "LP-A6/protein.itp": [
+          1941223,
+          1787706899189488560
+        ],
+        "LP-A6/residues_energy_summary.csv": [
+          32438,
+          1788299785407961572
+        ],
+        "LP-A6/topol.top": [
+          727,
+          1787707029648733723
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1_rmsd_ligand.xvg": [
+          67075,
+          1772750965250523308
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1contacts_lig_active.xvg": [
+          58276,
+          1772700665556060350
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1dist_lig_catalytic.xvg": [
+          53150,
+          1772700663737049438
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1mindist_lig_active.xvg": [
+          68276,
+          1772700665556060350
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1rmsd_protein.xvg": [
+          67103,
+          1772697188617759196
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2_rmsd_ligand.xvg": [
+          67085,
+          1772750965252523294
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2contacts_lig_active.xvg": [
+          58272,
+          1772699551613329976
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2dist_lig_catalytic.xvg": [
+          53149,
+          1772699549760459502
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2mindist_lig_active.xvg": [
+          68272,
+          1772699551613329976
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2rmsd_protein.xvg": [
+          67098,
+          1772697192524931468
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3_rmsd_ligand.xvg": [
+          67094,
+          1772750965254523280
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3contacts_lig_active.xvg": [
+          58272,
+          1772699556766972700
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3dist_lig_catalytic.xvg": [
+          53146,
+          1772699554879103057
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3mindist_lig_active.xvg": [
+          68272,
+          1772699556766972700
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3rmsd_protein.xvg": [
+          67082,
+          1772697199721248826
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4_rmsd_ligand.xvg": [
+          67062,
+          1772750965256523265
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4contacts_lig_active.xvg": [
+          58272,
+          1772699562052610831
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4dist_lig_catalytic.xvg": [
+          53160,
+          1772699560166739419
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4mindist_lig_active.xvg": [
+          68272,
+          1772699562052610831
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4rmsd_protein.xvg": [
+          67084,
+          1772697203475414416
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5_rmsd_ligand.xvg": [
+          67091,
+          1772750965258523251
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5contacts_lig_active.xvg": [
+          58244,
+          1772699567310255439
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5dist_lig_catalytic.xvg": [
+          53149,
+          1772699565466379572
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5mindist_lig_active.xvg": [
+          68244,
+          1772699567310255439
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5rmsd_protein.xvg": [
+          67086,
+          1772697207237580382
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-LIG-rmsd": [
+          207569,
+          1772751380339480945
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-LIG-rmsd.svg": [
+          250053,
+          1772773985510902303
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-dist.svg": [
+          251371,
+          1772774009312239055
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-dist.xvg": [
+          157539,
+          1772753933655695273
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-rmsd.svg": [
+          250568,
+          1772773869463262408
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AA-rmsd.xvg": [
+          207556,
+          1772703291430845753
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1_rmsd_ligand.xvg": [
+          67103,
+          1772750965260523237
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1contacts_lig_active.xvg": [
+          58254,
+          1772699501594034957
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1dist_lig_catalytic.xvg": [
+          53139,
+          1772699497426363858
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1mindist_lig_active.xvg": [
+          68254,
+          1772699501594034957
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1rmsd_protein.xvg": [
+          67080,
+          1772697144380810465
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2_rmsd_ligand.xvg": [
+          67090,
+          1772750965262523222
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2contacts_lig_active.xvg": [
+          58257,
+          1772699512736171292
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2dist_lig_catalytic.xvg": [
+          53133,
+          1772699508713480496
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2mindist_lig_active.xvg": [
+          68257,
+          1772699512736171292
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2rmsd_protein.xvg": [
+          67091,
+          1772697160408516143
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3_rmsd_ligand.xvg": [
+          67057,
+          1772750965263523215
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3contacts_lig_active.xvg": [
+          58255,
+          1772699524725266963
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3dist_lig_catalytic.xvg": [
+          53133,
+          1772699520498582863
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3mindist_lig_active.xvg": [
+          68255,
+          1772699524725266963
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3rmsd_protein.xvg": [
+          67072,
+          1772697169036896218
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4contacts_lig_active.xvg": [
+          12237,
+          1772754401614447866
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4dist_lig_catalytic.xvg": [
+          11132,
+          1772754401195442557
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4mindist_lig_active.xvg": [
+          14237,
+          1772754401614447866
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4rmsd_ligand.xvg": [
+          13584,
+          1772751489396169175
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4rmsd_protein.xvg": [
+          13615,
+          1761262123165417307
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5_rmsd_ligand.xvg": [
+          65621,
+          1772751776692793381
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5contacts_lig_active.xvg": [
+          58268,
+          1772699546228707995
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5dist_lig_catalytic.xvg": [
+          53151,
+          1772699542055004363
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5mindist_lig_active.xvg": [
+          68268,
+          1772699546228707995
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5rmsd_protein.xvg": [
+          67091,
+          1772697184744588446
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-dist.svg": [
+          212295,
+          1772778670915138860
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-dist.xvg": [
+          134589,
+          1772778658129989290
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd-ligand.svg": [
+          211480,
+          1772773809793420672
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd-ligand.xvg": [
+          186838,
+          1772751981340150602
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd.svg": [
+          211895,
+          1772773748934563363
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/AG-rmsd.xvg": [
+          178328,
+          1772703481051869615
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1contacts_lig_active.xvg": [
+          58287,
+          1772699580035413681
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1dist_lig_catalytic.xvg": [
+          53163,
+          1772699575475712338
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1mindist_lig_active.xvg": [
+          68287,
+          1772699580035413681
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1rmsd_protein.xvg": [
+          67084,
+          1772697216863005099
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2contacts_lig_active.xvg": [
+          58280,
+          1772699587025962202
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2dist_lig_catalytic.xvg": [
+          53155,
+          1772699584575119632
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2mindist_lig_active.xvg": [
+          68280,
+          1772699587025962202
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2rmsd_protein.xvg": [
+          67093,
+          1772697222041233644
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3contacts_lig_active.xvg": [
+          58263,
+          1772699593980520606
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3dist_lig_catalytic.xvg": [
+          53147,
+          1772699591539674758
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3mindist_lig_active.xvg": [
+          68263,
+          1772699593980520606
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3rmsd_protein.xvg": [
+          67084,
+          1772697227244463332
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4contacts_lig_active.xvg": [
+          58278,
+          1772699600818093702
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4dist_lig_catalytic.xvg": [
+          53148,
+          1772699598362246221
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4mindist_lig_active.xvg": [
+          68278,
+          1772699600818093702
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4rmsd_ligand.xvg": [
+          67092,
+          1772752446670333758
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4rmsd_protein.xvg": [
+          67077,
+          1772703697103516083
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5contacts_lig_active.xvg": [
+          58286,
+          1772755366940943448
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5dist_lig_catalytic.xvg": [
+          53157,
+          1772755366940943448
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5mindist_lig_active.xvg": [
+          68286,
+          1772755366940943448
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5rmsd_ligand.xvg": [
+          67070,
+          1772752475476740113
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5rmsd_protein.xvg": [
+          67075,
+          1772703759613406726
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-dist.svg": [
+          250903,
+          1772773665663392575
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-dist.xvg": [
+          157652,
+          1772755535037779847
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-rmsd-ligand.xvg": [
+          224618,
+          1772752686077762651
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-rmsd.xvg": [
+          207602,
+          1772776636097205896
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A1_rmsd_ligand.xvg": [
+          67096,
+          1772750965268523179
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A2_rmsd_ligand.xvg": [
+          67092,
+          1772750965278523107
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A3_rmsd_ligand.xvg": [
+          67089,
+          1772750965280523093
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A4_rmsd_ligand.xvg": [
+          65606,
+          1772752411143835400
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A5_rmsd_ligand.xvg": [
+          65618,
+          1772752423310005705
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1_rmsd_ligand.xvg": [
+          67092,
+          1772750965284523064
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1contacts_lig_active.xvg": [
+          58260,
+          1772699612909356066
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1dist_lig_catalytic.xvg": [
+          53142,
+          1772699611023469671
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1mindist_lig_active.xvg": [
+          68260,
+          1772699612909356066
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1rmsd_protein.xvg": [
+          67094,
+          1772697241528094064
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2_rmsd-ligand.xvg": [
+          65585,
+          1772752918231991361
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2contacts_lig_active.xvg": [
+          58259,
+          1772701295903446869
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2dist_lig_catalytic.xvg": [
+          53149,
+          1772701294021422651
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2mindist_lig_active.xvg": [
+          68259,
+          1772701295903446869
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2rmsd_protein.xvg": [
+          67081,
+          1772697245473268326
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3_rmsd-ligand.xvg": [
+          65600,
+          1772752960432113657
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3contacts_lig_active.xvg": [
+          58260,
+          1772699618280035416
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3dist_lig_catalytic.xvg": [
+          53147,
+          1772699616407146758
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3mindist_lig_active.xvg": [
+          68260,
+          1772699618280035416
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3rmsd_protein.xvg": [
+          67097,
+          1772697249298437308
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4_rmsd-ligand.xvg": [
+          65605,
+          1772752927688015604
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4contacts_lig_active.xvg": [
+          58284,
+          1772699623409733096
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4dist_lig_catalytic.xvg": [
+          53142,
+          1772699621511844503
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4mindist_lig_active.xvg": [
+          68284,
+          1772699623409733096
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4rmsd_protein.xvg": [
+          67091,
+          1772697253135606840
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5_rmsd_ligand.xvg": [
+          67076,
+          1772750965292523007
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5contacts_lig_active.xvg": [
+          58272,
+          1772699628716424361
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5dist_lig_catalytic.xvg": [
+          53150,
+          1772699626800535351
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5mindist_lig_active.xvg": [
+          68272,
+          1772699628716424361
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5rmsd_protein.xvg": [
+          67084,
+          1772697257124783112
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-dist.svg": [
+          250200,
+          1772772986248369365
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-dist.xvg": [
+          157546,
+          1772776859944685931
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd-ligand.svg": [
+          250051,
+          1772773250640614215
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd-ligand.xvg": [
+          233100,
+          1772753180639255154
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd.svg": [
+          250072,
+          1772773167438419781
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/LP-rmsd.xvg": [
+          207547,
+          1772776951953949225
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/extract_stats.sh": [
+          227,
+          1772766124253679041
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/resumen.txt": [
+          4487,
+          1772766196240447208
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-LIG-rmsd.svg": [
+          250053,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-dist.svg": [
+          251371,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-rmsd.svg": [
+          250568,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-dist.svg": [
+          212295,
+          1772778670915138860
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-rmsd-ligand.svg": [
+          211480,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-rmsd.svg": [
+          211895,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Dist.pdf": [
+          293260,
+          1772778785496447401
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-dist.svg": [
+          250903,
+          1772776142241560279
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-rmsd-ligand.svg": [
+          249920,
+          1772776142242560275
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-rmsd.svg": [
+          250465,
+          1772776652365231497
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-dist.svg": [
+          250185,
+          1772777078215357218
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-rmsd-ligand.svg": [
+          250051,
+          1772776142242560275
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-rmsd.svg": [
+          250072,
+          1772776971467009004
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Rmsd-Dist.pdf": [
+          318040,
+          1773379909181128809
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Rmsd-ligand.pdf": [
+          334997,
+          1772778034590217614
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/Rmsd.pdf": [
+          331536,
+          1772777804062666069
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/dist.svg": [
+          733232,
+          1772778775871339526
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/rmsd-lig.svg": [
+          745569,
+          1772778822653860667
+        ],
+        "Resultados-Tesis-maestr\u00eda/25ns-DM/svg/rmsd.svg": [
+          740587,
+          1772777811339827520
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-SASA.xvg": [
+          105700,
+          1772601731129562810
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-gyrate.xvg": [
+          240791,
+          1772601731128562807
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-hbonds_internal.xvg": [
+          115706,
+          1772601731128562807
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-rmsd.xvg": [
+          269547,
+          1772607980992896260
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AA100ns-rmsf.xvg": [
+          7981,
+          1772601731129562810
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-gyrate.xvg": [
+          96815,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-hbonds_internal.xvg": [
+          46735,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-rmsd.xvg": [
+          52596,
+          1752217256587838418
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-rmsf.xvg": [
+          14682,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/AG100ns-sasa.xvg": [
+          42704,
+          1772601755822645667
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-gygarate-rmsd.pdf": [
+          211397,
+          1772610754935096221
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-gygarate.svg": [
+          275592,
+          1772609627230486835
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-rmsd.pdf": [
+          123977,
+          1772609175581206095
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-rmsd.svg": [
+          373694,
+          1772608917646178832
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All-rmsd.xvg": [
+          317474,
+          1772608674915388276
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/All.svg": [
+          490040,
+          1772610783739611793
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-SASA.xvg": [
+          42696,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-gyrate.xvg": [
+          96816,
+          1772601801278807706
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-hbonds_internal.xvg": [
+          46723,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-rmsd.xvg": [
+          54396,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/HMG100ns-rmsf.xvg": [
+          24746,
+          1772601801279807709
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-SASA.xvg": [
+          105736,
+          1772589150286940873
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-gyrate.xvg": [
+          240839,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-hbonds_internal.xvg": [
+          115749,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-rmsd.xvg": [
+          135103,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Enzimas_Libres/LP100ns-rmsf.xvg": [
+          8566,
+          1772589150285940859
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/All-BF.pdf": [
+          9861049,
+          1773377569597926957
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/All-BF.svg": [
+          11054418,
+          1773377605215968460
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-A1.png": [
+          2014850,
+          1773376728354124214
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-APO.png": [
+          2015096,
+          1773376867335067692
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-COMP.png": [
+          2055734,
+          1773376769618871947
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/BF-CoA.png": [
+          2091193,
+          1773376693163483624
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM.pdf": [
+          36292387,
+          1773371223290062880
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM.svg": [
+          35904846,
+          1773377749420375239
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_A1-1.png": [
+          6367247,
+          1773369363703701327
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_A1.pdf": [
+          6451428,
+          1773368647506525248
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_APO-1.png": [
+          6484689,
+          1773369366696752816
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_APO.pdf": [
+          6587521,
+          1773368647504525203
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_COMP-1.png": [
+          5884974,
+          1773369372255848690
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_COMP.pdf": [
+          5999504,
+          1773368647502525158
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_CoA-1.png": [
+          7833807,
+          1773369368529784395
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DCCM/DCCM_CoA.pdf": [
+          7755084,
+          1773368630378138619
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DIST.svg": [
+          509838,
+          1773379052755034389
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/DIST.xvg": [
+          333484,
+          1773378778056943289
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL.pdf": [
+          2440513,
+          1773370698570180043
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_A1-1.png": [
+          744603,
+          1773369372833858676
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_A1.pdf": [
+          153453,
+          1773368647506525248
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_APO-1.png": [
+          914956,
+          1773369373521870568
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_APO.pdf": [
+          179342,
+          1773368647502525158
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COA-1.png": [
+          766609,
+          1773369374193882188
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COA.pdf": [
+          114493,
+          1773368647499525090
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COMP-1.png": [
+          918944,
+          1773369374893894296
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/FEL/FEL_COMP.pdf": [
+          190868,
+          1773368647500525112
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_A1.xvg": [
+          46704,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_APO.xvg": [
+          92739,
+          1773120087215069626
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_COA.xvg": [
+          230703,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/HB/hb_COMP.xvg": [
+          168199,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA.pdf": [
+          2335649,
+          1773370232099000339
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_A1-1.png": [
+          508223,
+          1773369375481904472
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_A1.pdf": [
+          50486,
+          1773368647506525248
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_APO-1.png": [
+          712643,
+          1773369376270918130
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_APO.pdf": [
+          79074,
+          1773368647502525158
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COA-1.png": [
+          726251,
+          1773369377398937669
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COA.pdf": [
+          137011,
+          1773368694542949663
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COMP-1.png": [
+          916227,
+          1773369378442955764
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/PCA/PCA_COMP.pdf": [
+          127092,
+          1773368647500525112
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG.svg": [
+          449753,
+          1773379011001251598
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG.xvg": [
+          373603,
+          1773378344620607738
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_A1.xvg": [
+          42713,
+          1773120838979711672
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_APO.xvg": [
+          192856,
+          1773121269478300814
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_COA.xvg": [
+          210738,
+          1773120907486710100
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RG/rg_COMP.xvg": [
+          153659,
+          1773120936371138019
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSD.svg": [
+          453771,
+          1773378981760950516
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSD.xvg": [
+          453492,
+          1773378242805693795
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSD_RG.pdf": [
+          286990,
+          1773379375180472224
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_A1.xvg": [
+          363494,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_APO.xvg": [
+          363503,
+          1773120067797665365
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_COA.xvg": [
+          363498,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/RMSF/rmsf_COMP.xvg": [
+          363500,
+          1773117647409497852
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/Rmsd-Dist.pdf": [
+          318040,
+          1773379956462165690
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_A1.xvg": [
+          42705,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_APO.xvg": [
+          84721,
+          1773120067797665365
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_COA.xvg": [
+          210723,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/SASA/sasa_COMP.xvg": [
+          153615,
+          1773117647409497852
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_COA-COMP_active.xvg": [
+          168242,
+          1773125569956686055
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_COA_active.xvg": [
+          230785,
+          1773124995612146758
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_lig-COMP_active.xvg": [
+          168246,
+          1773124984228010283
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/contacts_lig_active.xvg": [
+          46760,
+          1773124681987707990
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_COA-COMP_catalytic.xvg": [
+          153571,
+          1773125066451011195
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_COA_catalytic.xvg": [
+          210659,
+          1773124977366928377
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_lig-COMP_catalytic.xvg": [
+          153567,
+          1773124733749221574
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/dist_lig_catalytic.xvg": [
+          42611,
+          1773124674462635498
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/extract_stats.sh": [
+          227,
+          1772766124253679041
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_COA-COMP_active.xvg": [
+          197370,
+          1773125569956686055
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_COA_active.xvg": [
+          270789,
+          1773124995612146758
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_lig-COMP_active.xvg": [
+          197374,
+          1773124984228010283
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/dist/mindist_lig_active.xvg": [
+          54760,
+          1773124681987707990
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/extract_stats.sh": [
+          227,
+          1772766124253679041
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd-Dist.svg": [
+          761704,
+          1773379928465553998
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-A1.xvg": [
+          52565,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-APO.xvg": [
+          104626,
+          1772219101174724344
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-COA.xvg": [
+          275117,
+          1772221053080320317
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd-Competitive.xvg": [
+          202273,
+          1771884740134889004
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_A1-COMP.xvg": [
+          189931,
+          1773181310742457003
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_A1-HMG.xvg": [
+          52594,
+          1773181243842502534
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_A1.xvg": [
+          52587,
+          1773117647407497824
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_APO.xvg": [
+          104610,
+          1773120067797665365
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COA-COMP.xvg": [
+          189911,
+          1773181509468294651
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COA-HMG.xvg": [
+          260622,
+          1773181278827001603
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COA.xvg": [
+          260605,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd/rmsd_COMP.xvg": [
+          189930,
+          1773117647408497838
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd_ligand.svg": [
+          513270,
+          1773379076308003419
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd_ligand.xvg": [
+          515392,
+          1773378782655991998
+        ],
+        "Resultados-Tesis-maestr\u00eda/Mecanismo_Ihibitorio/rmsd_rg.svg": [
+          675853,
+          1773379404887365505
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AA-All-dock.png": [
+          914990,
+          1772674227703520520
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AA-dock-zoom.png": [
+          1752463,
+          1772674482026201724
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AA-dock.png": [
+          1382740,
+          1772674431044707135
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AG-All-dock.png": [
+          2547751,
+          1772673597330025963
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AG-dock-zoom.png": [
+          2227714,
+          1772673941145919715
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/AG-dock.png": [
+          1816082,
+          1772673868725259558
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-BF.pdf": [
+          9861049,
+          1773377569597926957
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock-zoom.pdf": [
+          34959463,
+          1772684414414012050
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock-zoom.svg": [
+          35950411,
+          1772687658932062302
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock.pdf": [
+          23934122,
+          1772679085775971589
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-dock.svg": [
+          22564964,
+          1772679114793138330
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/All-gygarate.xvg": [
+          216273,
+          1772609554430778051
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/HMG-All-dock.png": [
+          7101142,
+          1772674875814465885
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/HMG-dock-zoom.png": [
+          5322979,
+          1772675182986294525
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/HMG-dock.png": [
+          5193693,
+          1772675123054645279
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/LP-All-dock.png": [
+          6135010,
+          1772676549866283067
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/LP-dock-zoom.png": [
+          4687160,
+          1772676300272944017
+        ],
+        "Resultados-Tesis-maestr\u00eda/im\u00e1genes/LP-dock.png": [
+          4216774,
+          1772676255597784753
+        ],
+        "system_A3_COA/#topol.top.1#": [
+          957,
+          1787779252253558016
+        ],
+        "system_A3_COA/#topol.top.2#": [
+          988,
+          1787781133064141725
+        ],
+        "system_A3_COA/A3-MMPBSA/apolar.xvg": [
+          4648,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/binding_energy.xvg": [
+          3956,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/contrib_MM.dat": [
+          1249219,
+          1788451576796371768
+        ],
+        "system_A3_COA/A3-MMPBSA/contrib_apol.dat": [
+          1249219,
+          1788451576796371768
+        ],
+        "system_A3_COA/A3-MMPBSA/contrib_pol.dat": [
+          1249219,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/energy.pdb": [
+          11180979,
+          1788451576924373424
+        ],
+        "system_A3_COA/A3-MMPBSA/energy_MM.xvg": [
+          5520,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/energy_summary.csv": [
+          176,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/polar.xvg": [
+          3237,
+          1788451576797371781
+        ],
+        "system_A3_COA/A3-MMPBSA/residues_energy_summary.csv": [
+          116471,
+          1788451576929373488
+        ],
+        "system_A3_COA/A3.itp": [
+          18180,
+          1787779252246557736
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/apolar.xvg": [
+          4533,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/binding_energy.xvg": [
+          3959,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/contrib_MM.dat": [
+          2370,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/contrib_apol.dat": [
+          2370,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/contrib_pol.dat": [
+          2370,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/energy.pdb": [
+          11180979,
+          1788460598108580624
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/energy_MM.xvg": [
+          5095,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/energy_summary.csv": [
+          168,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/polar.xvg": [
+          3093,
+          1788460597981580166
+        ],
+        "system_A3_COA/COA-A3-MMPBSA/residues_energy_summary.csv": [
+          267,
+          1788460598113580642
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/apolar.xvg": [
+          4648,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/binding_energy.xvg": [
+          3956,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/contrib_MM.dat": [
+          1249219,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/contrib_apol.dat": [
+          1249219,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/contrib_pol.dat": [
+          1249219,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/energy.pdb": [
+          11181001,
+          1788459311607226988
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/energy_MM.xvg": [
+          5571,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/energy_summary.csv": [
+          181,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/polar.xvg": [
+          3265,
+          1788459311477224903
+        ],
+        "system_A3_COA/COA-HMG-R_A3-MMPBSA/residues_energy_summary.csv": [
+          116447,
+          1788459311612227068
+        ],
+        "system_A3_COA/COA_original.itp": [
+          36916,
+          1787779252253558016
+        ],
+        "system_A3_COA/aaions.gro": [
+          6368878,
+          1787781153000754444
+        ],
+        "system_A3_COA/aasolv.gro": [
+          6393616,
+          1787781132951143967
+        ],
+        "system_A3_COA/ab.gro": [
+          1094190,
+          1787781099834824591
+        ],
+        "system_A3_COA/assembly_report.yaml": [
+          3487,
+          1787779252867582615
+        ],
+        "system_A3_COA/complex.gro": [
+          1094190,
+          1787779252292559579
+        ],
+        "system_A3_COA/component_atomtypes.itp": [
+          7138,
+          1787779252241557535
+        ],
+        "system_A3_COA/em.edr": [
+          15576,
+          1787781198794924573
+        ],
+        "system_A3_COA/em.gro": [
+          6368878,
+          1787781198849923623
+        ],
+        "system_A3_COA/em.log": [
+          53951,
+          1787781198965921621
+        ],
+        "system_A3_COA/em.mdp": [
+          1210,
+          1787780748599814887
+        ],
+        "system_A3_COA/em.tpr": [
+          7038440,
+          1787781194162004895
+        ],
+        "system_A3_COA/em.trr": [
+          1698468,
+          1787781198800924469
+        ],
+        "system_A3_COA/index.ndx": [
+          4620353,
+          1788386446507763694
+        ],
+        "system_A3_COA/ions.mdp": [
+          1046,
+          1787780748599814887
+        ],
+        "system_A3_COA/ions.tpr": [
+          7042604,
+          1787781141791970170
+        ],
+        "system_A3_COA/md.cpt": [
+          3398932,
+          1787994659702520196
+        ],
+        "system_A3_COA/md.edr": [
+          6721484,
+          1787994659792522817
+        ],
+        "system_A3_COA/md.gro": [
+          9765574,
+          1787994659791522788
+        ],
+        "system_A3_COA/md.log": [
+          6671093,
+          1787994659850524506
+        ],
+        "system_A3_COA/md.mdp": [
+          2725,
+          1787780748599814887
+        ],
+        "system_A3_COA/md.tpr": [
+          8736556,
+          1787781862142981663
+        ],
+        "system_A3_COA/md.trr": [
+          6795570468,
+          1787994659710520429
+        ],
+        "system_A3_COA/md.xtc": [
+          5285293708,
+          1787994659712520487
+        ],
+        "system_A3_COA/md_prev.cpt": [
+          3398932,
+          1787994659703520225
+        ],
+        "system_A3_COA/mdcenter.xtc": [
+          523166620,
+          1788385842981838538
+        ],
+        "system_A3_COA/mdfit.xtc": [
+          531189704,
+          1788386412351805945
+        ],
+        "system_A3_COA/mdout.mdp": [
+          11041,
+          1787781861324984569
+        ],
+        "system_A3_COA/mmpbsa.mdp": [
+          2937,
+          1765362185590258395
+        ],
+        "system_A3_COA/npt.cpt": [
+          3398932,
+          1787781728694553269
+        ],
+        "system_A3_COA/npt.edr": [
+          8204,
+          1787781728791552775
+        ],
+        "system_A3_COA/npt.gro": [
+          9765574,
+          1787781728790552780
+        ],
+        "system_A3_COA/npt.log": [
+          33096,
+          1787781728866552393
+        ],
+        "system_A3_COA/npt.mdp": [
+          11769,
+          1787780748599814887
+        ],
+        "system_A3_COA/npt.tpr": [
+          8736556,
+          1787781462142466037
+        ],
+        "system_A3_COA/npt.trr": [
+          56046804,
+          1787781728712553177
+        ],
+        "system_A3_COA/npt.xtc": [
+          265008356,
+          1787781728714553167
+        ],
+        "system_A3_COA/nvt.cpt": [
+          3398560,
+          1787781392644193268
+        ],
+        "system_A3_COA/nvt.edr": [
+          139212,
+          1787781392830191165
+        ],
+        "system_A3_COA/nvt.gro": [
+          9765574,
+          1787781392826191210
+        ],
+        "system_A3_COA/nvt.log": [
+          58611,
+          1787781392913190227
+        ],
+        "system_A3_COA/nvt.mdp": [
+          11889,
+          1787780748599814887
+        ],
+        "system_A3_COA/nvt.tpr": [
+          8736556,
+          1787781214347660674
+        ],
+        "system_A3_COA/nvt.trr": [
+          30570984,
+          1787781392678192883
+        ],
+        "system_A3_COA/nvt.xtc": [
+          1324068064,
+          1787781392683192827
+        ],
+        "system_A3_COA/posre_Protein_chain_A.itp": [
+          94668,
+          1787779252227556975
+        ],
+        "system_A3_COA/posre_Protein_chain_B.itp": [
+          93614,
+          1787779252228557014
+        ],
+        "system_A3_COA/posre_Protein_chain_C.itp": [
+          93645,
+          1787779252228557014
+        ],
+        "system_A3_COA/posre_Protein_chain_D.itp": [
+          91599,
+          1787779252228557014
+        ],
+        "system_A3_COA/protein.gro": [
+          1089022,
+          1787779252221556734
+        ],
+        "system_A3_COA/step8b_n4.pdb": [
+          1403417,
+          1787781197967938850
+        ],
+        "system_A3_COA/step8c_n4.pdb": [
+          1403428,
+          1787781197982938591
+        ],
+        "system_A3_COA/topol.top": [
+          1026,
+          1787781152882756691
+        ],
+        "system_A3_COA/topol_Protein_chain_A.itp": [
+          1721760,
+          1787779252222556774
+        ],
+        "system_A3_COA/topol_Protein_chain_B.itp": [
+          1703092,
+          1787779252224556854
+        ],
+        "system_A3_COA/topol_Protein_chain_C.itp": [
+          1704201,
+          1787779252225556894
+        ],
+        "system_A3_COA/topol_Protein_chain_D.itp": [
+          1664197,
+          1787779252227556975
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/apolar.xvg": [
+          4531,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/binding_energy.xvg": [
+          3957,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/contrib_MM.dat": [
+          2370,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/contrib_apol.dat": [
+          2370,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/contrib_pol.dat": [
+          2370,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/energy.pdb": [
+          11181137,
+          1788478691367762859
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/energy_MM.xvg": [
+          5093,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/energy_summary.csv": [
+          169,
+          1788478691238766137
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/polar.xvg": [
+          3085,
+          1788478691237766163
+        ],
+        "system_A6_COA/A6-COA-MMPBSA/residues_energy_summary.csv": [
+          271,
+          1788478691373762706
+        ],
+        "system_A6_COA/A6-MMPBSA/apolar.xvg": [
+          18241,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/binding_energy.xvg": [
+          15349,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/contrib_MM.dat": [
+          6097419,
+          1788425578871574677
+        ],
+        "system_A6_COA/A6-MMPBSA/contrib_apol.dat": [
+          6097419,
+          1788425578871574677
+        ],
+        "system_A6_COA/A6-MMPBSA/contrib_pol.dat": [
+          6097419,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/energy.pdb": [
+          11181174,
+          1788425579077569831
+        ],
+        "system_A6_COA/A6-MMPBSA/energy_MM.xvg": [
+          22513,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/energy_summary.csv": [
+          178,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/polar.xvg": [
+          11830,
+          1788425578872574654
+        ],
+        "system_A6_COA/A6-MMPBSA/residues_energy_summary.csv": [
+          116406,
+          1788425579096569384
+        ],
+        "system_A6_COA/A6.itp": [
+          17417,
+          1787779248888422845
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/apolar.xvg": [
+          4640,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/binding_energy.xvg": [
+          3948,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/contrib_MM.dat": [
+          1249219,
+          1788468363784965400
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/contrib_apol.dat": [
+          1249219,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/contrib_pol.dat": [
+          1249219,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/energy.pdb": [
+          11181137,
+          1788468363912959585
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/energy_MM.xvg": [
+          5563,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/energy_summary.csv": [
+          180,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/polar.xvg": [
+          3255,
+          1788468363785965354
+        ],
+        "system_A6_COA/COA-HMG-R_A6-MMPBSA/residues_energy_summary.csv": [
+          116632,
+          1788468363918959312
+        ],
+        "system_A6_COA/COA_original.itp": [
+          36968,
+          1787779248897423207
+        ],
+        "system_A6_COA/aaions.gro": [
+          6368968,
+          1787781149357824000
+        ],
+        "system_A6_COA/aasolv.gro": [
+          6393706,
+          1787781137210059839
+        ],
+        "system_A6_COA/ab.gro": [
+          1094280,
+          1787781098253858288
+        ],
+        "system_A6_COA/assembly_report.yaml": [
+          3735,
+          1787779249518448196
+        ],
+        "system_A6_COA/complex.gro": [
+          1094280,
+          1787779248935424738
+        ],
+        "system_A6_COA/component_atomtypes.itp": [
+          7412,
+          1787779248884422684
+        ],
+        "system_A6_COA/em.edr": [
+          10176,
+          1787781164816532526
+        ],
+        "system_A6_COA/em.gro": [
+          6368968,
+          1787781164869531543
+        ],
+        "system_A6_COA/em.log": [
+          41271,
+          1787781164921530578
+        ],
+        "system_A6_COA/em.mdp": [
+          1210,
+          1787780730769611368
+        ],
+        "system_A6_COA/em.tpr": [
+          7038272,
+          1787781158607648449
+        ],
+        "system_A6_COA/em.trr": [
+          1698492,
+          1787781164823532396
+        ],
+        "system_A6_COA/index.ndx": [
+          4620423,
+          1788386444880670465
+        ],
+        "system_A6_COA/ions.mdp": [
+          1046,
+          1787780730769611368
+        ],
+        "system_A6_COA/ions.tpr": [
+          7042440,
+          1787781141194981804
+        ],
+        "system_A6_COA/md.cpt": [
+          3398992,
+          1788006530352014166
+        ],
+        "system_A6_COA/md.edr": [
+          6721484,
+          1788006530438020184
+        ],
+        "system_A6_COA/md.gro": [
+          9765712,
+          1788006530437020114
+        ],
+        "system_A6_COA/md.log": [
+          6672209,
+          1788006530497024313
+        ],
+        "system_A6_COA/md.mdp": [
+          2725,
+          1787780730769611368
+        ],
+        "system_A6_COA/md.tpr": [
+          8736400,
+          1787781862943978824
+        ],
+        "system_A6_COA/md.trr": [
+          6795666492,
+          1788006530360014726
+        ],
+        "system_A6_COA/md.xtc": [
+          5285333240,
+          1788006530363014936
+        ],
+        "system_A6_COA/md_prev.cpt": [
+          3398992,
+          1788006530353014236
+        ],
+        "system_A6_COA/mdcenter.xtc": [
+          523208876,
+          1788385840743707120
+        ],
+        "system_A6_COA/mdfit.xtc": [
+          532072732,
+          1788386418775174232
+        ],
+        "system_A6_COA/mdout.mdp": [
+          11069,
+          1787781861887982568
+        ],
+        "system_A6_COA/mmpbsa.mdp": [
+          2937,
+          1765362185590258395
+        ],
+        "system_A6_COA/npt.cpt": [
+          3398992,
+          1787781720430595742
+        ],
+        "system_A6_COA/npt.edr": [
+          8204,
+          1787781720591594906
+        ],
+        "system_A6_COA/npt.gro": [
+          9765712,
+          1787781720588594921
+        ],
+        "system_A6_COA/npt.log": [
+          32594,
+          1787781720689594397
+        ],
+        "system_A6_COA/npt.mdp": [
+          11769,
+          1787780730769611368
+        ],
+        "system_A6_COA/npt.tpr": [
+          8736400,
+          1787781462963458110
+        ],
+        "system_A6_COA/npt.trr": [
+          56047596,
+          1787781720458595596
+        ],
+        "system_A6_COA/npt.xtc": [
+          265003928,
+          1787781720464595565
+        ],
+        "system_A6_COA/nvt.cpt": [
+          3398620,
+          1787781394364173865
+        ],
+        "system_A6_COA/nvt.edr": [
+          139212,
+          1787781394464172739
+        ],
+        "system_A6_COA/nvt.gro": [
+          9765712,
+          1787781394462172761
+        ],
+        "system_A6_COA/nvt.log": [
+          58821,
+          1787781394528172019
+        ],
+        "system_A6_COA/nvt.mdp": [
+          11889,
+          1787780730769611368
+        ],
+        "system_A6_COA/nvt.tpr": [
+          8736400,
+          1787781207809770540
+        ],
+        "system_A6_COA/nvt.trr": [
+          30571416,
+          1787781394384173639
+        ],
+        "system_A6_COA/nvt.xtc": [
+          1323971068,
+          1787781394387173606
+        ],
+        "system_A6_COA/nvt_prev.cpt": [
+          3398620,
+          1787781394365173853
+        ],
+        "system_A6_COA/plbS7DYA.in": [
+          845,
+          1788386563857479575
+        ],
+        "system_A6_COA/plbS7DYA.pqr": [
+          1766527,
+          1788386563939484263
+        ],
+        "system_A6_COA/posre_Protein_chain_A.itp": [
+          94668,
+          1787779248870422120
+        ],
+        "system_A6_COA/posre_Protein_chain_B.itp": [
+          93614,
+          1787779248871422160
+        ],
+        "system_A6_COA/posre_Protein_chain_C.itp": [
+          93645,
+          1787779248871422160
+        ],
+        "system_A6_COA/posre_Protein_chain_D.itp": [
+          91599,
+          1787779248871422160
+        ],
+        "system_A6_COA/protein.gro": [
+          1089022,
+          1787779248865421918
+        ],
+        "system_A6_COA/step11b_n1.pdb": [
+          1387933,
+          1787781164304542029
+        ],
+        "system_A6_COA/step11c_n1.pdb": [
+          1387944,
+          1787781164314541843
+        ],
+        "system_A6_COA/topol.top": [
+          1026,
+          1787781149242826203
+        ],
+        "system_A6_COA/topol_Protein_chain_A.itp": [
+          1721760,
+          1787779248866421958
+        ],
+        "system_A6_COA/topol_Protein_chain_B.itp": [
+          1703092,
+          1787779248867421999
+        ],
+        "system_A6_COA/topol_Protein_chain_C.itp": [
+          1704201,
+          1787779248869422079
+        ],
+        "system_A6_COA/topol_Protein_chain_D.itp": [
+          1664197,
+          1787779248870422120
+        ]
+      },
+      "index_sha256": {
+        "A3-HMG-R/index.ndx": "7a822a8e7cf206db4c86c8ae646b9f0012667b6a871787465ab69111a1e3e01d",
+        "AA-A6/index.ndx": "0dbdfd727b2d8a51aadb1eefa9a259b052f7af08580a001016b1669063a985b2",
+        "AG-A6/index.ndx": "5f3891e5cd308a5f92d8237fdfcd83f3368d4d5eff8910bccefe66fe4f245b1c",
+        "HMG-R-200ns-A6/index.ndx": "a1b2e8d51cb06629bab9551d963949931acefaecb6308fde86708492afd92164",
+        "HMG-R-25ns-A6/index.ndx": "a1b2e8d51cb06629bab9551d963949931acefaecb6308fde86708492afd92164",
+        "LP-A6/index.ndx": "89c54716349d5ff90ff9120afa6e81b6220bbbcf75be3983d4e875ae6f388048",
+        "system_A3_COA/index.ndx": "1cce9cc4bf25ae8c9f5e0eb29d4554947f531168a46bc43da76b8024dcd8ee7e",
+        "system_A6_COA/index.ndx": "fe48605f77ceebadd5b2e26bcfdf13119dedeef259e3b6651907213d8b4e67b5"
+      },
+      "n_files": 782,
+      "root": "/home/jesusxd/Escritorio/Nuevos_sistemas"
+    },
+    "verdict": {
+      "added": [],
+      "index_changed": [],
+      "modified": [],
+      "ok": true,
+      "removed": []
+    }
+  },
+  "study_root": "/home/jesusxd/Escritorio/Nuevos_sistemas",
+  "systems": [
+    {
+      "analyses": [
+        {
+          "analysis": "protein_rmsd",
+          "argv": [],
+          "checksums": {},
+          "command": "",
+          "message": "validated result already present: /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/protein_rmsd/rmsd_protein.xvg",
+          "output_files": [],
+          "provenance": null,
+          "status": "SKIP_EXISTING",
+          "stdin": "",
+          "task": "protein_rmsd",
+          "xvg_check": {}
+        },
+        {
+          "analysis": "ligand_rmsd",
+          "argv": [],
+          "checksums": {},
+          "command": "",
+          "message": "validated result already present: /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/ligand_rmsd/rmsd_ligand.xvg",
+          "output_files": [],
+          "provenance": null,
+          "status": "SKIP_EXISTING",
+          "stdin": "",
+          "task": "ligand_rmsd",
+          "xvg_check": {}
+        },
+        {
+          "analysis": "active_site_mindist",
+          "argv": [],
+          "checksums": {},
+          "command": "",
+          "message": "validated result already present: /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/active_site/mindist_lig_active.xvg",
+          "output_files": [],
+          "provenance": null,
+          "status": "SKIP_EXISTING",
+          "stdin": "",
+          "task": "active_site",
+          "xvg_check": {}
+        },
+        {
+          "analysis": "active_site_contacts",
+          "argv": [],
+          "checksums": {},
+          "command": "",
+          "message": "validated result already present: /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/active_site/contacts_lig_active.xvg",
+          "output_files": [],
+          "provenance": null,
+          "status": "SKIP_EXISTING",
+          "stdin": "",
+          "task": "active_site",
+          "xvg_check": {}
+        },
+        {
+          "analysis": "catalytic_com_distance",
+          "argv": [],
+          "checksums": {},
+          "command": "",
+          "message": "validated result already present: /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/catalytic_com_distance/dist_lig_catalytic.xvg",
+          "output_files": [],
+          "provenance": null,
+          "status": "SKIP_EXISTING",
+          "stdin": "",
+          "task": "catalytic_com_distance",
+          "xvg_check": {}
+        }
+      ],
+      "analysis_window_ps": [
+        0.0,
+        25000.0
+      ],
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6",
+      "eligibility": {
+        "eligible": true,
+        "missing_evidence": [],
+        "override_applied": false,
+        "reasons": [],
+        "system": "AA-A6",
+        "waived": []
+      },
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/index.ndx",
+      "measured_end_ps": 25000.0,
+      "output_dir": "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6",
+      "system": "AA-A6",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/md.tpr",
+      "trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/md.xtc"
+    }
+  ]
+}

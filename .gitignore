@@ -39,6 +39,8 @@ mdout.mdp
 /multi_system/
 /*_system/
 /*_campaign/
+# study-campaign managed analysis output (never committed; scientific artifacts)
+/analysis_outputs/
 
 # ── GROMACS / molecular files ───────────────────────────────────────────────
 # Blanket-ignored because build/run output litters the tree with these.
@@ -93,3 +95,4 @@ __pycache__/
 docs/Prot-Memb_FILES/oplsaa_membrane.ff/nb_params.itp
 docs/Prot-Memb_FILES/oplsaa_membrane.ff/pairtypes.itp
 docs/Prot-Memb_FILES/oplsaa_membrane.ff/*_old.itp
+/reports/legacy_study_validation/

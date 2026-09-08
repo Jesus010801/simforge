@@ -141,6 +141,8 @@ def _candidate_to_record(
                 art.end_time_ps = seg.end_time_ps if seg.end_time_ps is not None else art.end_time_ps
                 art.dt_ps = seg.dt_ps if seg.dt_ps is not None else art.dt_ps
 
+    from analysis.campaign.legacy import annotate_legacy
+    rec.legacy_study = annotate_legacy(rec, cand.sim_dir)
     return rec, ambiguities
 
 
