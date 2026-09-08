@@ -101,7 +101,8 @@ def test_analyze_dry_run_plans_without_executing(tmp_path):
 
 def test_inspect_writes_manifest_and_report(tmp_path):
     study = _fake_study(tmp_path)
-    r = _cli("study", "inspect", str(study), "--no-trajectory-inspection")
+    r = _cli("study", "inspect", str(study), "--no-trajectory-inspection",
+             "--output", str(study / "simforge_analysis"))
     assert r.returncode == 0, r.stderr
     out = study / "simforge_analysis"
     for name in ("study_manifest.yaml", "study_manifest.json",
