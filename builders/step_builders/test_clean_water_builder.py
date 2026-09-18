@@ -390,9 +390,12 @@ class TestWaterGateReportPriority:
         from runtime.water_gate import evaluate_water_gate
         # New format: use n_water_oxygens_remaining_in_core for gate decision
         self._write(tmp_path / "clean_water_report.json", {
+            "schema_version": "membrane-water-atlas/2.0",
             "n_water_oxygens_remaining_in_core": 20,
-            "cleanup_passed":    False,
-            "topology_updated":  True,
+            "confirmed_hard_clashes_remaining": 0,
+            "supported_membrane_defects_remaining": 1,
+            "cleanup_passed": True,
+            "topology_updated": True,
         })
         result = evaluate_water_gate(tmp_path)
         assert result.blocked

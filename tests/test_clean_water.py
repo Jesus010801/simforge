@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import tempfile
 from pathlib import Path
 
@@ -66,6 +67,22 @@ def _lipid(resid, x, y, z_hg, resname="DPP"):
     ]
 
 
+def _dense_lipid_shell(cx, cy, start_resid, radii=(2.0, 2.5, 3.5, 4.0, 4.5),
+                        n_per_ring=16, z_top=6.0, z_bot=4.0):
+    """A proper closed annular lipid shell (both leaflets, several radii) so
+    the region outside the protein ring is genuinely lipid-walled — see
+    tests/test_membrane_protein_spatial_classifier.py for the identical
+    helper and rationale."""
+    atoms, resid = [], start_resid
+    for radius in radii:
+        for i in range(n_per_ring):
+            angle = i * 2.0 * math.pi / n_per_ring
+            lx, ly = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+            atoms += _lipid(resid, lx, ly, z_hg=z_top); resid += 1
+            atoms += _lipid(resid, lx, ly, z_hg=z_bot); resid += 1
+    return atoms, resid
+
+
 def _build_system(
     tmpdir: Path,
     cx=6.0, cy=6.0,
@@ -91,6 +108,9 @@ def _build_system(
         ly = cy + 3.0 * math.sin(angle)
         atoms += _lipid(nrid, lx, ly, z_hg=4.0)
         nrid += 1
+
+    shell_atoms, nrid = _dense_lipid_shell(cx, cy, nrid)
+    atoms += shell_atoms
 
     pore_resid = None
     if pore_water:
@@ -207,13 +227,23 @@ class TestCoreWaterRemoved:
 
 class TestTopologyUpdate:
     def test_sol_decremented(self, tmp_path):
-        """topol.top SOL count must decrease by n_water_molecules_removed."""
+        """topol.top SOL count must match the actual post-cleanup water count.
+
+        The topology sync recounts SOL directly from the output coordinate
+        file (validators.topology_sync.sync_topology_molecule_count) rather
+        than trusting a delta off whatever the input topology declared —
+        the same "never trust a prior recorded count" policy already used
+        for lipids, which is what actually prevents a stale topology from
+        causing a grompp atom-count mismatch. The input topology here
+        declares a SOL count consistent with this fixture's real water
+        molecules, matching a real (non-corrupted) workspace.
+        """
         gro, tm_res, _, _ = _build_system(
             tmp_path, pore_water=False, core_water=True
         )
+        initial_sol = gro.read_text().count(" OW")
         topol_in  = tmp_path / "topol.top"
         topol_out = tmp_path / "topol_clean.top"
-        initial_sol = 500
         topol_in.write_text(
             "[ molecules ]\nDPPC             32\n"
             f"SOL              {initial_sol}\nNA               5\n"
@@ -232,8 +262,10 @@ class TestTopologyUpdate:
             pytest.skip("No waters removed in this geometry")
 
         text = topol_out.read_text()
-        assert f"SOL              {initial_sol - n_rm}" in text, (
-            f"Expected SOL {initial_sol - n_rm}, got:\n{text}"
+        match = re.search(r"^SOL\s+(\d+)", text, re.MULTILINE)
+        assert match is not None, f"No SOL line found in topology:\n{text}"
+        assert int(match.group(1)) == initial_sol - n_rm, (
+            f"Expected SOL {initial_sol - n_rm}, got {match.group(1)}:\n{text}"
         )
         assert rep["topology_updated"] is True
 

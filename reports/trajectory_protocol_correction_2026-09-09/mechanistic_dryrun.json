@@ -1,0 +1,1853 @@
+{
+  "analysis_trajectory": "mdfit.xtc",
+  "execution": "disabled; dry-run planning only",
+  "profile": "mechanistic",
+  "protocol_version": "mechanistic/1.0-draft",
+  "raw_md_xtc_is_forbidden_as_analysis_input": true,
+  "reference_study": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio",
+  "status_counts": {
+    "AVAILABLE": 12,
+    "NEW_EXTENSION": 24,
+    "PLANNED": 100,
+    "REVIEW_REQUIRED": 13,
+    "SUPERSEDED_PENDING": 43
+  },
+  "study_root": "/home/jesusxd/Escritorio/Nuevos_sistemas",
+  "systems": [
+    {
+      "analysis_trajectory": null,
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/A1",
+      "index": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/A1/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [
+            "rmsd-A1.xvg",
+            "rmsd_A1-HMG.xvg",
+            "rmsd_A1.xvg"
+          ],
+          "observable": "protein_rmsd",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [
+            "rmsd_A1-HMG.xvg"
+          ],
+          "observable": "ligand_rmsd",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [
+            "rmsf.xvg",
+            "rmsf_A1.xvg"
+          ],
+          "observable": "rmsf",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [
+            "rg_A1.xvg"
+          ],
+          "observable": "radius_of_gyration",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [
+            "sasa_A1.xvg"
+          ],
+          "observable": "sasa",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [
+            "hb_A1.xvg"
+          ],
+          "observable": "hbonds",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [
+            "mindist_lig_active.xvg"
+          ],
+          "observable": "active_site_mindist",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [
+            "contacts_lig_active.xvg"
+          ],
+          "observable": "active_site_contacts",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [
+            "dist_lig_catalytic.xvg"
+          ],
+          "observable": "catalytic_com_distance",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [
+            "PCA_A1.pdf",
+            "eigenval-A1.xvg",
+            "pc1-A1.xvg",
+            "pc2-A1.xvg"
+          ],
+          "observable": "pca",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [
+            "FEL_A1.pdf"
+          ],
+          "observable": "fel",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [
+            "DCCM_A1.pdf"
+          ],
+          "observable": "dccm",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "mmpbsa",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "per_residue_decomposition",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/A1/md.xtc",
+      "role": "reference",
+      "system": "A1",
+      "tpr": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/A1/md.tpr"
+    },
+    {
+      "analysis_trajectory": null,
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/APO",
+      "index": null,
+      "observables": [
+        {
+          "existing_outputs": [
+            "rmsd_APO.xvg"
+          ],
+          "observable": "protein_rmsd",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "observable needs a ligand; none resolved for this system",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [
+            "rmsf.xvg",
+            "rmsf_APO.xvg"
+          ],
+          "observable": "rmsf",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [
+            "rg_APO.xvg"
+          ],
+          "observable": "radius_of_gyration",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [
+            "sasa_APO.xvg"
+          ],
+          "observable": "sasa",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [
+            "hb_APO.xvg"
+          ],
+          "observable": "hbonds",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "observable needs a ligand; none resolved for this system",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "observable needs a ligand; none resolved for this system",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "observable needs a ligand; none resolved for this system",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [
+            "PCA_APO.pdf",
+            "eigenval-APO.xvg",
+            "pc1-APO.xvg",
+            "pc2-APO.xvg",
+            "proj-APO.xvg"
+          ],
+          "observable": "pca",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [
+            "FEL_APO.pdf"
+          ],
+          "observable": "fel",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [
+            "DCCM_APO.pdf"
+          ],
+          "observable": "dccm",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "mmpbsa",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "per_residue_decomposition",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/APO/md.xtc",
+      "role": "reference",
+      "system": "APO",
+      "tpr": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/APO/md.tpr"
+    },
+    {
+      "analysis_trajectory": null,
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COA",
+      "index": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COA/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [
+            "rmsd_COA-HMG.xvg",
+            "rmsd_COA.xvg"
+          ],
+          "observable": "protein_rmsd",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [
+            "rmsd_COA-HMG.xvg"
+          ],
+          "observable": "ligand_rmsd",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [
+            "rmsf.xvg",
+            "rmsf_COA.xvg"
+          ],
+          "observable": "rmsf",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [
+            "rg_COA.xvg"
+          ],
+          "observable": "radius_of_gyration",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [
+            "sasa_COA.xvg"
+          ],
+          "observable": "sasa",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [
+            "hb_COA.xvg"
+          ],
+          "observable": "hbonds",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [
+            "mindist_COA_active.xvg"
+          ],
+          "observable": "active_site_mindist",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [
+            "contacts_COA_active.xvg"
+          ],
+          "observable": "active_site_contacts",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [
+            "dist_COA_catalytic.xvg"
+          ],
+          "observable": "catalytic_com_distance",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [
+            "PCA_COA.pdf",
+            "eigenval-COA.xvg",
+            "pc1-COA.xvg",
+            "pc2-COA.xvg",
+            "proj-COA.xvg"
+          ],
+          "observable": "pca",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [
+            "FEL_COA.pdf"
+          ],
+          "observable": "fel",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [
+            "DCCM_CoA.pdf"
+          ],
+          "observable": "dccm",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "mmpbsa",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "per_residue_decomposition",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COA/md.xtc",
+      "role": "reference",
+      "system": "COA",
+      "tpr": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COA/md.tpr"
+    },
+    {
+      "analysis_trajectory": null,
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COMP",
+      "index": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COMP/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [
+            "rmsd_A1-COMP.xvg",
+            "rmsd_COA-COMP.xvg",
+            "rmsd_COMP.xvg"
+          ],
+          "observable": "protein_rmsd",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [
+            "rmsf.xvg",
+            "rmsf_COMP.xvg"
+          ],
+          "observable": "rmsf",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [
+            "rg_COMP.xvg"
+          ],
+          "observable": "radius_of_gyration",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [
+            "sasa_COMP.xvg"
+          ],
+          "observable": "sasa",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [
+            "hb_COMP.xvg"
+          ],
+          "observable": "hbonds",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [
+            "mindist_COA-COMP_active.xvg",
+            "mindist_lig-COMP_active.xvg"
+          ],
+          "observable": "active_site_mindist",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [
+            "contacts_COA-COMP_active.xvg",
+            "contacts_lig-COMP_active.xvg"
+          ],
+          "observable": "active_site_contacts",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [
+            "dist_COA-COMP_catalytic.xvg",
+            "dist_lig-COMP_catalytic.xvg"
+          ],
+          "observable": "catalytic_com_distance",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [
+            "PCA_COMP.pdf",
+            "eigenval-COMP.xvg",
+            "pc1-COMP.xvg",
+            "pc2-COMP.xvg",
+            "proj-COMP.xvg"
+          ],
+          "observable": "pca",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [
+            "FEL_COMP.pdf"
+          ],
+          "observable": "fel",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [
+            "DCCM_COMP.pdf"
+          ],
+          "observable": "dccm",
+          "reason": "historical output present but computed on raw md.xtc (no mdfit.xtc provenance) \u2014 recompute on mdfit.xtc; first: mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "SUPERSEDED_PENDING",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "mmpbsa",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "per_residue_decomposition",
+          "reason": "mdfit.xtc not present \u2014 canonical PBC-corrected rot+trans fit trajectory required; raw md.xtc is not accepted",
+          "source_trajectory": null,
+          "status": "REVIEW_REQUIRED",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": null,
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COMP/md.xtc",
+      "role": "reference",
+      "system": "COMP",
+      "tpr": "/home/jesusxd/Escritorio/Mecanismo_inhibitorio/COMP/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [
+            "binding_energy.xvg",
+            "energy_MM.xvg",
+            "energy_summary.csv"
+          ],
+          "observable": "mmpbsa",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [
+            "contrib_MM.dat",
+            "residues_energy_summary.csv"
+          ],
+          "observable": "per_residue_decomposition",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/md.xtc",
+      "role": "new",
+      "system": "A3-HMG-R",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [
+            "binding_energy.xvg",
+            "energy_MM.xvg",
+            "energy_summary.csv"
+          ],
+          "observable": "mmpbsa",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [
+            "contrib_MM.dat",
+            "residues_energy_summary.csv"
+          ],
+          "observable": "per_residue_decomposition",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/md.xtc",
+      "role": "new",
+      "system": "AA-A6",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/AA-A6/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [
+            "binding_energy.xvg",
+            "energy_MM.xvg",
+            "energy_summary.csv"
+          ],
+          "observable": "mmpbsa",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [
+            "contrib_MM.dat",
+            "residues_energy_summary.csv"
+          ],
+          "observable": "per_residue_decomposition",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/md.xtc",
+      "role": "new",
+      "system": "AG-A6",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/AG-A6/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [
+            "binding_energy.xvg",
+            "energy_MM.xvg",
+            "energy_summary.csv"
+          ],
+          "observable": "mmpbsa",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [
+            "contrib_MM.dat",
+            "residues_energy_summary.csv"
+          ],
+          "observable": "per_residue_decomposition",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": null,
+      "role": "new",
+      "system": "HMG-R-200ns-A6",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-200ns-A6/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [
+            "binding_energy.xvg",
+            "energy_MM.xvg",
+            "energy_summary.csv"
+          ],
+          "observable": "mmpbsa",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [
+            "contrib_MM.dat",
+            "residues_energy_summary.csv"
+          ],
+          "observable": "per_residue_decomposition",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/md.xtc",
+      "role": "new",
+      "system": "HMG-R-25ns-A6",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/HMG-R-25ns-A6/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [
+            "binding_energy.xvg",
+            "energy_MM.xvg",
+            "energy_summary.csv"
+          ],
+          "observable": "mmpbsa",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [
+            "contrib_MM.dat",
+            "residues_energy_summary.csv"
+          ],
+          "observable": "per_residue_decomposition",
+          "reason": "valid mdfit.xtc-based output already present",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "AVAILABLE",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/md.xtc",
+      "role": "new",
+      "system": "LP-A6",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/LP-A6/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "mmpbsa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "per_residue_decomposition",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/md.xtc",
+      "role": "new",
+      "system": "system_A3_COA",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A3_COA/md.tpr"
+    },
+    {
+      "analysis_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+      "analysis_trajectory_name": "mdfit.xtc",
+      "directory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA",
+      "index": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/index.ndx",
+      "observables": [
+        {
+          "existing_outputs": [],
+          "observable": "protein_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "ligand_rmsd",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rms"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "rmsf",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx rmsf"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "radius_of_gyration",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx gyrate"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "sasa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sasa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "hbonds",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx hbond"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_mindist",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "active_site_contacts",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx mindist"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "catalytic_com_distance",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx distance"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "pca",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx covar + gmx anaeig"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "fel",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "gmx sham / free-energy landscape"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "dccm",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "dynamic cross-correlation (CA)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "mmpbsa",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "g_mmpbsa run -pbsa"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "per_residue_decomposition",
+          "reason": "mdfit.xtc present; command buildable when execution authorised",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "PLANNED",
+          "tool": "g_mmpbsa run -decomp"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "clustering",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "gmx cluster (gromos)"
+        },
+        {
+          "existing_outputs": [],
+          "observable": "conformational_state_populations",
+          "reason": "NEW: not historically present for A1; source trajectory = mdfit.xtc when executed",
+          "source_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/mdfit.xtc",
+          "status": "NEW_EXTENSION",
+          "tool": "state assignment from clustering + shared PCA basin occupancy"
+        }
+      ],
+      "raw_production_trajectory": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/md.xtc",
+      "role": "new",
+      "system": "system_A6_COA",
+      "tpr": "/home/jesusxd/Escritorio/Nuevos_sistemas/system_A6_COA/md.tpr"
+    }
+  ]
+}

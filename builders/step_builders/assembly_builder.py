@@ -400,6 +400,7 @@ gmx solvate \\
         ref_atom    = p.get("ref_atom",    "O33")
         middle_atom = p.get("middle_atom", "C50")
         nwater      = p.get("nwater",      3)
+        legacy_slab_cleanup = bool(p.get("legacy_slab_cleanup", False))
         tm_residues_str = p.get("tm_residues")
         if tm_residues_str:
             from core.structural_annotation import residues_in_range
@@ -415,7 +416,7 @@ gmx solvate \\
 
         script = f"""#!/usr/bin/env python3
 # ─── Eliminar agua interior de bicapa ────────────────────────────────────────
-# Reimplementación Python de water_deletor.pl (Lemkul 2017).
+# Historical water_deletor.pl mode is selected only by legacy_slab_cleanup: true.
 # Outputs: system_clean.gro, topol.top, clean_water_report.json, water_report.json
 import sys, re, shutil, json
 from pathlib import Path
@@ -432,10 +433,11 @@ topol_src   = SOLVATE_DIR / "topol.top"
 topol_local = SCRIPT_DIR / "topol.top"
 
 TM_RESIDUES = set({tm_residues_literal})
-if TM_RESIDUES:
+LEGACY_SLAB_CLEANUP = {legacy_slab_cleanup}
+if not LEGACY_SLAB_CLEANUP:
     from validators.pore_hydration import clean_water_channel_aware
     report = clean_water_channel_aware(
-        gro_in, gro_out, tm_residues=TM_RESIDUES, output_dir=SCRIPT_DIR,
+        gro_in, gro_out, tm_residues=TM_RESIDUES or None, output_dir=SCRIPT_DIR,
         topol_in=topol_src, topol_out=topol_local,
     )
     print(json.dumps(report, indent=2))
@@ -467,27 +469,22 @@ n_molecules_removed = result.metadata["waters_removed"]
 n_atoms_removed     = n_molecules_removed * {nwater}  # atoms per water molecule
 
 # Actualizar conteo SOL en topol.top ─────────────────────────────────────────
+# Recounts SOL directly from gro_out (never trusts the adapter's
+# self-reported removal count) via the same section-scoped [ molecules ]
+# rewriter already used for lipid counts — replaces the old unscoped
+# `^SOL\\s+\\d+` regex, which could match an unrelated line if a
+# [ moleculetype ] block happened to be inlined in the same file.
 shutil.copy2(topol_src, topol_local)
-text = topol_local.read_text()
-
-def update_sol_count(text, n_removed):
-    lines = text.splitlines()
-    out = []
-    for line in lines:
-        m = re.match(r'^(SOL)\\s+(\\d+)', line)
-        if m:
-            old = int(m.group(2))
-            new = old - n_removed
-            print(f"  topol.top SOL: {{old}} → {{new}}")
-            line = f"SOL              {{new}}"
-        out.append(line)
-    return "\\n".join(out)
+from validators.topology_sync import sync_topology_molecule_count
 
 topology_updated = False
 try:
-    topol_local.write_text(update_sol_count(text, n_molecules_removed) + "\\n")
-    topology_updated = True
-    print(f"topol.top updated: {{topol_local}}")
+    _sol_sync = sync_topology_molecule_count(
+        gro_out, topol_local, "SOL", atoms_per_molecule={nwater},
+        report_path=SCRIPT_DIR / "topology_sync_water_report.json",
+    )
+    topology_updated = bool(_sol_sync.get("synchronized"))
+    print(f"topol.top SOL: {{_sol_sync.get('old_count')}} -> {{_sol_sync.get('new_count')}}")
 except Exception as _te:
     print(f"WARNING: topology update failed: {{_te}}", file=sys.stderr)
 

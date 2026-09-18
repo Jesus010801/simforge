@@ -1,0 +1,13 @@
+{
+  "coordinate_file": "reports/membrane_water_v2_real_validation/aasolv_v2_clean.gro",
+  "topology_file": "reports/membrane_water_v2_real_validation/topol_v2.top",
+  "resname": "SOL",
+  "old_count": 70576,
+  "new_count": 68843,
+  "removed_count": 1733,
+  "old_expected_atoms": 271627,
+  "new_expected_atoms": 266428,
+  "coordinate_atoms": 266428,
+  "synchronized": true,
+  "warnings": []
+}

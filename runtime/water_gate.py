@@ -1,122 +1,41 @@
-# runtime/water_gate.py
-"""
-Gate: water-in-bilayer check after clean_water.
-
-Checks clean_water_report.json (primary, written by run_clean_water.py ≥ v2)
-or water_report.json (backward compat for workspaces built before the report
-was renamed).  Blocks if water oxygens remain inside the bilayer hydrophobic
-core after cleanup.
-"""
+"""Water-cleanup gate based on confirmed region defects and steric clashes."""
 from __future__ import annotations
-
 import json
 from pathlib import Path
-
 from runtime.gate_runner import GateResult
-
-_WARN_THRESHOLD = 5    # warn if 1–5 waters remain (might be at boundary)
 
 
 def evaluate_water_gate(step_dir: Path) -> GateResult | None:
-    """
-    Returns None when no report is present.
-    Blocks when remaining waters > _WARN_THRESHOLD (cleanup clearly failed).
-    Warns for 1–_WARN_THRESHOLD waters (boundary ambiguity).
-
-    Report priority:
-      1. clean_water_report.json  (primary, contains full audit fields)
-      2. water_report.json        (backward compat for older workspaces)
-    """
-    # Try primary report first
-    primary = step_dir / "clean_water_report.json"
-    if primary.exists():
-        return _evaluate_clean_water_report(primary)
-
-    # Backward compat: old workspaces only wrote water_report.json
-    legacy = step_dir / "water_report.json"
-    if not legacy.exists():
-        return None
-    return _evaluate_water_report(legacy)
-
-
-def _evaluate_clean_water_report(path: Path) -> GateResult | None:
-    """Read clean_water_report.json and produce a GateResult.
-
-    Uses 'n_water_oxygens_remaining_in_core' (written by assembly_builder ≥ v3)
-    which counts only OW atoms inside the hydrophobic core after deletion.
-    Falls back to the legacy 'final_water_count' field with a warning, because
-    that field is the total remaining waters in the system (not just core waters)
-    and will produce false positives for any large solvated membrane system.
-    """
-    try:
-        data = json.loads(path.read_text())
-    except Exception:
-        return None
-
-    errors:   list[str] = []
-    warnings: list[str] = []
-
-    # Prefer the precise core-water count written by assembly_builder ≥ v3
-    if "n_water_oxygens_remaining_in_core" in data:
-        n_remain = data["n_water_oxygens_remaining_in_core"]
+    primary=Path(step_dir)/"clean_water_report.json"
+    legacy=Path(step_dir)/"water_report.json"
+    path=primary if primary.exists() else legacy
+    if not path.exists(): return None
+    try: data=json.loads(path.read_text())
+    except Exception: return None
+    warnings=list(data.get("warnings",[]));errors=[]
+    has_atlas=("supported_membrane_defects_remaining" in data or "confirmed_hard_clashes_remaining" in data
+               or "schema_version" in data)
+    if has_atlas:
+        defects=int(data.get("supported_membrane_defects_remaining",0))
+        clashes=int(data.get("confirmed_hard_clashes_remaining",0))
+        if defects: errors.append(f"{defects} supported membrane-defect waters remain")
+        if clashes: errors.append(f"{clashes} confirmed water clashes remain")
+        ncore=int(data.get("n_water_oxygens_remaining_in_core",0))
+        if ncore: warnings.append(f"{ncore} waters remain in classified membrane-interior regions")
+        passed=not errors and bool(data.get("cleanup_passed",True))
     else:
-        # Legacy: final_water_count = total waters remaining in whole system — not core-only.
-        # This will be a very large number for solvated membrane systems and is NOT
-        # a reliable gate signal.  Treat as advisory only (never block on it).
-        n_remain = 0
-        legacy   = data.get("final_water_count", 0)
-        if legacy > 0:
-            warnings.append(
-                f"clean_water_report.json uses legacy 'final_water_count' ({legacy} total "
-                "waters in system — not waters in core); gate cannot evaluate cleanup accuracy. "
-                "Recompile workspace to regenerate run_clean_water.py with core-water reporting."
-            )
-
-    if n_remain > _WARN_THRESHOLD:
-        errors.append(
-            f"{n_remain} water oxygen(s) remain in bilayer hydrophobic core after cleanup"
-        )
-    elif n_remain > 0:
-        warnings.append(
-            f"{n_remain} water oxygen(s) near bilayer core boundary after cleanup"
-        )
-
-    # Surface metadata fields for structured reporting
-    core_z_min = data.get("core_z_min")
-    core_z_max = data.get("core_z_max")
-    cleanup_passed = data.get("cleanup_passed", n_remain == 0)
-
-    return GateResult(
-        passed     = cleanup_passed and n_remain == 0,
-        blocked    = len(errors) > 0,
-        confidence = 1.0,
-        errors     = errors,
-        warnings   = warnings,
-    )
-
-
-def _evaluate_water_report(path: Path) -> GateResult | None:
-    """Read legacy water_report.json and produce a GateResult."""
-    try:
-        data = json.loads(path.read_text())
-    except Exception:
-        return None
-
-    errors   = data.get("errors",   [])
-    warnings = data.get("warnings", [])
-
-    n_remain = data.get("n_waters_remaining", 0)
-    if not errors and not warnings and n_remain > 0:
-        msg = f"{n_remain} water oxygen(s) remain inside bilayer core after cleanup"
-        if n_remain > _WARN_THRESHOLD:
-            errors = [msg]
-        else:
-            warnings = [msg]
-
-    return GateResult(
-        passed     = data.get("passed", False),
-        blocked    = len(errors) > 0,
-        confidence = data.get("confidence", 1.0),
-        errors     = errors,
-        warnings   = warnings,
-    )
+        # Historical reports only measure a Z slab. This cannot establish that
+        # retained water is invalid, so it remains an advisory signal.
+        has_core_count=("n_water_oxygens_remaining_in_core" in data or "n_waters_remaining" in data)
+        ncore=int(data.get("n_water_oxygens_remaining_in_core",data.get("n_waters_remaining",0)))
+        if ncore: warnings.append(f"{ncore} water(s) remain according to a legacy slab/count report; review region classification")
+        if not has_core_count:
+            warnings.append("Legacy water report has no region-atlas counts; membrane-water status is unresolved")
+        for item in data.get("errors",[]):
+            low=str(item).lower()
+            if any(x in low for x in ("core","bilayer","membrane","slab")):
+                warnings.append(str(item))
+            else: errors.append(str(item))
+        passed=not errors
+    return GateResult(passed=passed,blocked=bool(errors),confidence=float(data.get("confidence",1.0)),
+                      errors=errors,warnings=warnings)

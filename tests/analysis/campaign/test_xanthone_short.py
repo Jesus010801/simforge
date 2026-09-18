@@ -40,7 +40,7 @@ def _record(tmp_path, name="AA-A6", *, ligand_id=13, site_id=21,
     """A discovered SystemRecord for one synthetic A6 system with fake timing."""
     root = _ds(tmp_path)
     d, _ = system(root, name, ligand_id=ligand_id, site_id=site_id,
-                  duration=mdp_duration)
+                  duration=mdp_duration, with_fit=True)
     (d / "md.tpr").write_bytes(b"fake tpr header")
     rec = _rebuild(root, name, measured_end=measured_end, dt_ps=dt_ps,
                    inspected=inspected)
@@ -388,7 +388,7 @@ def test_xvg_post_validation_notices_wrong_point_count(tmp_path, monkeypatch):
 def test_run_study_writes_reports_and_integrity(tmp_path, fake_gmx, monkeypatch):
     root = tmp_path / "dataset"
     root.mkdir()
-    system(root, "AA-A6")
+    system(root, "AA-A6", with_fit=True)
     (root / "AA-A6" / "md.tpr").write_bytes(b"tpr")
 
     # deterministic measured timing without touching real gmx check
@@ -420,3 +420,82 @@ def test_run_study_refuses_output_inside_dataset(tmp_path, monkeypatch):
     system(root, "AA-A6")
     with pytest.raises((ValueError,)):
         xs.run_study(root, output_dir=root / "results", gmx="gmx")
+
+
+# ── trajectory-protocol correction: mdfit.xtc is mandatory (2026-09-09) ───────
+
+def test_analysis_binds_mdfit_not_raw_md_xtc(tmp_path, fake_gmx):
+    """Every GROMACS invocation reads mdfit.xtc; md.xtc is never an -f argument."""
+    d, rec = _record(tmp_path)
+    run = _run(rec, _out(tmp_path))
+    assert {a.status for a in run.analyses} == {xs.EXECUTED}
+    analysis_calls = [c for c in fake_gmx.calls
+                      if c["argv"][1] in ("rms", "mindist", "distance")]
+    assert analysis_calls
+    for c in analysis_calls:
+        f = c["argv"][c["argv"].index("-f") + 1]
+        assert Path(f).name == "mdfit.xtc", f
+        assert "md.xtc" not in f
+    # the fitted trajectory is what run.trajectory records; md.xtc is kept aside
+    assert Path(run.trajectory).name == "mdfit.xtc"
+    assert Path(run.raw_production_trajectory).name == "md.xtc"
+
+
+def test_missing_mdfit_blocks_every_analysis_with_review_required(tmp_path, fake_gmx):
+    """md.xtc + md.tpr + index.ndx present but no mdfit.xtc → all REVIEW_REQUIRED,
+    and no command is ever constructed against the raw trajectory."""
+    root = _ds(tmp_path)
+    d, _ = system(root, "AA-A6", with_fit=False)
+    (d / "md.tpr").write_bytes(b"fake tpr header")
+    rec = _rebuild(root, "AA-A6")
+    run = _run(rec, _out(tmp_path))
+    assert {a.status for a in run.analyses} == {xs.REVIEW_REQUIRED}
+    assert all("mdfit.xtc" in a.message for a in run.analyses)
+    # no gmx analysis tool was invoked at all
+    assert not any(c["argv"][1] in ("rms", "mindist", "distance")
+                   for c in fake_gmx.calls)
+    assert run.trajectory is None
+    assert run.eligibility["eligible"] is False
+
+
+def test_provenance_records_fit_trajectory_and_raw_separately(tmp_path, fake_gmx):
+    d, rec = _record(tmp_path)
+    run = _run(rec, _out(tmp_path))
+    prov = json.loads(
+        Path(_by_analysis(run)["protein_rmsd"].provenance_path).read_text())
+    assert prov["source_trajectory"].endswith("mdfit.xtc")
+    assert prov["raw_production_trajectory"].endswith("md.xtc")
+    assert prov["protocol_version"] == "xanthone_short/1.1"
+    assert "rot+trans fit" in prov["analysis_trajectory_role"]
+    assert prov["preprocessing_chain"][0] == "md.xtc"
+    assert any("mdfit.xtc" in step for step in prov["preprocessing_chain"])
+    # the raw trajectory is fingerprinted for integrity, not consumed
+    assert "raw_production_trajectory" in prov["source_fingerprints"]
+
+
+def test_window_is_independent_of_production_length_on_mdfit(tmp_path, fake_gmx):
+    """A 200 ns production run is still analysed 0-25 ns off its mdfit.xtc."""
+    d, rec = _record(tmp_path, "HMG-R-25ns-A6", ligand_id=13, site_id=21,
+                     mdp_duration=200000, measured_end=200000.0)
+    run = _run(rec, _out(tmp_path))
+    assert {a.status for a in run.analyses} == {xs.EXECUTED}
+    for c in fake_gmx.calls:
+        if c["argv"][1] in ("rms", "mindist", "distance"):
+            assert c["argv"][c["argv"].index("-b") + 1] == "0"
+            assert c["argv"][c["argv"].index("-e") + 1] == "25000"
+            assert Path(c["argv"][c["argv"].index("-f") + 1]).name == "mdfit.xtc"
+
+
+def test_semantic_index_roles_still_resolved_by_name(tmp_path, fake_gmx):
+    """The mdfit switch does not disturb name-based group resolution."""
+    d, rec = _record(tmp_path, ligand_id=17)
+    run = _run(rec, _out(tmp_path))
+    prov = json.loads(
+        Path(_by_analysis(run)["ligand_rmsd"].provenance_path).read_text())
+    assert prov["semantic_groups"]["ligand"] == "LIG"
+    assert prov["numeric_group_ids"]["LIG"] == 17
+    # the stdin fed to gmx rms uses the *name*, never the numeric id
+    lig_call = next(c for c in fake_gmx.calls
+                    if c["argv"][1] == "rms" and "rmsd_ligand.xvg" in " ".join(c["argv"]))
+    assert "LIG" in (lig_call["stdin"] or "")
+    assert "17" not in (lig_call["stdin"] or "")

@@ -1,0 +1,126 @@
+{
+  "source": "/home/jesusxd/Escritorio/Canal_M2-EUG/aasolv.gro",
+  "source_atoms": 273316,
+  "clean_atoms": 266428,
+  "source_water_instances": 71139,
+  "preserved_water_instances": 68843,
+  "removed_water_instances": 2296,
+  "removed_water_categories": {
+    "steric_clash": 2296
+  },
+  "all_retained_atom_lines_exact": true,
+  "all_output_waters_valid": true,
+  "unique_instance_ids": true,
+  "topology_sol_count": 68843,
+  "topology_ion_counts": {
+    "NA": 0,
+    "CL": 0
+  },
+  "grompp": {
+    "passed": true,
+    "maxwarn": 1,
+    "warning": "system net charge 25.000200 after stale NA/CL topology entries were reconciled to zero GRO ions",
+    "tpr": "/tmp/aasolv_v2_dryrun.tpr"
+  },
+  "runtime": {
+    "atlas_total_seconds": 40.14641709699936,
+    "geometry_seconds": 31.18398859500303,
+    "wall_seconds_reported_by_cleanup_wrapper": 209.3,
+    "peak_rss_mb": 611.0859375
+  },
+  "convergence": {
+    "criterion": "region-class and topology stability under modest grid-spacing change",
+    "converged": false,
+    "runs": [
+      {
+        "spacing_nm": 0.2,
+        "regions": 304,
+        "classes": {
+          "ambiguous": 293,
+          "lipid_facing_void": 10,
+          "protein_pore": 1
+        },
+        "portals": 7,
+        "nominal_free_voxels": 248918,
+        "supported_patch_fraction": 0.9654824893
+      },
+      {
+        "spacing_nm": 0.22,
+        "regions": 230,
+        "classes": {
+          "ambiguous": 222,
+          "lipid_facing_void": 7,
+          "protein_pore": 1
+        },
+        "portals": 6,
+        "nominal_free_voxels": 186774,
+        "supported_patch_fraction": 0.9695290859
+      }
+    ],
+    "region_count_relative_change": -0.24342105263157895,
+    "interpretation": "central pore candidate persists, but total elementary region count changes by 24.3%; tiny components remain resolution-sensitive. Not converged for release."
+  },
+  "visual_review": {
+    "preview": "atlas_xy_review.png",
+    "status": "not approved: scattered tiny ambiguous/lipid-facing candidates and resolution sensitivity require scientific review",
+    "vmd_script": "inspect_regions.vmd",
+    "command": "vmd -e /home/jesusxd/Escritorio/simforge/reports/membrane_water_v2_real_validation/inspect_regions.vmd"
+  },
+  "release_status": "BLOCKED_PENDING_REGION_STABILITY_AND_VISUAL_REVIEW",
+  "post_optimization_atlas_build": {
+    "grid_spacing_nm": 0.2,
+    "runtime_seconds": 30.635,
+    "peak_rss_mb": 257.15625,
+    "regions": 304,
+    "classes": {
+      "ambiguous": 293,
+      "lipid_facing_void": 10,
+      "protein_pore": 1
+    },
+    "portals": 7,
+    "pathway_nodes": 304,
+    "grid_shape": [
+      63,
+      63,
+      96
+    ],
+    "supported_patch_fraction": 0.9654824893,
+    "matches_cleanup_atlas_topology": true
+  },
+  "full_test_suite": {
+    "passed": 2716,
+    "failed": 4,
+    "skipped": 6,
+    "xfailed": 9,
+    "xpassed": 1,
+    "duration_seconds": 425.95,
+    "failing_tests": [
+      "ligand.test_integrate::TestPrepareCLI::test_prepare_with_ambiguous_h_ratio_blocks_without_rdkit",
+      "ligand.test_integrate::TestHydrogenationCLIOption::test_hydrogenation_none_unknown_status_exits_nonzero",
+      "ligand.test_integrate::TestHydrationStatus::test_status_unknown_for_plausible_ratio",
+      "ligand.test_integrate::TestHydrationStatus::test_complex_with_h_status_is_unknown"
+    ],
+    "membrane_water_focused_suite": "103 passed, 1 xpassed (latest run after adapter, gate, and identity changes)"
+  },
+  "water_mapping_by_class": {
+    "bulk": 67126,
+    "protein_pore": 14,
+    "vestibule": 0,
+    "internal_cavity": 0,
+    "buried_pocket": 0,
+    "lipid_facing_void": 43,
+    "supported_membrane_defect_candidate": 0,
+    "ambiguous": 1660,
+    "confirmed_steric_clash_removed": 2296
+  },
+  "uncertain_water_mappings": 16590,
+  "region_topology": {
+    "elementary_regions": 304,
+    "portals": 7,
+    "pathway_nodes": 304,
+    "hierarchy_aggregates": 304,
+    "hierarchy_note": "aggregates are singleton regions; shared-portal branch decomposition remains incomplete"
+  },
+  "confirmed_hard_clashes_remaining": 0,
+  "supported_membrane_defects_remaining": 0
+}

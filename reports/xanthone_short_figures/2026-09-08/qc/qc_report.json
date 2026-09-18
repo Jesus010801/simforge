@@ -1,0 +1,1213 @@
+{
+  "generated": "2026-09-08",
+  "sd_convention": "population (ddof=0), matches thesis resumen.txt",
+  "hmg_ligand_rmsd_note": "HMG ligand RMSD uses the fit-to-protein files HMG_CoA_R-A{n}_rmsd_ligand.xvg for A1-A5 (thesis-compatible) and the SimForge 'LIG after lsq fit to Protein' file for A6. The alternative HMG-A4/A5 fit-to-LIG files are intentionally NOT used.",
+  "entries": [
+    {
+      "figure": "figures/primary/AA_protein_rmsd_A1-A6.svg",
+      "target": "AA",
+      "descriptor": "protein_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/protein_rmsd/rmsd_protein.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AA_ligand_rmsd_A1-A6.svg",
+      "target": "AA",
+      "descriptor": "ligand_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/ligand_rmsd/rmsd_ligand.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AA_active_mindist_A1-A6.svg",
+      "target": "AA",
+      "descriptor": "active_mindist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/active_site/mindist_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AA_active_contacts_A1-A6.svg",
+      "target": "AA",
+      "descriptor": "active_contacts",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/active_site/contacts_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AA_catalytic_dist_A1-A6.svg",
+      "target": "AA",
+      "descriptor": "catalytic_dist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A1dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A2dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A3dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A4dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AA-A5dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AA-A6/observables/catalytic_com_distance/dist_lig_catalytic.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AG_protein_rmsd_A1-A6.svg",
+      "target": "AG",
+      "descriptor": "protein_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AG-A6/observables/protein_rmsd/rmsd_protein.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AG_ligand_rmsd_A1-A6.svg",
+      "target": "AG",
+      "descriptor": "ligand_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AG-A6/observables/ligand_rmsd/rmsd_ligand.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AG_active_mindist_A1-A6.svg",
+      "target": "AG",
+      "descriptor": "active_mindist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AG-A6/observables/active_site/mindist_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AG_active_contacts_A1-A6.svg",
+      "target": "AG",
+      "descriptor": "active_contacts",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AG-A6/observables/active_site/contacts_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/AG_catalytic_dist_A1-A6.svg",
+      "target": "AG",
+      "descriptor": "catalytic_dist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A1dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A2dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A3dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A4dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/AG-A5dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/AG-A6/observables/catalytic_com_distance/dist_lig_catalytic.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/HMG_protein_rmsd_A1-A6.svg",
+      "target": "HMG",
+      "descriptor": "protein_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/HMG-R-25ns-A6/observables/protein_rmsd/rmsd_protein.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/HMG_ligand_rmsd_A1-A6.svg",
+      "target": "HMG",
+      "descriptor": "ligand_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A1_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A2_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A3_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A4_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG_CoA_R-A5_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/HMG-R-25ns-A6/observables/ligand_rmsd/rmsd_ligand.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/HMG_active_mindist_A1-A6.svg",
+      "target": "HMG",
+      "descriptor": "active_mindist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/HMG-R-25ns-A6/observables/active_site/mindist_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/HMG_active_contacts_A1-A6.svg",
+      "target": "HMG",
+      "descriptor": "active_contacts",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/HMG-R-25ns-A6/observables/active_site/contacts_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/HMG_catalytic_dist_A1-A6.svg",
+      "target": "HMG",
+      "descriptor": "catalytic_dist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A1dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A2dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A3dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A4dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/HMG-A5dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/HMG-R-25ns-A6/observables/catalytic_com_distance/dist_lig_catalytic.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/LP_protein_rmsd_A1-A6.svg",
+      "target": "LP",
+      "descriptor": "protein_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5rmsd_protein.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/LP-A6/observables/protein_rmsd/rmsd_protein.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/LP_ligand_rmsd_A1-A6.svg",
+      "target": "LP",
+      "descriptor": "ligand_rmsd",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2_rmsd-ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3_rmsd-ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4_rmsd-ligand.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5_rmsd_ligand.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/LP-A6/observables/ligand_rmsd/rmsd_ligand.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [
+        {
+          "compound": "A6",
+          "vmax": 7.712,
+          "note": "excursion >3 nm; suspected periodic-image artefact in this xvg (active-site contact retained)"
+        }
+      ],
+      "validation_status": "WARN_ARTIFACT"
+    },
+    {
+      "figure": "figures/primary/LP_active_mindist_A1-A6.svg",
+      "target": "LP",
+      "descriptor": "active_mindist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5mindist_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/LP-A6/observables/active_site/mindist_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/LP_active_contacts_A1-A6.svg",
+      "target": "LP",
+      "descriptor": "active_contacts",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5contacts_lig_active.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/LP-A6/observables/active_site/contacts_lig_active.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    },
+    {
+      "figure": "figures/primary/LP_catalytic_dist_A1-A6.svg",
+      "target": "LP",
+      "descriptor": "catalytic_dist",
+      "data_sources": [
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A1dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A2dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A3dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A4dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/LP-A5dist_lig_catalytic.xvg",
+        "/home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_short/LP-A6/observables/catalytic_com_distance/dist_lig_catalytic.xvg"
+      ],
+      "compounds_included": [
+        "A1",
+        "A2",
+        "A3",
+        "A4",
+        "A5",
+        "A6"
+      ],
+      "all_six_present": true,
+      "time_coverage_ns": {
+        "A1": [
+          0.0,
+          25.0
+        ],
+        "A2": [
+          0.0,
+          25.0
+        ],
+        "A3": [
+          0.0,
+          25.0
+        ],
+        "A4": [
+          0.0,
+          25.0
+        ],
+        "A5": [
+          0.0,
+          25.0
+        ],
+        "A6": [
+          0.0,
+          25.0
+        ]
+      },
+      "n_points": {
+        "A1": 2501,
+        "A2": 2501,
+        "A3": 2501,
+        "A4": 2501,
+        "A5": 2501,
+        "A6": 2501
+      },
+      "any_all_nan_trace": false,
+      "coverage_0_25ns_ok": true,
+      "suspected_artifacts": [],
+      "validation_status": "PASS"
+    }
+  ]
+}

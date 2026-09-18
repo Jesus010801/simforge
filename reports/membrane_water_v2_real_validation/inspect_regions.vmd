@@ -1,0 +1,38 @@
+# Load the cleaned system and overlay region-atlas voxel clouds.
+set base "/home/jesusxd/Escritorio/simforge/reports/membrane_water_v2_real_validation"
+set sys [mol new "$base/aasolv_v2_clean.gro" type gro waitfor all]
+mol delrep 0 $sys
+mol representation Licorice 0.10 12 12
+mol color ColorID 8
+mol selection "protein and not hydrogen"
+mol addrep $sys
+mol representation Licorice 0.08 10 10
+mol color ColorID 4
+mol selection "resname DPP"
+mol addrep $sys
+mol representation Points 2
+mol color ColorID 0
+mol selection "resname SOL"
+mol addrep $sys
+set clouds {
+  region_pore.pdb 6
+  region_vestibule.pdb 7
+  region_cavity.pdb 13
+  region_lipid_void.pdb 3
+  region_membrane_defect.pdb 1
+  region_ambiguous.pdb 10
+}
+foreach {name color} $clouds {
+  set path "$base/$name"
+  if {[file size $path] > 5} {
+    set mid [mol new $path type pdb waitfor all]
+    mol delrep 0 $mid
+    mol representation Points 7
+    mol color ColorID $color
+    mol selection all
+    mol addrep $mid
+  }
+}
+display projection Orthographic
+axes location LowerLeft
+display resetview

@@ -297,8 +297,8 @@ class TestWaterGate:
         assert gate.passed is True
         assert gate.blocked is False
 
-    def test_many_waters_remaining_blocks(self, tmp_path):
-        # >5 waters: script writes errors list → gate blocks
+    def test_legacy_membrane_core_count_is_advisory(self, tmp_path):
+        # A slab/core count cannot establish that retained water is invalid.
         n_remain = 20
         msg = f"{n_remain} water oxygen(s) inside bilayer core"
         _w(tmp_path / "water_report.json", {
@@ -306,8 +306,9 @@ class TestWaterGate:
             "errors": [msg], "warnings": [], "confidence": 1.0,
         })
         gate = evaluate_water_gate(tmp_path)
-        assert gate.blocked is True
-        assert gate.errors != []
+        assert gate.blocked is False
+        assert gate.errors == []
+        assert gate.warnings
 
     def test_few_waters_remaining_warns_not_blocks(self, tmp_path):
         # 1–5 waters: script writes warnings list → gate advises but does not block
@@ -332,15 +333,17 @@ class TestWaterGate:
         assert gate.blocked is False
         assert gate.warnings != []
 
-    def test_six_waters_blocks(self, tmp_path):
-        # boundary: 6 → error (blocked)
-        msg = "6 water oxygen(s) inside bilayer core"
-        _w(tmp_path / "water_report.json", {
-            "passed": False, "n_waters_remaining": 6,
-            "errors": [msg], "warnings": [], "confidence": 1.0,
+    def test_confirmed_clashes_block_independent_of_core_count(self, tmp_path):
+        _w(tmp_path / "clean_water_report.json", {
+            "schema_version": "membrane-water-atlas/2.0",
+            "n_water_oxygens_remaining_in_core": 6,
+            "confirmed_hard_clashes_remaining": 1,
+            "supported_membrane_defects_remaining": 0,
+            "cleanup_passed": True,
         })
         gate = evaluate_water_gate(tmp_path)
         assert gate.blocked is True
+        assert any("clash" in e.lower() for e in gate.errors)
 
     def test_explicit_errors_in_report_override(self, tmp_path):
         _w(tmp_path / "water_report.json", {
@@ -435,15 +438,125 @@ class TestWaterGate:
         assert gate.passed is True
         assert gate.errors == []
 
-    def test_clean_water_report_new_format_many_remain_blocks(self, tmp_path):
-        """New-format report with many OW in core blocks the gate."""
+    def test_supported_defects_block_but_core_water_is_advisory(self, tmp_path):
         _w(tmp_path / "clean_water_report.json", {
+            "schema_version": "membrane-water-atlas/2.0",
             "n_water_oxygens_remaining_in_core": 30,
-            "cleanup_passed": False,
+            "confirmed_hard_clashes_remaining": 0,
+            "supported_membrane_defects_remaining": 1,
+            "cleanup_passed": True,
         })
         gate = evaluate_water_gate(tmp_path)
         assert gate.blocked is True
-        assert any("30" in e for e in gate.errors)
+        assert any("defect" in e.lower() for e in gate.errors)
+        assert any("30" in w for w in gate.warnings)
+
+    def test_real_production_report_zero_remaining_passes_end_to_end(self, tmp_path):
+        """End-to-end: the real production clean_water_channel_aware() (not a
+        synthetic JSON fixture) writes a clean_water_report.json whose
+        n_water_oxygens_remaining_in_core the gate then reads. Regression for
+        the bug where this field was hard-coded to 0 regardless of what
+        actually remained — a successful real cleanup must still report (and
+        the gate must still pass on) a genuine 0."""
+        import math
+
+        from validators.pore_hydration import clean_water_channel_aware
+
+        gro = tmp_path / "system.gro"
+        atoms = []
+        tm_residues = set()
+        resid = 1
+        for z in (3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5):
+            for i in range(20):
+                angle = i * 2 * math.pi / 20
+                atoms.append((resid, "ALA", "CA", 6.0 + math.cos(angle), 6.0 + math.sin(angle), z))
+                tm_residues.add(resid)
+                resid += 1
+        for radius in (2.0, 2.5, 3.5, 4.0):
+            for i in range(16):
+                angle = i * 2 * math.pi / 16
+                lx, ly = 6.0 + radius * math.cos(angle), 6.0 + radius * math.sin(angle)
+                for z_hg, z_tail in ((6.0, 5.5), (4.0, 4.5)):
+                    atoms.append((resid, "DPP", "P", lx, ly, z_hg)); resid += 1
+                    atoms.append((resid, "DPP", "C50", lx, ly, z_tail)); resid += 1
+        # lumen water (must survive) + membrane-core defect water far outside the ring (must be removed)
+        atoms.append((resid, "SOL", "OW", 6.0, 6.0, 5.0)); resid += 1
+        atoms.append((resid, "SOL", "OW", 9.0, 6.0, 5.0)); resid += 1
+
+        lines = ["gate regression", str(len(atoms))]
+        for i, (r, resname, name, x, y, z) in enumerate(atoms, 1):
+            lines.append(f"{r:5d}{resname:<5s}{name:>5s}{i:5d}{x:8.3f}{y:8.3f}{z:8.3f}")
+        lines.append("  12.00000  12.00000  10.00000")
+        gro.write_text("\n".join(lines) + "\n")
+
+        clean_water_channel_aware(
+            gro, tmp_path / "clean.gro", tm_residues=tm_residues, output_dir=tmp_path,
+        )
+        clean_report = json.loads((tmp_path / "clean_water_report.json").read_text())
+        assert clean_report["schema_version"] == "membrane-water-atlas/2.0"
+        assert clean_report["confirmed_hard_clashes_remaining"] == 0
+        assert clean_report["supported_membrane_defects_remaining"] == 0
+        gate = evaluate_water_gate(tmp_path)
+        assert gate is not None
+        assert gate.blocked is False
+        assert gate.passed is True
+
+    def test_real_production_report_nonzero_remaining_blocks_end_to_end(self, tmp_path):
+        """Same real production system, but with remove_membrane_core_water
+        semantics disabled via run_cleanup's override so the membrane-defect
+        water is deliberately left behind — proving the gate now actually
+        sees and blocks on a real nonzero count instead of the old hard-coded
+        0 that could never trigger this path."""
+        import math
+
+        from validators.membrane_water import run_cleanup
+
+        gro = tmp_path / "system.gro"
+        atoms = []
+        tm_residues = set()
+        resid = 1
+        for z in (3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5):
+            for i in range(20):
+                angle = i * 2 * math.pi / 20
+                atoms.append((resid, "ALA", "CA", 6.0 + math.cos(angle), 6.0 + math.sin(angle), z))
+                tm_residues.add(resid)
+                resid += 1
+        for radius in (2.0, 2.5, 3.5, 4.0):
+            for i in range(16):
+                angle = i * 2 * math.pi / 16
+                lx, ly = 6.0 + radius * math.cos(angle), 6.0 + radius * math.sin(angle)
+                for z_hg, z_tail in ((6.0, 5.5), (4.0, 4.5)):
+                    atoms.append((resid, "DPP", "P", lx, ly, z_hg)); resid += 1
+                    atoms.append((resid, "DPP", "C50", lx, ly, z_tail)); resid += 1
+        # >5 membrane-defect waters, so the gate's block threshold is exceeded
+        for i in range(8):
+            angle = i * 2 * math.pi / 8
+            atoms.append((resid, "SOL", "OW", 6.0 + 4.75 * math.cos(angle), 6.0 + 4.75 * math.sin(angle), 5.0))
+            resid += 1
+
+        lines = ["gate regression", str(len(atoms))]
+        for i, (r, resname, name, x, y, z) in enumerate(atoms, 1):
+            lines.append(f"{r:5d}{resname:<5s}{name:>5s}{i:5d}{x:8.3f}{y:8.3f}{z:8.3f}")
+        lines.append("  12.00000  12.00000  10.00000")
+        gro.write_text("\n".join(lines) + "\n")
+
+        result = run_cleanup(
+            gro, tmp_path / "clean.gro", tm_residues=tm_residues, output_dir=tmp_path,
+            remove_membrane_core_water=False,
+        )
+        assert result["n_water_oxygens_remaining_in_core"] > 0, (
+            "With remove_membrane_core_water=False the defect water must remain, "
+            "and the report must reflect that (never hard-coded to 0)"
+        )
+        _w(tmp_path / "clean_water_report.json", {
+            "schema_version": result["schema_version"],
+            "n_water_oxygens_remaining_in_core": result["n_water_oxygens_remaining_in_core"],
+            "confirmed_hard_clashes_remaining": result["confirmed_hard_clashes_remaining"],
+            "supported_membrane_defects_remaining": result["supported_membrane_defects_remaining"],
+            "cleanup_passed": result["cleanup_passed"],
+        })
+        gate = evaluate_water_gate(tmp_path)
+        assert gate.blocked == bool(result["confirmed_hard_clashes_remaining"] or result["supported_membrane_defects_remaining"])
 
 
 # ══════════════════════════════════════════════════════════════════════════════

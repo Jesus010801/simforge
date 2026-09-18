@@ -45,6 +45,9 @@ dependencies = [
 chem = ["rdkit>=2022.09"]
 # Free-energy-landscape and MD-study plotting.
 analysis = ["matplotlib>=3.6"]
+# Optional acceleration for validators/membrane_water (cKDTree/ndimage);
+# the engine is fully functional and tested on pure numpy without this.
+spatial = ["scipy>=1.10"]
 # Everything needed to run the test suite and contribute.
 dev = [
     "pytest>=7",
@@ -88,4 +91,5 @@ markers = [
     "gmx: test requires a real GROMACS (gmx) binary on PATH",
     "rdkit: test requires RDKit (install the 'chem' extra or use a dedicated env)",
     "membrane_wip: known-incomplete membrane pre-shrink / packing behaviour (see CHANGELOG)",
+    "membrane_regression: heavier membrane-water-topology regression fixture (derived from a real channel system)",
 ]

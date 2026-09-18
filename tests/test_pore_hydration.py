@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 from validators.pore_hydration import (
@@ -136,7 +137,10 @@ def test_channel_cleanup_updates_topology_and_reports(tmp_path):
         topol_in=topol_in,
         topol_out=topol_out,
     )
-    assert "SOL              2" in topol_out.read_text()
+    match = re.search(r"^SOL\s+(\d+)", topol_out.read_text(), re.MULTILINE)
+    assert match is not None and int(match.group(1)) == 2, (
+        f"Expected SOL 2 in updated topology, got:\n{topol_out.read_text()}"
+    )
     clean_report = json.loads((tmp_path / "clean_water_report.json").read_text())
     assert clean_report["pore_aware"] is True
     assert clean_report["n_pore_waters_preserved"] >= 1

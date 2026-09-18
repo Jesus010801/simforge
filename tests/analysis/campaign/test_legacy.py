@@ -12,7 +12,8 @@ from analysis.campaign.manifest import build_manifest
 from analysis.campaign.orchestration.study_analyzer import run_inspect
 
 
-def system(tmp_path, name='AA-A6', ligand_id=13, site_id=21, duration=25000):
+def system(tmp_path, name='AA-A6', ligand_id=13, site_id=21, duration=25000,
+           with_fit=False):
     d = tmp_path / name
     d.mkdir()
     names = ['System', 'Protein', 'Protein-H', 'C-alpha', 'Backbone']
@@ -26,9 +27,19 @@ def system(tmp_path, name='AA-A6', ligand_id=13, site_id=21, duration=25000):
     (d / 'md.xtc').write_bytes(b'fake trajectory')
     (d / 'topol.top').write_text('#include "A6.itp"\n[ molecules ]\nProtein 1\nLIG 1\n')
     (d / 'md.mdp').write_text(f'integrator = md\ndt = 0.002\nnsteps = {duration / .002:.0f}\n')
+    artifacts = [TrajectoryArtifact(path=str(d/'md.xtc'), stage='production', end_time_ps=duration)]
+    if with_fit:
+        # Realistic legacy directory: the PBC-corrected rot+trans fit derivative
+        # is always present next to md.xtc (md.xtc -> mdcenter.xtc -> mdfit.xtc).
+        (d / 'mdcenter.xtc').write_bytes(b'fake centered trajectory')
+        (d / 'mdfit.xtc').write_bytes(b'fake fitted trajectory')
+        artifacts += [
+            TrajectoryArtifact(path=str(d/'mdcenter.xtc'), stage='derived'),
+            TrajectoryArtifact(path=str(d/'mdfit.xtc'), stage='derived'),
+        ]
     r = SystemRecord('test', 'test', 'rep01', index_path=str(d/'index.ndx'),
                      production_trajectory_paths=[str(d/'md.xtc')],
-                     trajectory_artifacts=[TrajectoryArtifact(path=str(d/'md.xtc'), stage='production', end_time_ps=duration)])
+                     trajectory_artifacts=artifacts)
     return d, r
 
 
