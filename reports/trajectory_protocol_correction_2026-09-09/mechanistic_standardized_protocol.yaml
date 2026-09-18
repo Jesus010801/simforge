@@ -1,0 +1,257 @@
+# Standardized mechanistic descriptor protocol — A1 / A3 / A6
+# ---------------------------------------------------------------------------
+# Status: DRAFT for dry-run audit. No mechanistic GROMACS analysis is executed
+# by adopting this file. Execution is a later, explicitly-authorised phase.
+#
+# Purpose: make the historical A1 mechanistic study (Mecanismo_inhibitorio/)
+# and the new A3 / A6 mechanistic systems (Nuevos_sistemas/) directly
+# comparable, on one trajectory-treatment, one analysis window, one set of
+# atom selections and one PCA/FEL reference basis.
+protocol_version: "mechanistic/1.0-draft"
+date: 2026-09-09
+supersedes_note: >
+  The historical A1/APO/COA/COMP descriptor outputs were computed from the raw
+  production trajectory md.xtc (scripts analysis_md.sh, analysis_contacts_distances.sh,
+  md_pca.sh, backbone.sh, per-system pca.py/fel.py/dccm.py). Under this protocol
+  they are SUPERSEDED_PENDING and must be recomputed on mdfit.xtc.
+
+# ── 1. Trajectory treatment (identical for every system) ────────────────────
+trajectory:
+  raw_production: md.xtc            # production output; NEVER an analysis input
+  preprocessing:
+    - step: center
+      command: >
+        gmx trjconv -s md.tpr -f md.xtc -n index.ndx
+        -pbc res -ur compact -center -o mdcenter.xtc
+      center_group: Protein
+      output_group: System
+    - step: fit
+      command: >
+        gmx trjconv -s md.tpr -f mdcenter.xtc -n index.ndx
+        -fit rot+trans -o mdfit.xtc
+      fit_group: Backbone            # rot+trans least-squares fit on backbone
+      output_group: System
+  analysis_trajectory: mdfit.xtc    # the ONLY input to every observable below
+  fallback_to_raw_md_xtc: forbidden
+  reference_systems_need_reprocessing:
+    # these directories have no mdfit.xtc yet -> generate it with the chain above
+    - Mecanismo_inhibitorio/A1
+    - Mecanismo_inhibitorio/APO
+    - Mecanismo_inhibitorio/COA
+    - Mecanismo_inhibitorio/COMP
+
+# ── 2. Analysis window + sampling (independent of production length) ────────
+analysis_window:
+  # Historical A1 mechanistic runs are 200 ns; A3-HMG-R and HMG-R-200ns-A6 are
+  # 200 ns; system_A3_COA / system_A6_COA are ~200 ns. The comparable window is
+  # the full common production span.
+  begin_ps: 0
+  end_ps: 200000
+  note: >
+    Where a system's mdfit.xtc is shorter than 200 ns it is analysed over its
+    full span and flagged; it is never extrapolated. The 25 ns xanthone_short
+    window is a SEPARATE, independent profile and is not changed by this file.
+  frame_stride_ps: 100             # gmx ...-dt 100  (2001 frames over 0-200 ns)
+  equilibration_discard_ps: 0      # full trajectory for time series; see per-observable
+
+# ── 3. Atom selections / semantic groups ──────────────────────────────────
+selections:
+  protein_fit: Backbone            # least-squares fit reference for all RMSD/PCA
+  protein_rmsd: Backbone
+  protein_rmsf: C-alpha
+  radius_of_gyration: Protein
+  sasa: Protein
+  hbonds: [Protein, LIG]           # donor/acceptor sets; APO: Protein/Protein
+  ligand: LIG                      # by NAME from each system's index.ndx
+  active_site: ActiveSite_*        # ActiveSite_HMG / ActiveSite_AA / ...
+  catalytic_site: Catalytic_*      # Catalytic_HMG / Catalytic_AA / ...
+  pca_atoms: C-alpha               # Cα only, protein
+  dccm_atoms: C-alpha
+  resolution_rule: >
+    Groups are resolved by name from each system's own index.ndx. Numeric ids
+    are recorded for provenance only and never passed to GROMACS.
+
+# ── 4. Observables ─────────────────────────────────────────────────────────
+observables:
+  - key: protein_rmsd
+    tool: gmx rms
+    command: gmx rms -s md.tpr -f mdfit.xtc -n index.ndx -tu ns -o rmsd_protein.xvg
+    stdin: [Backbone, Backbone]
+    historically_present_for_A1: true
+  - key: ligand_rmsd
+    tool: gmx rms
+    command: gmx rms -s md.tpr -f mdfit.xtc -n index.ndx -tu ns -o rmsd_ligand.xvg
+    stdin: [Backbone, LIG]         # fit on protein backbone, RMSD of LIG
+    applicable_when: ligand present (not APO)
+    historically_present_for_A1: true
+  - key: rmsf
+    tool: gmx rmsf
+    command: gmx rmsf -s md.tpr -f mdfit.xtc -n index.ndx -res -o rmsf_protein.xvg
+    stdin: [C-alpha]
+    historically_present_for_A1: true
+  - key: radius_of_gyration
+    tool: gmx gyrate
+    command: gmx gyrate -s md.tpr -f mdfit.xtc -n index.ndx -tu ns -o rg_protein.xvg
+    stdin: [Protein]
+    historically_present_for_A1: true
+  - key: sasa
+    tool: gmx sasa
+    command: gmx sasa -s md.tpr -f mdfit.xtc -n index.ndx -tu ns -o sasa_protein.xvg
+    stdin: [Protein]
+    historically_present_for_A1: true
+  - key: hbonds
+    tool: gmx hbond
+    command: gmx hbond -s md.tpr -f mdfit.xtc -n index.ndx -tu ns -num hbnum.xvg
+    stdin: [Protein, LIG]          # APO / enzyme-free: [Protein, Protein]
+    historically_present_for_A1: true
+  - key: active_site_mindist
+    tool: gmx mindist
+    command: >
+      gmx mindist -s md.tpr -f mdfit.xtc -n index.ndx -b 0 -e 200000
+      -d 0.6 -od mindist_lig_active.xvg -on contacts_lig_active.xvg
+    stdin: [LIG, ActiveSite_*]
+    historically_present_for_A1: true    # contacts_lig_active.xvg exists for A1
+  - key: active_site_contacts
+    tool: gmx mindist              # same invocation as above, -on output
+    contact_cutoff_nm: 0.6
+    historically_present_for_A1: true
+  - key: catalytic_com_distance
+    tool: gmx distance
+    command: >
+      gmx distance -s md.tpr -f mdfit.xtc -n index.ndx -b 0 -e 200000
+      -select 'com of group "LIG" plus com of group "Catalytic_*"'
+      -oall dist_lig_catalytic.xvg
+    historically_present_for_A1: true
+  - key: pca
+    tool: gmx covar + gmx anaeig
+    per_system_commands:
+      - gmx covar -s md.tpr -f mdfit.xtc -n index.ndx -tu ns -o eigenval.xvg -v eigenvec.trr -av average.pdb
+      - gmx anaeig -v eigenvec.trr -f mdfit.xtc -s md.tpr -first 1 -last 2 -proj proj.xvg -2d pc1_pc2.xvg
+    covar_selection: [C-alpha, C-alpha]
+    historically_present_for_A1: true
+    comparability: SEE shared_pca_basis  # per-system PC1/PC2 are NOT comparable
+  - key: fel
+    tool: gmx sham
+    per_system_command: >
+      gmx sham -f pc1_pc2.xvg -ls fel.xpm -notime ; (render fel.pdf)
+    historically_present_for_A1: true
+    comparability: SEE shared_fel
+  - key: dccm
+    tool: dynamic cross-correlation matrix (Cα)
+    method: >
+      Cα covariance from mdfit.xtc, normalised C_ij = <Δr_i·Δr_j> /
+      sqrt(<Δr_i^2><Δr_j^2>). Historical A1 dccm.py used MDAnalysis on
+      backbone.xtc; standardize on Cα from mdfit.xtc.
+    historically_present_for_A1: true
+  - key: mmpbsa
+    tool: g_mmpbsa run -pbsa
+    command: >
+      g_mmpbsa run -f mdfit.xtc -s md.tpr -n index.ndx
+      -unit1 'group "Protein"' -unit2 'group "LIG"'
+      -b 150000 -e 200000 -dt 200 -i mmpbsa.mdp -pbsa -decomp
+      -mm energy_MM.xvg -pol polar.xvg -apol apolar.xvg
+      -mmcon contrib_MM.dat -pcon contrib_pol.dat -apcon contrib_apol.dat -incl_14
+    window_ps: [150000, 200000]    # last 50 ns; A3-HMG-R / HMG-R-200ns-A6 already use this
+    snapshot_stride_ps: 200
+    mmpbsa_mdp_sha256: "954785fb180552bc..."   # the majority mdp; see mmpbsa_equivalence_audit.md
+    historically_present_for_A1: true
+    note: >
+      200 ns MM-PBSA totals for A3 (-127.8 +/- 110.9) and A6 (-116.8 +/- 182.0)
+      have SD > |mean| (poorly converged). Keep the 25 ns xanthone_short series
+      for quantitative modelling; use the 200 ns series for per-residue
+      interpretation only.
+  - key: per_residue_decomposition
+    tool: g_mmpbsa run -decomp
+    output: residues_energy_summary.csv (+ contrib_*.dat)
+    historically_present_for_A1: true
+    note: >
+      HMGR-A1 reference and A3/A6 200 ns runs both have 1615-residue
+      residues_energy_summary.csv -> a catalytic-residue comparison is ready
+      (interpretation only). HMGR-A2..A5 (815 residues, different mdp) are a
+      separate batch and out of scope for the A1/A3/A6 comparison.
+
+# ── 5. NEW extensions (NOT historically present for A1) ─────────────────────
+new_extensions:
+  - key: clustering
+    status: NEW_EXTENSION
+    tool: gmx cluster
+    command: >
+      gmx cluster -s md.tpr -f mdfit.xtc -n index.ndx -tu ns
+      -method gromos -cutoff 0.15 -cl clusters.pdb -sz cluster_sizes.xvg
+      -clid cluster_id_vs_time.xvg -o rmsd_clust.xpm
+    selection: [Backbone, Backbone]
+    cutoff_nm: 0.15               # to be tuned per target family before execution
+    rationale: >
+      A1's historical study has no clustering output. Added for conformational
+      state definition and as the basis for state populations.
+  - key: conformational_state_populations
+    status: NEW_EXTENSION
+    method: >
+      Fraction of frames in each gmx-cluster; cross-checked against basin
+      occupancy on the shared PCA PC1/PC2 FEL (below). Report populations per
+      system and a common state-labelling across A1/A3/A6.
+    rationale: no historical precedent for A1.
+
+# ── 6. Comparability specification (task Part 7) ───────────────────────────
+comparability:
+  trajectory_duration_ns: {A1: 200, A3: 200, A6: 200}
+  analysis_interval_ps: [0, 200000]
+  frame_stride_ps: 100
+  preprocessing: "md.xtc -> trjconv -pbc res -ur compact -center -> mdcenter.xtc -> trjconv -fit rot+trans -> mdfit.xtc"
+  atom_selections: {see: selections}
+  protein_fitting: "least-squares rot+trans on Backbone, common reference frame = frame 0 of A1 mdfit.xtc after alignment to a shared average structure"
+  active_catalytic_site_definitions: "per-target index groups ActiveSite_HMG / Catalytic_HMG (HMG-CoA-reductase family for A1/A3/A6-HMG); resolved by name"
+  pca_atom_selection: "C-alpha, protein only"
+  pca_reference_alignment: "all frames aligned to a single shared average Cα structure before covariance"
+  fel_coordinates: "PC1, PC2 of the shared basis (below); kT at 309.65 K"
+  dccm_atom_representation: "C-alpha; same residue ordering across systems"
+  warning: >
+    Independently generated per-system PCA coordinates are NOT comparable:
+    PC1/PC2 of A1's own covariance are different axes from A3's or A6's. Direct
+    comparison requires the shared basis below.
+
+shared_pca_basis:
+  applies_to: [A1, A3, A6]           # same receptor (HMG-CoA reductase) required
+  precondition: identical Cα count and residue numbering across the three systems
+  procedure:
+    - align each system's mdfit.xtc Cα to one shared average structure
+      (built from the concatenation of the three)
+    - concatenate the three aligned Cα trajectories: cat_A1A3A6.xtc
+    - single covariance: gmx covar -f cat_A1A3A6.xtc -s shared_ref.tpr
+      -o eigenval_shared.xvg -v eigenvec_shared.trr -av avg_shared.pdb  (stdin: C-alpha C-alpha)
+    - project EACH system separately onto the shared eigenvectors:
+      gmx anaeig -v eigenvec_shared.trr -f <sys>_mdfit_ca.xtc -s shared_ref.tpr
+      -first 1 -last 2 -proj proj_<sys>_shared.xvg -2d pc1pc2_<sys>_shared.xvg
+  outputs: pc1pc2_A1_shared.xvg, pc1pc2_A3_shared.xvg, pc1pc2_A6_shared.xvg
+
+shared_fel:
+  procedure:
+    - pool PC1/PC2 of all three shared projections to define common bin edges
+    - per-system 2D histogram on those edges -> G = -kT ln P, G -= G.min()
+    - kT = 0.008314 * 309.65 kJ/mol
+  outputs:
+    - FEL_A1_sharedPC.pdf, FEL_A3_sharedPC.pdf, FEL_A6_sharedPC.pdf  (same axes/limits)
+    - FEL_overlay_A1A3A6_sharedPC.pdf
+  also_keep: per-system FEL on each system's own PC1/PC2 (historically compatible)
+
+# ── 7. Systems in scope ───────────────────────────────────────────────────
+systems:
+  reference:
+    - {name: A1,   dir: Mecanismo_inhibitorio/A1,   ligand: A1 (xanthone), receptor: HMG-CoA reductase}
+    - {name: APO,  dir: Mecanismo_inhibitorio/APO,  ligand: none}
+    - {name: COA,  dir: Mecanismo_inhibitorio/COA,  ligand: CoA}
+    - {name: COMP, dir: Mecanismo_inhibitorio/COMP, ligand: A1 + CoA (ternary)}
+  new:
+    - {name: A3-HMG-R,       dir: Nuevos_sistemas/A3-HMG-R,       ligand: A3, receptor: HMG-CoA reductase}
+    - {name: HMG-R-200ns-A6, dir: Nuevos_sistemas/HMG-R-200ns-A6, ligand: A6, receptor: HMG-CoA reductase}
+    - {name: system_A3_COA,  dir: Nuevos_sistemas/system_A3_COA,  ligand: A3 + CoA}
+    - {name: system_A6_COA,  dir: Nuevos_sistemas/system_A6_COA,  ligand: A6 + CoA}
+
+# ── 8. Execution gating ───────────────────────────────────────────────────
+execution:
+  authorised: false
+  precondition:
+    - this protocol reviewed and approved
+    - mdfit.xtc present (or regenerated) for every system in scope
+    - shared Cα count / residue numbering verified for A1/A3/A6
+  dry_run_command: "simforge study mechanistic-plan Nuevos_sistemas --reference Mecanismo_inhibitorio --json"

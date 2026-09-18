@@ -2537,6 +2537,7 @@ from analysis.campaign.cli import (  # noqa: E402
     study_analyze_fn as _study_analyze_fn,
     study_inspect_fn as _study_inspect_fn,
     study_plan_fn as _study_plan_fn,
+    study_mechanistic_plan_fn as _study_mechanistic_plan_fn,
     study_selections_fn as _study_selections_fn,
     study_commands_fn as _study_commands_fn,
     study_run_fn as _study_run_fn,
@@ -2545,10 +2546,12 @@ _study_campaign_app.command(name="inspect")(_study_inspect_fn)
 _study_campaign_app.command(name="analyze")(_study_analyze_fn)
 _study_campaign_app.command(name="analyses")(_study_analyses_fn)
 _study_campaign_app.command(name="plan")(_study_plan_fn)
+_study_campaign_app.command(name="mechanistic-plan")(_study_mechanistic_plan_fn)
 _study_campaign_app.command(name="selections")(_study_selections_fn)
 _study_campaign_app.command(name="commands")(_study_commands_fn)
 _study_campaign_app.command(name="run")(_study_run_fn)
-_STUDY_SUBCOMMANDS = {"inspect", "analyze", "analyses", "plan", "selections", "commands", "run"}
+_STUDY_SUBCOMMANDS = {"inspect", "analyze", "analyses", "plan", "mechanistic-plan",
+                      "selections", "commands", "run"}
 
 
 def _dispatch_study_campaign(sub: str, extra: list[str]) -> None:
@@ -2577,6 +2580,7 @@ def study(
       simforge study inspect  <dir>            discover + validate, read-only
       simforge study selections <dir>         original index IDs and semantic roles
       simforge study plan <dir>               legacy profiles and dry-run plan
+      simforge study mechanistic-plan <dir> --reference <hist-dir>   mechanistic dry-run (no execution)
       simforge study run <dir> --profile xanthone_short --missing-only   opt-in execution
       simforge study analyze  <dir> --analysis rmsd-receptor
       simforge study analyses                  list registered analyses

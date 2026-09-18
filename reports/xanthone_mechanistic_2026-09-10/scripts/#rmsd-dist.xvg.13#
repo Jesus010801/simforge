@@ -1,0 +1,118 @@
+# This file was created Wed Sep  9 22:51:01 2026
+# Created by:
+#                     :-) GROMACS - gmx cluster, 2025.2 (-:
+# 
+# Executable:   /usr/local/gromacs/bin/gmx
+# Data prefix:  /usr/local/gromacs
+# Working dir:  /home/jesusxd/Escritorio/simforge/reports/xanthone_mechanistic_2026-09-10/scripts
+# Command line:
+#   gmx cluster -s /home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/md.tpr -f /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/traj/mdfit.xtc -n /home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/index.ndx -tu ns -method gromos -cutoff 0.35 -clid /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/state_probe_0.35.xvg -g /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/state_probe_0.35.log -o /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/state_probe_0.35.xpm
+# gmx cluster is part of G R O M A C S:
+#
+# Gnomes, ROck Monsters And Chili Sauce
+#
+@    title "RMS Distribution"
+@    xaxis  label "RMS (nm)"
+@    yaxis  label "counts"
+@TYPE xy
+         0           0
+0.00275929           0
+0.00551857           0
+0.00827786           0
+ 0.0110371           0
+ 0.0137964           0
+ 0.0165557           0
+  0.019315           0
+ 0.0220743           0
+ 0.0248336           0
+ 0.0275929           0
+ 0.0303522           0
+ 0.0331114           0
+ 0.0358707           0
+   0.03863           0
+ 0.0413893           0
+ 0.0441486           0
+ 0.0469079           0
+ 0.0496672           0
+ 0.0524264           0
+ 0.0551857           0
+  0.057945           0
+ 0.0607043           0
+ 0.0634636           0
+ 0.0662229           0
+ 0.0689822           2
+ 0.0717415          16
+ 0.0745007          52
+   0.07726         127
+ 0.0800193         301
+ 0.0827786         515
+ 0.0855379         812
+ 0.0882972        1091
+ 0.0910565        1524
+ 0.0938157        1880
+  0.096575        2473
+ 0.0993343        3081
+  0.102094        3812
+  0.104853        4695
+  0.107612        5517
+  0.110371        6718
+  0.113131        7826
+   0.11589        8938
+  0.118649        9785
+  0.121409       10888
+  0.124168       11745
+  0.126927       12448
+  0.129686       13301
+  0.132446       13611
+  0.135205       14306
+  0.137964       14946
+  0.140724       15540
+  0.143483       15891
+  0.146242       16433
+  0.149001       16795
+  0.151761       17090
+   0.15452       17594
+  0.157279       18250
+  0.160039       18322
+  0.162798       18740
+  0.165557       18888
+  0.168316       18288
+  0.171076       17990
+  0.173835       16916
+  0.176594       15680
+  0.179354       14192
+  0.182113       12451
+  0.184872       11231
+  0.187631        9693
+  0.190391        8377
+   0.19315        7001
+  0.195909        6037
+  0.198669        4981
+  0.201428        4166
+  0.204187        3931
+  0.206947        3468
+  0.209706        3145
+  0.212465        2855
+  0.215224        2580
+  0.217984        2351
+  0.220743        1968
+  0.223502        1687
+  0.226262        1467
+  0.229021        1277
+   0.23178        1025
+  0.234539         813
+  0.237299         690
+  0.240058         565
+  0.242817         451
+  0.245577         320
+  0.248336         289
+  0.251095         197
+  0.253854         166
+  0.256614         102
+  0.259373          70
+  0.262132          61
+  0.264892          29
+  0.267651          20
+   0.27041           7
+  0.273169           6
+  0.275929           4

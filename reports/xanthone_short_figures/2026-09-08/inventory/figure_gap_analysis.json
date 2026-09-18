@@ -1,0 +1,274 @@
+{
+  "expected_primary_figures": 20,
+  "expected_heatmaps": 4,
+  "summary_tables": [
+    "short_descriptor_summary.csv",
+    "short_descriptor_summary.md"
+  ],
+  "items": [
+    {
+      "target": "AA",
+      "descriptor": "protein_rmsd",
+      "expected_figure": "figures/primary/AA_protein_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-rmsd.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "AA",
+      "descriptor": "ligand_rmsd",
+      "expected_figure": "figures/primary/AA_ligand_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-LIG-rmsd.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "AA",
+      "descriptor": "active_mindist",
+      "expected_figure": "figures/primary/AA_active_mindist_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "AA",
+      "descriptor": "active_contacts",
+      "expected_figure": "figures/primary/AA_active_contacts_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "AA",
+      "descriptor": "catalytic_dist",
+      "expected_figure": "figures/primary/AA_catalytic_dist_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AA-dist.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "AG",
+      "descriptor": "protein_rmsd",
+      "expected_figure": "figures/primary/AG_protein_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-rmsd.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "AG",
+      "descriptor": "ligand_rmsd",
+      "expected_figure": "figures/primary/AG_ligand_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-rmsd-ligand.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "AG",
+      "descriptor": "active_mindist",
+      "expected_figure": "figures/primary/AG_active_mindist_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "AG",
+      "descriptor": "active_contacts",
+      "expected_figure": "figures/primary/AG_active_contacts_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "AG",
+      "descriptor": "catalytic_dist",
+      "expected_figure": "figures/primary/AG_catalytic_dist_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/AG-dist.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "HMG",
+      "descriptor": "protein_rmsd",
+      "expected_figure": "figures/primary/HMG_protein_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-rmsd.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "HMG",
+      "descriptor": "ligand_rmsd",
+      "expected_figure": "figures/primary/HMG_ligand_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-rmsd-ligand.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "HMG",
+      "descriptor": "active_mindist",
+      "expected_figure": "figures/primary/HMG_active_mindist_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "HMG",
+      "descriptor": "active_contacts",
+      "expected_figure": "figures/primary/HMG_active_contacts_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "HMG",
+      "descriptor": "catalytic_dist",
+      "expected_figure": "figures/primary/HMG_catalytic_dist_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/HMG-dist.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "LP",
+      "descriptor": "protein_rmsd",
+      "expected_figure": "figures/primary/LP_protein_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-rmsd.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "LP",
+      "descriptor": "ligand_rmsd",
+      "expected_figure": "figures/primary/LP_ligand_rmsd_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-rmsd-ligand.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "LP",
+      "descriptor": "active_mindist",
+      "expected_figure": "figures/primary/LP_active_mindist_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "LP",
+      "descriptor": "active_contacts",
+      "expected_figure": "figures/primary/LP_active_contacts_A1-A6.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "no historical comparative figure for this descriptor family -> generated new"
+    },
+    {
+      "target": "LP",
+      "descriptor": "catalytic_dist",
+      "expected_figure": "figures/primary/LP_catalytic_dist_A1-A6.svg",
+      "historical_figure": "/home/jesusxd/Escritorio/Nuevos_sistemas/Resultados-Tesis-maestr\u00eda/25ns-DM/svg/LP-dist.svg",
+      "classification": "EXISTS_BUT_INCOMPLETE",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "regenerated_A1-A6",
+      "note": "historical Grace SVG exists for A1-A5; missing A6 and not presentation-consistent with the new set -> regenerated as A1-A6"
+    },
+    {
+      "target": "AA",
+      "descriptor": "heatmap",
+      "expected_figure": "figures/summary/AA_heatmap_short_descriptors.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "generated_new",
+      "note": "no historical per-target descriptor heatmap"
+    },
+    {
+      "target": "AG",
+      "descriptor": "heatmap",
+      "expected_figure": "figures/summary/AG_heatmap_short_descriptors.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "generated_new",
+      "note": "no historical per-target descriptor heatmap"
+    },
+    {
+      "target": "HMG",
+      "descriptor": "heatmap",
+      "expected_figure": "figures/summary/HMG_heatmap_short_descriptors.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "generated_new",
+      "note": "no historical per-target descriptor heatmap"
+    },
+    {
+      "target": "LP",
+      "descriptor": "heatmap",
+      "expected_figure": "figures/summary/LP_heatmap_short_descriptors.svg",
+      "historical_figure": null,
+      "classification": "MISSING",
+      "a1_a5_sources_present": true,
+      "a6_source_present": true,
+      "action": "generated_new",
+      "note": "no historical per-target descriptor heatmap"
+    }
+  ]
+}

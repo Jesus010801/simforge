@@ -38,8 +38,26 @@ from analysis.campaign.models import SystemRecord
 from analysis.campaign.structure.index_groups import parse_index_groups
 
 PROFILE = "xanthone_short"
-PROTOCOL_VERSION = "xanthone_short/1.0"
+PROTOCOL_VERSION = "xanthone_short/1.1"
 WINDOW_PS: tuple[float, float] = (0.0, 25000.0)
+
+#: The canonical scientific-analysis trajectory.  Observables are computed from
+#: the PBC-corrected, rot+trans-fitted derivative only:
+#:
+#:   md.xtc
+#:     -> gmx trjconv -pbc res -ur compact -center   -> mdcenter.xtc
+#:     -> gmx trjconv -fit rot+trans                  -> mdfit.xtc
+#:
+#: Raw ``md.xtc`` is the production trajectory, never an analysis input — reading
+#: it directly produces periodic-image artefacts (spurious RMSD excursions while
+#: the ligand is demonstrably still bound).  If ``mdfit.xtc`` is absent the
+#: analysis is blocked (REVIEW_REQUIRED); there is no fallback to ``md.xtc``.
+FIT_TRAJECTORY_NAME = "mdfit.xtc"
+PREPROCESSING_CHAIN = (
+    "md.xtc",
+    "gmx trjconv -pbc res -ur compact -center -> mdcenter.xtc",
+    "gmx trjconv -fit rot+trans -> mdfit.xtc",
+)
 CONTACT_CUTOFF_NM = 0.6
 PROVENANCE_SCHEMA = "simforge/study-campaign/xanthone-short/provenance/v1"
 
@@ -181,6 +199,14 @@ def assess_eligibility(legacy: dict, rec: SystemRecord) -> Eligibility:
     if not prod:
         el.eligible = False
         el.missing_evidence.append("no readable production trajectory")
+
+    directory = legacy.get("directory")
+    source_dir = Path(directory).resolve() if directory else None
+    if _fit_trajectory(rec, source_dir) is None:
+        el.eligible = False
+        el.missing_evidence.append(
+            f"{FIT_TRAJECTORY_NAME} (PBC-corrected rot+trans fit) not present — "
+            f"raw md.xtc must not be analysed directly")
 
     for w in rec.warnings:
         if getattr(w, "severity", "") in ("review_required", "error"):
@@ -409,7 +435,8 @@ class SystemRun:
     output_dir: str
     eligibility: dict
     window_ps: list[float]
-    trajectory: Optional[str] = None
+    trajectory: Optional[str] = None            # the analysis trajectory (mdfit.xtc)
+    raw_production_trajectory: Optional[str] = None  # md.xtc — recorded, never analysed
     tpr: Optional[str] = None
     index: Optional[str] = None
     measured_end_ps: Optional[float] = None
@@ -420,25 +447,90 @@ class SystemRun:
             "system": self.system, "directory": self.directory,
             "output_dir": self.output_dir, "eligibility": self.eligibility,
             "analysis_window_ps": self.window_ps, "trajectory": self.trajectory,
+            "analysis_trajectory_role": (
+                f"pbc-corrected rot+trans fit ({FIT_TRAJECTORY_NAME})"
+                if self.trajectory else None),
+            "raw_production_trajectory": self.raw_production_trajectory,
             "tpr": self.tpr, "index": self.index,
             "measured_end_ps": self.measured_end_ps,
             "analyses": [a.to_dict() for a in self.analyses],
         }
 
 
-def _coverage_ok(rec: SystemRecord) -> tuple[bool, Optional[float], str]:
-    """Confirm the production trajectory spans at least 0-25 000 ps."""
-    insp = rec.trajectory_inspection
+def _fit_trajectory(rec: SystemRecord, source_dir: Optional[Path]) -> Optional[str]:
+    """The canonical analysis trajectory: the ``mdfit.xtc`` rot+trans fit only.
+
+    Prefers a discovered DERIVED artifact literally named ``mdfit.xtc``; falls
+    back to ``<source_dir>/mdfit.xtc`` on disk.  Returns ``None`` when absent —
+    ``md.xtc`` / ``mdcenter.xtc`` / ``*.trr`` are *never* returned.  A missing
+    ``mdfit.xtc`` must block the analysis (REVIEW_REQUIRED), not fall back.
+    """
+    for a in rec.trajectory_artifacts:
+        if Path(a.path).name == FIT_TRAJECTORY_NAME and Path(a.path).is_file():
+            return str(Path(a.path).resolve())
+    if source_dir:
+        cand = source_dir / FIT_TRAJECTORY_NAME
+        if cand.is_file():
+            return str(cand.resolve())
+    return None
+
+
+def _measure_fit_span(fit_traj: str, gmx: str) -> tuple[Optional[float], Optional[float]]:
+    """``(end_time_ps, dt_ps)`` of *fit_traj* via ``gmx check`` (streamed, O(1))."""
+    from analysis.campaign.trajectory.inspector import _parse_gmx_check
+    res = run_gmx(["check", "-f", fit_traj], gmx=gmx, timeout=1800)
+    if not res.ok:
+        return None, None
+    p = _parse_gmx_check(res.stderr + "\n" + res.stdout)
+    end = p.get("end_time_ps")
+    dt = p.get("dt_ps")
+    if end is None and p.get("n_frames") and dt is not None:
+        end = p.get("start_time_ps", 0.0) + (p["n_frames"] - 1) * dt
+    return end, dt
+
+
+def _coverage_ok(rec: SystemRecord, fit_traj: Optional[str], *, gmx: str = "gmx",
+                 dry_run: bool = False) -> tuple[bool, Optional[float], str]:
+    """Confirm the *fitted* analysis trajectory itself spans at least 0-25 000 ps.
+
+    The raw production ``md.xtc`` length is not the arbiter — the window is a
+    property of the analysis, not of the production run, and only ``mdfit.xtc``
+    is ever analysed.  ``mdfit.xtc`` is measured directly with ``gmx check``;
+    only when that is unavailable (dry-run / no gmx / unparsable) is the
+    discovery-time production inspection used as an upper-bound fallback (the
+    fit is derived from the production trajectory, so cannot span longer).
+    """
     need = WINDOW_PS[1]
+    if not fit_traj:
+        return False, None, (
+            f"{FIT_TRAJECTORY_NAME} not found — canonical PBC-corrected rot+trans "
+            f"fit trajectory required; raw md.xtc is not an acceptable analysis input")
+
+    if not dry_run and gmx_available(gmx):
+        end, dt = _measure_fit_span(fit_traj, gmx)
+        if end is not None:
+            if end + max(dt or 0.0, 1.0) >= need:
+                return True, end, f"measured {FIT_TRAJECTORY_NAME} span ({end:g} ps)"
+            return False, end, (
+                f"{FIT_TRAJECTORY_NAME} ends at {end:g} ps (< {need:g} ps) — "
+                f"cannot cover the 0-25 000 ps window")
+
+    insp = rec.trajectory_inspection
     if insp and insp.inspected and insp.end_time_ps is not None:
         dt = insp.dt_ps or 0.0
         if insp.end_time_ps + max(dt, 1.0) >= need:
-            return True, insp.end_time_ps, "measured trajectory span"
+            return True, insp.end_time_ps, (
+                f"{FIT_TRAJECTORY_NAME} present; span not directly measured — "
+                f"discovery inspection spans {insp.end_time_ps:g} ps")
         return False, insp.end_time_ps, (
-            f"measured trajectory ends at {insp.end_time_ps:g} ps (< {need:g} ps)")
+            f"inspected trajectory ends at {insp.end_time_ps:g} ps (< {need:g} ps)")
     if insp and insp.tpr_duration_ps and insp.tpr_duration_ps >= need:
-        return True, None, "intended TPR duration (trajectory span not measured)"
-    return False, None, "could not confirm 0-25 000 ps coverage (gmx check unavailable)"
+        return True, None, "intended TPR duration (span not measured)"
+    if dry_run:
+        return True, None, f"{FIT_TRAJECTORY_NAME} present (span not verified — dry-run)"
+    return False, None, (
+        f"could not confirm 0-25 000 ps coverage of {FIT_TRAJECTORY_NAME} "
+        f"(gmx check unavailable)")
 
 
 def _resolve_index_names(index_path: str) -> set[str]:
@@ -451,7 +543,8 @@ def _resolve_index_names(index_path: str) -> set[str]:
 def _write_provenance(path: Path, *, task: Task, analysis: str, system: str,
                       argv: list[str], stdin: str, legacy: dict, rec: SystemRecord,
                       tpr: str, traj: str, ndx: str, gmx: str, returncode: int,
-                      outputs: list[Path], measured_end_ps, source_fp: dict) -> dict:
+                      outputs: list[Path], measured_end_ps, source_fp: dict,
+                      raw_traj: Optional[str] = None) -> dict:
     roles = list(dict.fromkeys(task.roles))
     prov = {
         "schema": PROVENANCE_SCHEMA,
@@ -464,6 +557,10 @@ def _write_provenance(path: Path, *, task: Task, analysis: str, system: str,
         .isoformat(timespec="seconds"),
         "gromacs_version": gmx_version(gmx),
         "source_trajectory": traj,
+        "analysis_trajectory_role": (
+            f"pbc-corrected rot+trans fit ({FIT_TRAJECTORY_NAME})"),
+        "raw_production_trajectory": raw_traj,
+        "preprocessing_chain": list(PREPROCESSING_CHAIN),
         "source_tpr": tpr,
         "index_file": ndx,
         "semantic_groups": {r: _group_name(legacy, r) for r in roles},
@@ -490,9 +587,15 @@ def _write_provenance(path: Path, *, task: Task, analysis: str, system: str,
     return prov
 
 
-def _source_fingerprints(traj: str, tpr: str, ndx: str) -> dict:
+def _source_fingerprints(traj: str, tpr: str, ndx: str,
+                         raw_traj: Optional[str] = None) -> dict:
     out = {}
-    for label, p in (("trajectory", traj), ("tpr", tpr), ("index", ndx)):
+    items = [("trajectory", traj), ("tpr", tpr), ("index", ndx)]
+    if raw_traj:
+        items.append(("raw_production_trajectory", raw_traj))
+    for label, p in items:
+        if p is None:
+            continue
         fp = Path(p)
         if not fp.is_file():
             out[label] = {"path": p, "present": False}
@@ -550,13 +653,19 @@ def run_system(rec: SystemRecord, *, out_root: Path, gmx: str,
                     output_dir=str(Path(out_root) / name),
                     eligibility=el.to_dict(), window_ps=list(WINDOW_PS))
 
-    traj = next((p for p in rec.production_trajectory_paths if Path(p).is_file()), None)
+    # The analysis trajectory is the PBC-corrected rot+trans fit (``mdfit.xtc``)
+    # only.  The raw production ``md.xtc`` is recorded for provenance but is never
+    # an analysis input; if ``mdfit.xtc`` is absent the analyses are blocked.
+    raw_traj = next((p for p in rec.production_trajectory_paths
+                     if Path(p).is_file()), None)
+    traj = _fit_trajectory(rec, source_dir)
     # Reference is the *production* topology only — the historical protocol used
     # ``md.tpr``.  Never silently fall back to an equilibration/EM ``.tpr``.
     tpr = (str(source_dir / "md.tpr")
            if source_dir and (source_dir / "md.tpr").is_file() else None)
     ndx = legacy.get("index")
     run.trajectory, run.tpr, run.index = traj, tpr, ndx
+    run.raw_production_trajectory = raw_traj
 
     source_families, _ = (existing_results(source_dir)
                           if source_dir and source_dir.is_dir() else ({}, []))
@@ -567,13 +676,16 @@ def run_system(rec: SystemRecord, *, out_root: Path, gmx: str,
         blockers.append("system not eligible: " + "; ".join(
             el.reasons + el.missing_evidence))
     if not traj:
-        blockers.append("no production trajectory file")
+        blockers.append(
+            f"{FIT_TRAJECTORY_NAME} not found — canonical PBC-corrected rot+trans "
+            f"fit trajectory required; raw md.xtc is not an acceptable analysis "
+            f"input (preprocessing: {' -> '.join(PREPROCESSING_CHAIN)})")
     if not tpr or not Path(tpr).is_file():
         blockers.append("md.tpr not found")
     if not ndx or not Path(ndx).is_file():
         blockers.append("index.ndx not found")
 
-    cov_ok, measured_end, cov_msg = _coverage_ok(rec)
+    cov_ok, measured_end, cov_msg = _coverage_ok(rec, traj, gmx=gmx, dry_run=dry_run)
     run.measured_end_ps = measured_end
     if not cov_ok:
         blockers.append(cov_msg)
@@ -641,7 +753,7 @@ def run_system(rec: SystemRecord, *, out_root: Path, gmx: str,
 
         produced = [obs_dir / fn for fn in task.outputs.values()]
         present = [p for p in produced if p.is_file()]
-        source_fp = _source_fingerprints(traj, tpr, ndx)
+        source_fp = _source_fingerprints(traj, tpr, ndx, raw_traj=raw_traj)
 
         for a in task.analyses:
             fn = _analysis_filename(task, a)
@@ -661,7 +773,8 @@ def run_system(rec: SystemRecord, *, out_root: Path, gmx: str,
                 prov_path, task=task, analysis=a, system=name, argv=argv,
                 stdin=stdin, legacy=legacy, rec=rec, tpr=tpr, traj=traj, ndx=ndx,
                 gmx=gmx, returncode=res.returncode, outputs=present,
-                measured_end_ps=measured_end, source_fp=source_fp)
+                measured_end_ps=measured_end, source_fp=source_fp,
+                raw_traj=raw_traj)
             ar.provenance_path = str(prov_path.resolve())
             run.analyses.append(ar)
 
@@ -789,7 +902,9 @@ def render_markdown(report: StudyRunReport) -> str:
             lines.append(f"- blocking: {el['reasons']}")
         if el.get("missing_evidence"):
             lines.append(f"- missing evidence: {el['missing_evidence']}")
-        lines.append(f"- trajectory: `{s.trajectory}`")
+        lines.append(f"- analysis trajectory (mdfit.xtc): `{s.trajectory}`")
+        lines.append(f"- raw production trajectory (recorded, not analysed): "
+                     f"`{s.raw_production_trajectory}`")
         lines.append(f"- tpr: `{s.tpr}`")
         lines.append(f"- index: `{s.index}`")
         lines.append(f"- measured trajectory end: {s.measured_end_ps} ps")

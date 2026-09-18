@@ -1,0 +1,65 @@
+directory,item,present,detail
+HMG_CoA_R-A1,trajectory_duration,yes,"100 ns (rmsd_100ns.xvg 0-100 ns; md_100ns.tpr); em/nvt/npt/md full pipeline present"
+HMG_CoA_R-A1,canonical_analysis_trajectory,partial,"md_centered.xtc (490 MB) / md_final.xtc (496 MB) / md_nojump.xtc (548 MB), all built Feb 23 2026 (long after the Nov-Dec 2025 production) - post-hoc PBC-processing attempts on the 100 ns run; no evidence these were validated the way HMG-R-200ns-A6's md_final.xtc was"
+HMG_CoA_R-A1,md.tpr,yes,"md.tpr (703f3e5a... md5) AND md_100ns.tpr (2000668c... md5) - two different tpr, not identical"
+HMG_CoA_R-A1,index.ndx,no,"not found at top level of this directory"
+HMG_CoA_R-A1,RMSD,yes,rmsd_100ns.xvg (0-100 ns)
+HMG_CoA_R-A1,RMSF,no,not found
+HMG_CoA_R-A1,Rg,yes,rg_100ns.xvg
+HMG_CoA_R-A1,SASA,no,not found
+HMG_CoA_R-A1,PCA/FEL/DCCM,partial,"4 FEL variant dirs (fel_hmgcoa_rmsd_rg, _20bins, _3d, _3d_plotly) + 6 representative_states variant dirs (clustering-derived); no explicit PCA/DCCM output seen at top level"
+HMG_CoA_R-A1,MM-PBSA,no,"no energy_summary.csv / residues_energy_summary.csv / binding_energy.xvg / mmpbsa.mdp anywhere in this directory"
+HMG_CoA_R-A1,energy_summary.csv,no,absent
+HMG_CoA_R-A1,residues_energy_summary.csv,no,absent
+HMG_CoA_R-A1,binding_energy.xvg,no,absent
+HMG_CoA_R-A1,per_residue_decomposition,no,absent
+HMG_CoA_R-A1,CoA/A1_interaction_analysis,no,"single-ligand system only, no CoA present"
+HMG_CoA_R-A1-R2,trajectory_duration,yes,"200 ns (md.mdp nsteps=200000000 x dt=0.001 ps; binding_energy.xvg and rmsd-A1.xvg both span 0-200 ns)"
+HMG_CoA_R-A1-R2,canonical_analysis_trajectory,yes,"md_final.xtc (source_trajectory in energy_MM.xvg command line); raw md.xtc also present (21.37 GB)"
+HMG_CoA_R-A1-R2,md.tpr,yes,"md.tpr, 12142572 B, 284597 atoms - byte-identical size to Mecanismo_inhibitorio/A1/md.tpr"
+HMG_CoA_R-A1-R2,index.ndx,yes,"index.ndx (+ index_full.ndx, index_old.ndx - multiple iterations); includes ActiveSite/Catalytic-style groups plus a QM_region group"
+HMG_CoA_R-A1-R2,RMSD,yes,rmsd-A1.xvg (0-200 ns)
+HMG_CoA_R-A1-R2,RMSF,not_verified,"not located by name at top level in this pass (scope: MM-PBSA + trajectory provenance prioritised); may exist under a different filename"
+HMG_CoA_R-A1-R2,Rg,not_verified,not located by name at top level in this pass
+HMG_CoA_R-A1-R2,SASA,not_verified,not located by name at top level in this pass
+HMG_CoA_R-A1-R2,PCA/FEL/DCCM,partial,"gmx cluster already run (cluster.log: 'Found 4 clusters', clusters.xpm, centers.pdb); no PCA/FEL/DCCM output located by name in this pass"
+HMG_CoA_R-A1-R2,MM-PBSA,yes,"FULL 200 ns MM-PBSA present and complete - see a1_long_mmpbsa_recovery.md"
+HMG_CoA_R-A1-R2,energy_summary.csv,yes,"Total -236.516 +/- 33.740 kJ/mol (vDW -157.166, Elec -44.399, Polar -102.289 -> sign per file: Polar-solvation 102.289, Non-polar-solvation -137.239)"
+HMG_CoA_R-A1-R2,residues_energy_summary.csv,yes,"1616 lines (1615 residues + header), same format as A3/A6"
+HMG_CoA_R-A1-R2,binding_energy.xvg,yes,"per-frame decomposition, 150-200 ns window, spans to 200000.000 ps"
+HMG_CoA_R-A1-R2,per_residue_decomposition,yes,residues_energy_summary.csv present and readable
+HMG_CoA_R-A1-R2,CoA/A1_interaction_analysis,no,"single-ligand system (A1 only, no CoA) - by design"
+HMG_CoA_R-A1-R2,mmpbsa.mdp,yes,"sha256 a08eb840aa52c8aa5bef668b2ce2f3526a7c51e3d662fa96be6758fd184ad0a7 - the 'ISCB+/A2 / Sustratos-inhibidores' canonical variant (comment-char-only difference vs the 954785fb1805... variant used for A3/A6/HMG-R-200ns-A6); physically identical PB/SASA parameters"
+HMG_CoA_R-A1-R2,other_relevant,yes,"QM/MM side-attempt present (qmmm.inp, qm_atoms.txt, QM_MM/) but qmmm.out shows an ABORTED CP2K run (invalid enumeration errors) - does not affect the classical MD or MM-PBSA, which used the standard GROMACS 'md' integrator"
+HMG-CoA-R_sustrato,trajectory_duration,yes,"200 ns (md.xtc 100 ns dic-2025 + md_continue.* Feb-2026 continuation -> md_200ns.xtc 4.95 GB full length; g_mmpbsa window 150-200 ns confirms >=200 ns)"
+HMG-CoA-R_sustrato,canonical_analysis_trajectory,yes,md_final.xtc (per energy_MM.xvg command line: -f md_final.xtc -s md.tpr)
+HMG-CoA-R_sustrato,md.tpr,yes,"md.tpr, 8507044 B - byte-identical size to Mecanismo_inhibitorio/COA/md.tpr"
+HMG-CoA-R_sustrato,index.ndx,yes,index.ndx present
+HMG-CoA-R_sustrato,RMSD,yes,"multiple: rmsd1_COA.xvg, rmsd1_hmg.xvg, rmsd2_COA.xvg, rmsd3_COA.xvg, rmsd-CoA.xvg, rmsd-COA.xvg, rmsd_COA.xvg (iterative naming, several attempts)"
+HMG-CoA-R_sustrato,RMSF,no,not found by name in this pass
+HMG-CoA-R_sustrato,Rg,no,not found by name in this pass
+HMG-CoA-R_sustrato,SASA,no,not found by name in this pass
+HMG-CoA-R_sustrato,PCA/FEL/DCCM,no,not found by name in this pass
+HMG-CoA-R_sustrato,MM-PBSA,yes,"FULL 200 ns MM-PBSA present and complete (substrate-only, E+S)"
+HMG-CoA-R_sustrato,energy_summary.csv,yes,"Total -196.585 +/- 34.952 kJ/mol (vDW -115.888, Elec -123.753, Polar 103.517, Apolar -60.462); matches the current presentation's E+S row exactly"
+HMG-CoA-R_sustrato,residues_energy_summary.csv,yes,present (116478 bytes, same format as other systems)
+HMG-CoA-R_sustrato,binding_energy.xvg,yes,present
+HMG-CoA-R_sustrato,per_residue_decomposition,yes,residues_energy_summary.csv present
+HMG-CoA-R_sustrato,CoA/A1_interaction_analysis,n/a,"substrate-only system, no A1 present - protein-CoA channel only"
+HMG-CoA-R_sustrato,mmpbsa.mdp,yes,present (not hash-compared in this pass)
+Competitive-system-2,trajectory_duration,yes,"200-205 ns (md_200ns.tpr; g_mmpbsa window 150-200 ns for all three decompositions; aa_extended_full.xtc 8.35 GB suggests an extended/alternate cut)"
+Competitive-system-2,canonical_analysis_trajectory,yes,"md_final.xtc (8428580692 B) - byte-identical size to Mecanismo_inhibitorio/COMP/md.xtc"
+Competitive-system-2,md.tpr,yes,md_200ns.tpr (12666448 B) used by all three MM-PBSA runs
+Competitive-system-2,index.ndx,yes,index.ndx (+ whole.ndx) present
+Competitive-system-2,RMSD,yes,"rmsd-competitive.xvg, rmsd-Competitive.xvg, rmsd-dist.xvg, rmsd_protein.xvg (iterative naming)"
+Competitive-system-2,RMSF,no,not found by name in this pass
+Competitive-system-2,Rg,no,not found by name in this pass
+Competitive-system-2,SASA,no,not found by name in this pass
+Competitive-system-2,PCA/FEL/DCCM,partial,"gmx cluster already run (cluster.log, clusteres.xpm, centers.pdb); no PCA/FEL/DCCM by name in this pass"
+Competitive-system-2,MM-PBSA,yes,"THREE separate complete 200 ns MM-PBSA decompositions - see a1_long_mmpbsa_recovery.md"
+Competitive-system-2,energy_summary.csv,yes,"energy_summary-A1.csv (A1-in-ternary, Total -211.691 +/- 26.273); COA-energy_summary.csv (CoA-in-ternary, Total -133.832 +/- 58.683); A1-COAenergy_summary.csv (A1<->CoA pairwise, Total -27.410 +/- 22.365)"
+Competitive-system-2,residues_energy_summary.csv,yes,"COA-residues_energy_summary.csv (116463 B, full protein decomposition); A1-COAresidues_energy_summary.csv (270 B, 2-row: LIG-873 and COA-874 pairwise shares, summing to the pairwise total)"
+Competitive-system-2,binding_energy.xvg,yes,"A1binding_energy.xvg, A1-COAbinding_energy.xvg, COA-binding_energy.xvg"
+Competitive-system-2,per_residue_decomposition,yes,present for all three channels
+Competitive-system-2,CoA/A1_interaction_analysis,yes,"A1-COA* files ARE a genuine third MM-PBSA channel (A1 vs CoA pairwise, unit1=COA/unit2=LIG) - not present anywhere in the current xanthone_mechanistic pipeline, which only computes mindist/contacts/COM-distance for this channel, never an energetic decomposition"
+Competitive-system-2,mmpbsa.mdp,yes,"present; strides differ between channels: A1-in-ternary uses -dt 100 (501 cfg), CoA-in-ternary and A1-COA pairwise use -dt 500 (101 cfg) - same window (150-200 ns), different sampling density per channel"

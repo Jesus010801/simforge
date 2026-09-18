@@ -2,17 +2,32 @@
 validators/membrane_protein_spatial_classifier.py
 Phase 10B: Membrane-Protein Spatial Classifier.
 
-Classifies regions of space in a protein-membrane system using a 3-D occupancy
-grid and flood-fill to distinguish aqueous pores from external lipid-accessible
-surfaces, hydrophobic core, and isolated cavities.
+`run_spatial_classifier` / `run_pore_aware_water_cleanup` (the public API of
+this module) now delegate to validators.membrane_water — a real 3-D
+solvent-topology engine (local leaflet surfaces, VDW excluded volume for
+BOTH protein and lipid, connected-component region analysis, and
+protein-vs-lipid wall-composition discrimination between a true
+transmembrane pore and a lateral lipid-packing defect). See
+validators/membrane_water/classify.py for the algorithm.
 
-Classification categories (per water/lipid molecule):
-  bulk_water                – outside membrane Z range
-  pore_water                – at membrane Z, inside TM bundle, connected to bulk
-  membrane_core_water       – at membrane Z, outside TM bundle (→ remove)
-  isolated_internal_water   – at membrane Z, not connected to bulk
-  valid_external_lipid      – outside TM bundle footprint
-  forbidden_pore_lipid      – COM inside TM bundle at membrane Z
+The private helpers below this docstring (_parse_gro_atoms,
+_compute_membrane_core_z, _compute_tm_geometry, _build_occupancy_grid,
+_dilate_step, _flood_fill, _voxel_idx, _update_sol_count,
+_remove_sol_resids_from_gro) are the ORIGINAL (Phase 10B) global-Z-slab /
+single-TM-circle implementation. They are kept, unmodified, only because
+external code may still import them by name; run_spatial_classifier and
+run_pore_aware_water_cleanup no longer call them. Do not extend this file's
+own classification logic — extend validators/membrane_water instead.
+
+Legacy classification categories, still reported for backward compatibility
+(now computed for real by validators.membrane_water instead of the old
+presence-flag / global-Z-slab approximations):
+  bulk_water                – outside the local membrane core (leaflet model)
+  pore_water                – protein-walled channel, connects both bulk sides
+  membrane_core_water       – lipid-walled membrane-core water (→ remove)
+  isolated_internal_water   – enclosed cavity, not connected to bulk
+  valid_external_lipid      – lipid not intruding into a pore/vestibule
+  forbidden_pore_lipid      – lipid COM inside a pore/vestibule region
 """
 from __future__ import annotations
 
@@ -27,6 +42,11 @@ try:
     _HAS_NP = True
 except ImportError:
     _HAS_NP = False
+
+from validators.membrane_water import classify_membrane_water as _classify_membrane_water
+from validators.membrane_water import determine_removal_set as _determine_removal_set
+from validators.membrane_water import run_cleanup as _run_membrane_water_cleanup
+from validators.membrane_water.constants import CLEANUP_MODE_AGGRESSIVE, CLEANUP_MODE_CONSERVATIVE
 
 _SOLVENT_RESNAMES: frozenset[str] = frozenset({
     "SOL", "HOH", "WAT", "TIP3", "TIP4", "TIP5",
@@ -299,7 +319,7 @@ def _write_classifier_report(report: dict, output_dir: Path) -> None:
     )
 
 
-# ── Main classifier ───────────────────────────────────────────────────────────
+# ── Main classifier (delegates to validators.membrane_water) ──────────────────
 
 def run_spatial_classifier(
     gro_path: "Path | str",
@@ -315,18 +335,33 @@ def run_spatial_classifier(
     remove_membrane_core_water: bool = True,
     remove_isolated_internal_water: bool = False,
     max_removed_pore_lipids: int = 80,
+    lipid: str = "DPPC",
+    forcefield: str = "opls-aa",
 ) -> dict:
-    """Classify water and lipid molecules by spatial region in a protein-membrane system.
+    """Classify water and lipid molecules by spatial region in a
+    protein-membrane system, using the validators.membrane_water engine
+    (real leaflet-local membrane geometry, VDW excluded volume for both
+    protein and lipid, connected-component pore/vestibule/cavity/defect
+    classification — see validators/membrane_water/classify.py).
 
-    Returns a report dict with classification counts and residue lists.
-    Writes membrane_protein_spatial_classification_report.json if output_dir is given.
+    Signature and legacy report fields are preserved for backward
+    compatibility. `protein_padding_nm` is now interpreted as a
+    solvent-probe-radius override (the primary excluded-volume definition is
+    per-element van der Waals radii, not one global padding value) — pass
+    the default (0.25) to get the engine's own default probe radius, or a
+    different value to override it. `preserve_pore_water` and
+    `remove_pore_lipids` are accepted for compatibility; pore/vestibule
+    water and non-forbidden lipids are always preserved by the new engine
+    regardless of these flags (there is no code path that removes them).
+    Writes membrane_protein_spatial_classification_report.json if
+    output_dir is given, extended with new fields (membrane_model,
+    tm_annotation, regions, water_counts, cleanup_mode, confidence) on top
+    of every legacy key.
     """
     gro_path = Path(gro_path)
     out_dir = Path(output_dir) if output_dir else None
     if out_dir:
         out_dir.mkdir(parents=True, exist_ok=True)
-
-    warnings_list: list[str] = []
 
     if not enabled:
         rep = _disabled_report()
@@ -335,203 +370,65 @@ def run_spatial_classifier(
         return rep
 
     if not _HAS_NP:
-        warnings_list.append("numpy not available — spatial classifier requires numpy")
         rep = _disabled_report()
-        rep["warnings"] = warnings_list
+        rep["warnings"] = ["numpy not available — spatial classifier requires numpy"]
         if out_dir:
             _write_classifier_report(rep, out_dir)
         return rep
 
-    atoms, _box = _parse_gro_atoms(gro_path)
-    if not atoms:
-        warnings_list.append(f"Empty or unreadable GRO: {gro_path}")
+    cleanup_mode = CLEANUP_MODE_CONSERVATIVE if remove_membrane_core_water else CLEANUP_MODE_AGGRESSIVE
+    # protein_padding_nm at its historical default (0.25) maps to the
+    # engine's own default solvent-probe radius; any other value is treated
+    # as an explicit override, preserving the old "bigger padding = bigger
+    # excluded volume" knob without making it the primary VDW definition.
+    probe_kwargs = {} if protein_padding_nm == 0.25 else {"solvent_probe_radius_nm": protein_padding_nm}
+
+    try:
+        report = _classify_membrane_water(
+            gro_path,
+            tm_residues=tm_residues,
+            lipid_resnames=frozenset(lipid_resnames) if lipid_resnames else None,
+            lipid=lipid,
+            forcefield=forcefield,
+            grid_spacing_nm=grid_spacing_nm,
+            cleanup_mode=cleanup_mode,
+            max_removed_pore_lipids=max_removed_pore_lipids,
+            **probe_kwargs,
+        )
+    except Exception as exc:  # pragma: no cover - defensive fail-safe
         rep = _disabled_report()
-        rep["warnings"] = warnings_list
+        rep["warnings"] = [f"membrane_water engine failed: {exc}; falling back to disabled report"]
         if out_dir:
             _write_classifier_report(rep, out_dir)
         return rep
 
-    lip_set = frozenset(lipid_resnames) if lipid_resnames else _DEFAULT_LIPID_RESNAMES
-    tm_set = set(tm_residues) if tm_residues else set()
+    removed_candidate = _determine_removal_set(
+        report,
+        cleanup_mode=report["cleanup_mode"],
+        remove_membrane_core_water=remove_membrane_core_water,
+        remove_isolated_internal_water=remove_isolated_internal_water,
+    )
 
-    # Separate atoms by category
-    protein_atoms = [
-        a for a in atoms
-        if a["resname"] not in lip_set
-        and a["resname"] not in _SOLVENT_RESNAMES
-        and not a["atomname"].startswith("H")
-    ]
-
-    lipid_by_resid: dict[int, list[dict]] = {}
-    for a in atoms:
-        if a["resname"] in lip_set:
-            lipid_by_resid.setdefault(a["resid"], []).append(a)
-
-    sol_ow_by_resid: dict[int, dict] = {}
-    for a in atoms:
-        if a["resname"] == "SOL" and a["atomname"] == "OW":
-            sol_ow_by_resid[a["resid"]] = a
-
-    # Membrane geometry
-    z_core_bot, z_core_top, _z_mid = _compute_membrane_core_z(atoms, lip_set)
-
-    # TM geometry
-    tm_cx, tm_cy, tm_radius = _compute_tm_geometry(atoms, tm_set, lip_set)
-    # Threshold for "inside TM bundle": radius + half the padding
-    tm_thresh = tm_radius + protein_padding_nm * 0.5
-
-    can_detect_pore = bool(protein_atoms) and bool(tm_set)
-
-    # ── Build grid & flood-fill ───────────────────────────────────────────────
-    top_reached = bottom_reached = None
-
-    if can_detect_pore:
-        relevant = protein_atoms + [
-            a for lst in lipid_by_resid.values() for a in lst
-        ]
-        xs = [a["x"] for a in relevant]
-        ys = [a["y"] for a in relevant]
-        zs = [a["z"] for a in relevant]
-        buf_xy, buf_z = 1.0, 0.5
-        ox = min(xs) - buf_xy
-        oy = min(ys) - buf_xy
-        oz = min(zs) - buf_z
-        Nx = max(4, int(math.ceil((max(xs) + buf_xy - ox) / grid_spacing_nm)) + 1)
-        Ny = max(4, int(math.ceil((max(ys) + buf_xy - oy) / grid_spacing_nm)) + 1)
-        Nz = max(4, int(math.ceil((max(zs) + buf_z - oz) / grid_spacing_nm)) + 1)
-        origin = (ox, oy, oz)
-        shape = (Nx, Ny, Nz)
-
-        blocked = _build_occupancy_grid(
-            protein_atoms, grid_spacing_nm, protein_padding_nm, origin, shape
-        )
-
-        # Z-index boundaries for bulk seeds
-        iz_top_start = min(
-            Nz - 1,
-            max(0, int(math.ceil((z_core_top + 0.1 - oz) / grid_spacing_nm)))
-        )
-        iz_bot_end = max(
-            0,
-            min(Nz - 1, int(math.floor((z_core_bot - 0.1 - oz) / grid_spacing_nm)))
-        )
-
-        seeds_top = np.zeros(shape, dtype=bool)
-        seeds_top[:, :, iz_top_start:] = True
-        seeds_top &= ~blocked
-
-        seeds_bot = np.zeros(shape, dtype=bool)
-        seeds_bot[:, :, : iz_bot_end + 1] = True
-        seeds_bot &= ~blocked
-
-        top_reached    = _flood_fill(blocked, seeds_top)
-        bottom_reached = _flood_fill(blocked, seeds_bot)
-
-    # ── Water classification ──────────────────────────────────────────────────
-    bulk_water:     list[int] = []
-    pore_water:     list[int] = []
-    core_water:     list[int] = []
-    isolated_water: list[int] = []
-
-    for resid, ow in sol_ow_by_resid.items():
-        z = ow["z"]
-        if z < z_core_bot - 0.05 or z > z_core_top + 0.05:
-            bulk_water.append(resid)
-            continue
-
-        if not can_detect_pore or top_reached is None:
-            core_water.append(resid)
-            continue
-
-        dist_xy = math.sqrt((ow["x"] - tm_cx) ** 2 + (ow["y"] - tm_cy) ** 2)
-        if dist_xy > tm_thresh:
-            core_water.append(resid)
-            continue
-
-        # Inside TM bundle footprint at membrane Z
-        ix, iy, iz = _voxel_idx(ow["x"], ow["y"], z, origin, grid_spacing_nm, shape)
-        in_top = bool(top_reached[ix, iy, iz])
-        in_bot = bool(bottom_reached[ix, iy, iz])
-
-        if in_top or in_bot:
-            pore_water.append(resid)
-        else:
-            isolated_water.append(resid)
-
-    # ── Lipid classification ──────────────────────────────────────────────────
-    valid_lipids:    list[int] = []
-    forbidden_lipids: list[int] = []
-
-    for resid, lip_atoms in lipid_by_resid.items():
-        cx = sum(a["x"] for a in lip_atoms) / len(lip_atoms)
-        cy = sum(a["y"] for a in lip_atoms) / len(lip_atoms)
-        cz = sum(a["z"] for a in lip_atoms) / len(lip_atoms)
-
-        if cz < z_core_bot or cz > z_core_top:
-            valid_lipids.append(resid)
-            continue
-
-        dist_xy = math.sqrt((cx - tm_cx) ** 2 + (cy - tm_cy) ** 2)
-        if can_detect_pore and dist_xy <= tm_thresh:
-            forbidden_lipids.append(resid)
-        else:
-            valid_lipids.append(resid)
-
-    # ── Policy checks ─────────────────────────────────────────────────────────
-    if len(forbidden_lipids) > max_removed_pore_lipids:
-        msg = (
-            f"n_forbidden_pore_lipids={len(forbidden_lipids)} exceeds "
-            f"max_removed_pore_lipids={max_removed_pore_lipids}; "
-            "check TM annotation or embedding quality."
-        )
-        warnings_list.append(msg)
-        if policy == "strict":
-            raise RuntimeError(f"[spatial_classifier] STRICT: {msg}")
-
-    if forbidden_lipids and policy == "strict" and remove_pore_lipids:
+    if report["n_forbidden_pore_lipids"] > max_removed_pore_lipids and policy == "strict":
         raise RuntimeError(
-            f"[spatial_classifier] STRICT: {len(forbidden_lipids)} forbidden pore lipids detected."
+            f"[spatial_classifier] STRICT: n_forbidden_pore_lipids="
+            f"{report['n_forbidden_pore_lipids']} exceeds max_removed_pore_lipids="
+            f"{max_removed_pore_lipids}; check TM annotation or embedding quality."
+        )
+    if report["forbidden_pore_lipid_resids"] and policy == "strict" and remove_pore_lipids:
+        raise RuntimeError(
+            f"[spatial_classifier] STRICT: {report['n_forbidden_pore_lipids']} forbidden "
+            "pore lipids detected."
         )
 
-    # ── Candidate water for removal ───────────────────────────────────────────
-    removed_candidate: list[int] = []
-    if remove_membrane_core_water:
-        removed_candidate.extend(core_water)
-    if remove_isolated_internal_water:
-        removed_candidate.extend(isolated_water)
-
-    # Pore/vestibule/cavity counts (binary: present or absent)
-    n_pores     = 1 if pore_water else 0
-    n_isolated  = 1 if isolated_water else 0
-
-    report = {
-        "enabled":                       True,
-        "grid_spacing_nm":               grid_spacing_nm,
-        "protein_padding_nm":            protein_padding_nm,
-        "membrane_core_z_range":         [round(z_core_bot, 4), round(z_core_top, 4)],
-        "n_regions_detected":            n_pores + n_isolated,
-        "n_transmembrane_pores":         n_pores,
-        "n_one_sided_vestibules":        0,
-        "n_isolated_cavities":           n_isolated,
-        "n_bulk_waters":                 len(bulk_water),
-        "n_pore_waters":                 len(pore_water),
-        "n_membrane_core_waters":        len(core_water),
-        "n_isolated_internal_waters":    len(isolated_water),
-        "n_valid_external_lipids":       len(valid_lipids),
-        "n_forbidden_pore_lipids":       len(forbidden_lipids),
-        "forbidden_pore_lipid_resids":   sorted(forbidden_lipids),
-        "pore_water_resids":             sorted(pore_water),
-        "removed_water_resids_candidate": sorted(removed_candidate),
-        "warnings":                      warnings_list,
-    }
+    report["removed_water_resids_candidate"] = sorted(removed_candidate)
 
     if out_dir:
         _write_classifier_report(report, out_dir)
-
     return report
 
 
-# ── Pore-aware water cleanup ──────────────────────────────────────────────────
+# ── Pore-aware water cleanup (delegates to validators.membrane_water) ─────────
 
 def run_pore_aware_water_cleanup(
     gro_in:       "Path | str",
@@ -548,67 +445,70 @@ def run_pore_aware_water_cleanup(
     protein_padding_nm: float = 0.25,
     policy: str = "warn",
     update_topology_count: bool = True,
+    lipid: str = "DPPC",
+    forcefield: str = "opls-aa",
 ) -> dict:
-    """Pore-aware clean_water replacement.
+    """Pore-aware clean_water replacement, delegating to
+    validators.membrane_water.run_cleanup() — see that module and
+    validators/membrane_water/classify.py for the algorithm.
 
-    Runs the spatial classifier to distinguish pore water (preserve) from
-    membrane-core water (remove), then writes a new GRO and optionally
-    updates the topology SOL count.
+    Never deletes water solely because its Z coordinate falls inside the
+    membrane core: only water confidently classified as a lipid/membrane
+    core defect or a steric clash is removed by default (conservative mode);
+    ambiguous water and any water inside a real pore/vestibule/isolated
+    cavity is preserved.
 
-    Returns a clean_water_report-compatible dict.
+    Returns a clean_water_report-compatible dict (every legacy key
+    populated with real values, plus new fields under 'spatial_classifier_report').
     """
     gro_in  = Path(gro_in)
     gro_out = Path(gro_out)
     out_dir = Path(output_dir) if output_dir else gro_out.parent
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    # Classify
-    clf_report = run_spatial_classifier(
-        gro_path=gro_in,
+    cleanup_mode = CLEANUP_MODE_CONSERVATIVE if remove_membrane_core_water else CLEANUP_MODE_AGGRESSIVE
+    probe_kwargs = {} if protein_padding_nm == 0.25 else {"solvent_probe_radius_nm": protein_padding_nm}
+
+    result = _run_membrane_water_cleanup(
+        gro_in, gro_out,
         tm_residues=tm_residues,
-        lipid_resnames=lipid_resnames,
+        lipid_resnames=frozenset(lipid_resnames) if lipid_resnames else None,
+        lipid=lipid,
+        forcefield=forcefield,
+        topol_in=topol_in if update_topology_count else None,
+        topol_out=topol_out if update_topology_count else None,
         output_dir=out_dir,
-        enabled=True,
-        policy=policy,
-        grid_spacing_nm=grid_spacing_nm,
-        protein_padding_nm=protein_padding_nm,
-        preserve_pore_water=preserve_pore_water,
+        cleanup_mode=cleanup_mode,
         remove_membrane_core_water=remove_membrane_core_water,
         remove_isolated_internal_water=remove_isolated_internal_water,
+        grid_spacing_nm=grid_spacing_nm,
+        **probe_kwargs,
     )
 
-    remove_resids: set[int] = set(clf_report["removed_water_resids_candidate"])
-    n_removed = _remove_sol_resids_from_gro(gro_in, gro_out, remove_resids)
+    clf_report = result["classification"]
+    if policy == "strict" and clf_report["forbidden_pore_lipid_resids"]:
+        raise RuntimeError(
+            f"[spatial_classifier] STRICT: {clf_report['n_forbidden_pore_lipids']} forbidden "
+            "pore lipids detected."
+        )
 
-    topology_updated = False
-    if update_topology_count and topol_in and topol_out and n_removed > 0:
-        topol_in  = Path(topol_in)
-        topol_out = Path(topol_out)
-        if topol_in.exists():
-            text = topol_in.read_text()
-            topol_out.write_text(_update_sol_count(text, n_removed) + "\n")
-            topology_updated = True
-
-    pore_water_resids = clf_report["pore_water_resids"]
     core_z = clf_report["membrane_core_z_range"] or [None, None]
-
     report = {
-        "input_water_molecules":             len(clf_report["removed_water_resids_candidate"])
-                                             + clf_report["n_pore_waters"]
-                                             + clf_report["n_bulk_waters"]
-                                             + clf_report["n_isolated_internal_waters"],
-        "n_water_molecules_removed":         n_removed,
-        "n_water_oxygens_remaining_in_core": clf_report["n_pore_waters"],
-        "n_pore_waters_preserved":           len(pore_water_resids),
-        "pore_water_resids":                 pore_water_resids,
-        "core_z_min":                        core_z[0],
-        "core_z_max":                        core_z[1],
-        "output_gro_path":                   str(gro_out),
-        "topology_updated":                  topology_updated,
-        "cleanup_passed":                    True,
-        "pore_aware":                        True,
-        "spatial_classifier_report":         clf_report,
-        "warnings":                          clf_report.get("warnings", []),
+        "input_water_molecules":             sum(len(v) for v in clf_report["water_resid_by_category"].values()),
+        "n_water_molecules_removed":          result["n_water_molecules_removed"],
+        "n_water_oxygens_remaining_in_core":  result["n_water_oxygens_remaining_in_core"],
+        "n_pore_waters_preserved":            clf_report["n_pore_waters"],
+        "pore_water_resids":                  clf_report["pore_water_resids"],
+        "core_z_min":                         core_z[0],
+        "core_z_max":                         core_z[1],
+        "output_gro_path":                    result["output_gro_path"],
+        "topology_updated":                   result["topology_updated"],
+        "cleanup_passed":                     result["cleanup_passed"],
+        "pore_aware":                         True,
+        "spatial_classifier_report":          clf_report,
+        "cleanup_mode":                       result["cleanup_mode"],
+        "validation":                         result["validation"],
+        "warnings":                           result["warnings"],
     }
 
     (out_dir / "clean_water_report.json").write_text(

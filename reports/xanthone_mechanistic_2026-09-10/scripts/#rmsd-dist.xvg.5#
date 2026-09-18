@@ -1,0 +1,118 @@
+# This file was created Wed Sep  9 22:28:50 2026
+# Created by:
+#                     :-) GROMACS - gmx cluster, 2025.2 (-:
+# 
+# Executable:   /usr/local/gromacs/bin/gmx
+# Data prefix:  /usr/local/gromacs
+# Working dir:  /home/jesusxd/Escritorio/simforge/reports/xanthone_mechanistic_2026-09-10/scripts
+# Command line:
+#   gmx cluster -s /home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/md.tpr -f /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/traj/mdfit.xtc -n /home/jesusxd/Escritorio/Nuevos_sistemas/A3-HMG-R/index.ndx -tu ns -method gromos -cutoff 0.15 -cl /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/clusters.pdb -sz /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/cluster_sizes.xvg -clid /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/cluster_id_vs_time.xvg -o /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/rmsd_clust.xpm -g /home/jesusxd/Escritorio/simforge/analysis_outputs/xanthone_mechanistic/A3-HMG-R/clustering/cluster.log
+# gmx cluster is part of G R O M A C S:
+#
+# S  C  A  M  O  R  G
+#
+@    title "RMS Distribution"
+@    xaxis  label "RMS (nm)"
+@    yaxis  label "counts"
+@TYPE xy
+         0           0
+  0.071553        4349
+  0.143106       36425
+  0.214659       21331
+  0.286212        4307
+  0.357765        4051
+  0.429318        3920
+  0.500871        3639
+  0.572424        3611
+  0.643977        3618
+   0.71553        3542
+  0.787083        3210
+  0.858636        2711
+  0.930189        2152
+   1.00174        1699
+    1.0733        1273
+   1.14485        1065
+    1.2164         847
+   1.28795         704
+   1.35951         486
+   1.43106         313
+   1.50261         475
+   1.57417         713
+   1.64572         588
+   1.71727         529
+   1.78883         361
+   1.86038         188
+   1.93193         387
+   2.00348         829
+   2.07504        1496
+   2.14659        1888
+   2.21814        2346
+    2.2897        2686
+   2.36125        3310
+    2.4328        3866
+   2.50436        3740
+   2.57591        3512
+   2.64746        3432
+   2.71901        3062
+   2.79057        3038
+   2.86212        3164
+   2.93367        2870
+   3.00523        2342
+   3.07678        1700
+   3.14833        1269
+   3.21989        1141
+   3.29144        1054
+   3.36299        1169
+   3.43454        1404
+    3.5061        2128
+   3.57765       20736
+    3.6492        6057
+   3.72076        6859
+   3.79231       27028
+   3.86386       23976
+   3.93542        3173
+   4.00697       26985
+   4.07852       41785
+   4.15007        7999
+   4.22163        4169
+   4.29318        2688
+   4.36473        2118
+   4.43629        1850
+   4.50784        2123
+   4.57939        2178
+   4.65095        2143
+    4.7225        3462
+   4.79405       24434
+    4.8656       47007
+   4.93716       12846
+   5.00871        6476
+   5.08026        6683
+   5.15182        6987
+   5.22337       10576
+   5.29492        7439
+   5.36648        3993
+   5.43803        2190
+   5.50958        1689
+   5.58114        1405
+   5.65269        1021
+   5.72424         931
+   5.79579        2563
+   5.86735       10187
+    5.9389        4222
+   6.01045        4514
+   6.08201         218
+   6.15356          99
+   6.22511          56
+   6.29667         161
+   6.36822          94
+   6.43977         107
+   6.51132         196
+   6.58288         250
+   6.65443         128
+   6.72598           1
+   6.79754           0
+   6.86909           0
+   6.94064           0
+    7.0122          35
+   7.08375         370
+    7.1553         353

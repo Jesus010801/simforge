@@ -1,0 +1,25 @@
+compound_id,target,canonical_heatmap.py,thesis_Heat.pdf,mmpbsa_dataset.csv/_v2,old_0extras_heatmap.py(Jul2025),on_disk_preliminary_folder,A6_run,canonical_vs_dataset,canonical_vs_old,canonical_vs_folder
+A1,alpha_amylase,-165.20,-165.2,-165.2,-165.20,-165.201 (MMPBSA/AA-A1),n/a,match,match,match
+A1,alpha_glucosidase,-174.86,-174.9,-174.9,-174.86,NONE,n/a,match,match,no folder
+A1,hmgcoa_reductase,-190.90,-190.9,-190.9,-190.90,-190.896 (MMPBSA/HMGR-A1),n/a,match,match,match
+A1,pancreatic_lipase,-188.91,-188.9,-188.9,-168.91,-168.905 (MMPBSA/LP-A1),n/a,match,DIFF -20.00,DIFF -20.0
+A2,alpha_amylase,-168.98,-169.0,-169.0,-168.98,-168.978 (ISCB+/A2/AA-A2),n/a,match,match,match
+A2,alpha_glucosidase,-156.59,-156.6,-156.6,-176.59,NONE,n/a,match,DIFF +20.00,no folder
+A2,hmgcoa_reductase,-173.71,-173.7,-173.7,-223.71,-223.711 (MMPBSA/HMGR-A2),n/a,match,DIFF +50.00,DIFF +50.0
+A2,pancreatic_lipase,-143.96,-144.0,-144.0,-143.96,-143.957 (MMPBSA/LP-A2),n/a,match,match,match
+A3,alpha_amylase,-157.27,-157.3,-157.3,-157.27,-157.270 (MMPBSA/AA-A3),n/a,match,match,match
+A3,alpha_glucosidase,-115.66,-115.7,-115.7,-115.66,-115.659 (MMPBSA/AG-A3),n/a,match,match,match
+A3,hmgcoa_reductase,-144.05,-144.1,-144.1,-144.05,-144.053 (MMPBSA/HMGR-A3),n/a,match,match,match
+A3,pancreatic_lipase,-60.91,-60.9,-60.9,-60.91,-60.908 (MMPBSA/LP-A3),n/a,match,match,match
+A4,alpha_amylase,-172.83,-172.8,-172.8,-172.83,-172.833 (MMPBSA/AA-A4),n/a,match,match,match
+A4,alpha_glucosidase,-164.08,-164.1,-164.1,-164.08,NONE,n/a,match,match,no folder
+A4,hmgcoa_reductase,-180.69,-180.7,-180.7,-220.69,-220.687 (MMPBSA/HMGR-A4),n/a,match,DIFF +40.00,DIFF +40.0
+A4,pancreatic_lipase,-66.86,-66.9,-66.9,-66.86,-66.857 (MMPBSA/LP-A4),n/a,match,match,match
+A5,alpha_amylase,-162.60,-162.6,-162.6,-242.60,-242.600 (MMPBSA/AA-A5),n/a,match,DIFF +80.00,DIFF +80.0
+A5,alpha_glucosidase,-181.70,-181.7,-181.7,-231.70,-231.698 (MMPBSA/AG-A5),n/a,match,DIFF +50.00,DIFF +50.0
+A5,hmgcoa_reductase,-140.65,-140.7,-140.7,-140.65,-198.209 (MMPBSA/HMGR-A5(Sep2025)),n/a,match,match,DIFF +57.6
+A5,pancreatic_lipase,-179.88,-179.9,-179.9,-219.88,-219.884 (MMPBSA/LP-A5),n/a,match,DIFF +40.00,DIFF +40.0
+A6,alpha_amylase,-160.99,-161.0,-161.0,n/a,n/a,Nuevos_sistemas/AA-A6,match,,on-disk energy_summary.csv
+A6,alpha_glucosidase,-144.15,-144.2,-144.2,n/a,n/a,Nuevos_sistemas/AG-A6,match,,on-disk energy_summary.csv
+A6,hmgcoa_reductase,-266.23,-266.2,-266.2,n/a,n/a,Nuevos_sistemas/HMG-R-25ns-A6,match,,on-disk energy_summary.csv
+A6,pancreatic_lipase,-304.85,-304.9,-304.9,n/a,n/a,Nuevos_sistemas/LP-A6,match,,on-disk energy_summary.csv

@@ -267,6 +267,40 @@ def study_plan_fn(
     _legacy_command(path, as_json, True, inspect_trajectories)
 
 
+def study_mechanistic_plan_fn(
+    path: Annotated[Path, typer.Argument(help="Study root with the NEW mechanistic systems.")] = Path('.'),
+    reference: Annotated[Optional[Path], typer.Option('--reference', help="Historical mechanistic study (A1/APO/COA/COMP) to include in the plan.")] = None,
+    as_json: Annotated[bool, typer.Option('--json')] = False,
+) -> None:
+    """Dry-run plan for the standardized mechanistic descriptor profile.
+
+    Reports, for every (system, observable): the source trajectory (always the
+    PBC-corrected rot+trans fit ``mdfit.xtc`` — raw ``md.xtc`` is never an
+    analysis input) and a status of AVAILABLE / SKIP_EXISTING / PLANNED /
+    REVIEW_REQUIRED / SUPERSEDED_PENDING / NEW_EXTENSION.  Never executes GROMACS.
+    """
+    from analysis.campaign.mechanistic import plan_mechanistic
+    report = plan_mechanistic(path, reference=reference)
+    if as_json:
+        print(json.dumps(report, indent=2, sort_keys=True))
+        raise typer.Exit(0)
+    _console.print(
+        f"[bold cyan]mechanistic dry-run plan[/bold cyan]  "
+        f"profile={report['profile']} / {report['protocol_version']}  "
+        f"analysis trajectory = {report['analysis_trajectory']} "
+        f"(raw md.xtc forbidden)\n", markup=True)
+    for s in report['systems']:
+        _console.print(f"[bold]{s['system']}[/bold]  ({s['role']})  "
+                       f"mdfit.xtc={'yes' if s['analysis_trajectory'] else 'MISSING'}",
+                       markup=True, highlight=False)
+        for o in s['observables']:
+            _console.print(f"  {o['status']:<19} {o['observable']:<32} {o['reason']}",
+                           markup=False, highlight=False)
+        _console.print("")
+    _console.print(f"status counts: {report['status_counts']}", markup=False)
+    raise typer.Exit(0)
+
+
 def study_selections_fn(
     path: Annotated[Path, typer.Argument(help="Study root.")] = Path('.'),
     as_json: Annotated[bool, typer.Option('--json')] = False,

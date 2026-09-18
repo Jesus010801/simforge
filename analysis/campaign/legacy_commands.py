@@ -43,11 +43,14 @@ def build_xanthone_commands(rec, legacy: dict, *, gmx: str = "gmx") -> dict:
     selections = legacy.get("selections", {})
     existing = legacy.get("existing_results", {})
     tpr = _file(directory, ("md.tpr", "*.tpr"))
-    trajectory = _file(directory, ("md.xtc", "*.xtc", "md.trr", "*.trr"))
+    raw_trajectory = _file(directory, ("md.xtc", "*.xtc", "md.trr", "*.trr"))
+    # Scientific observables run on the PBC-corrected rot+trans fit only.
+    fit_trajectory = str(directory / "mdfit.xtc") if (directory / "mdfit.xtc").is_file() else None
+    trajectory = fit_trajectory  # never the raw production trajectory
     index = legacy.get("index")
     protein_id = selections.get("protein", {}).get("group_id")
     preprocessing = [
-        {"step": "center", "argv": [gmx, "trjconv", "-f", trajectory or "md.xtc", "-s", tpr or "md.tpr", "-pbc", "res", "-ur", "compact", "-center", "-o", str(directory / "mdcenter.xtc")], "stdin": str(protein_id) + "\n" if protein_id is not None else "", "selection_role": "protein", "selection_confidence": 0.7, "status": "PLANNED" if protein_id is not None else "REVIEW_REQUIRED"},
+        {"step": "center", "argv": [gmx, "trjconv", "-f", raw_trajectory or "md.xtc", "-s", tpr or "md.tpr", "-pbc", "res", "-ur", "compact", "-center", "-o", str(directory / "mdcenter.xtc")], "stdin": str(protein_id) + "\n" if protein_id is not None else "", "selection_role": "protein", "selection_confidence": 0.7, "status": "PLANNED" if protein_id is not None else "REVIEW_REQUIRED"},
         {"step": "fit", "argv": [gmx, "trjconv", "-f", str(directory / "mdcenter.xtc"), "-s", tpr or "md.tpr", "-fit", "rot+trans", "-o", str(directory / "mdfit.xtc")], "stdin": str(protein_id) + "\n" if protein_id is not None else "", "selection_role": "protein", "selection_confidence": 0.7, "status": "PLANNED" if protein_id is not None else "REVIEW_REQUIRED"},
     ]
     rows = []
@@ -65,10 +68,10 @@ def build_xanthone_commands(rec, legacy: dict, *, gmx: str = "gmx") -> dict:
             status, reason = "REVIEW_REQUIRED", "historical g_mmpbsa parameters are incomplete; no guessing"
         elif missing or not tpr or not trajectory or not index:
             status = "REVIEW_REQUIRED"
-            reason = "missing " + ", ".join(missing or [x for x, v in (("md.tpr", tpr), ("trajectory", trajectory), ("index.ndx", index)) if not v])
+            reason = "missing " + ", ".join(missing or [x for x, v in (("md.tpr", tpr), ("mdfit.xtc (canonical PBC-corrected rot+trans fit; raw md.xtc is not accepted)", trajectory), ("index.ndx", index)) if not v])
         else:
-            status, reason = "PLANNED", "dry-run command only"
-        argv = [gmx, tool.split()[1], "-s", tpr or "md.tpr", "-f", trajectory or "md.xtc", "-n", index or "index.ndx"]
+            status, reason = "PLANNED", "dry-run command only; analysis trajectory = mdfit.xtc"
+        argv = [gmx, tool.split()[1], "-s", tpr or "md.tpr", "-f", trajectory or str(directory / "mdfit.xtc"), "-n", index or "index.ndx"]
         output_flag = "-o"
         if analysis == "active_site_mindist": output_flag = "-od"
         elif analysis == "active_site_contacts":
