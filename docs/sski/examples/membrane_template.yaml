@@ -1,0 +1,15 @@
+template_id: mammalian_plasma_membrane_generic_v1
+schema_version: "0.1"
+scope:
+  organism_group: mammal
+  compartment: plasma_membrane
+composition:
+  POPC: 0.40
+  POPE: 0.20
+  CHOL: 0.40
+evidence_level: generic_model
+use: fallback_only
+limitations:
+  - Not a species-specific lipidome.
+  - Not a tissue-specific lipidome.
+  - Leaflet asymmetry is not established by this template.

@@ -1,0 +1,13 @@
+policy_name: physiological_protonation
+version: 1
+preserve:
+  heavy_atom_connectivity: true
+  stereochemistry: true
+determine_locally:
+  hydrogens: true
+  formal_protonation_state: true
+  tautomer_if_ambiguous: true
+environment:
+  pH: 7.4
+  ionic_strength_M: 0.15
+on_failure: ABORT

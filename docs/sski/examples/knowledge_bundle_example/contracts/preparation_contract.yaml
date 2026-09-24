@@ -1,0 +1,6 @@
+schema_version: "0.1"
+operations:
+  - operation: determine_protonation
+    status: DEFERRED
+    policy: physiological_protonation@1
+    failure_policy: ABORT
