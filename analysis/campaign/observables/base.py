@@ -64,9 +64,26 @@ class ObservableSpec:
     #: Scientific coordinate purpose (``models.ObservablePurpose``; open string).
     #: Reserved for context-dependent preprocessing decisions — not acted on yet.
     purpose: Optional[str] = None
+    #: ids of persistent annotations this observable is defined on (Phase 6);
+    #: their identities belong in its definition evidence
+    required_annotations: tuple[str, ...] = ()
 
     def parameters_schema(self) -> dict:
         return {}
+
+    def annotation_evidence(self, ctx: "AnalysisContext") -> Optional[dict]:
+        """``{id: evidence}`` for ``required_annotations`` — None if any is
+        missing or not ACTIVE (an observable must not run on inactive intent).
+        Include the result in :meth:`definition_evidence` so a changed
+        annotation invalidates exactly the analyses that use it."""
+        from analysis.campaign.annotations import annotation_evidence
+        out: dict = {}
+        for ann_id in self.required_annotations:
+            ev = annotation_evidence(ctx.system.annotations, ann_id)
+            if ev is None:
+                return None
+            out[ann_id] = ev
+        return out
 
     def output_schema(self, params: Optional[dict] = None) -> list[ResultArray]:
         """The result arrays this observable will produce, declared before

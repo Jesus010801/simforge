@@ -300,7 +300,7 @@ def test_decision_identity(tmp_path, monkeypatch):
     assert _ident(tmp_path, intent=IntentSource.USER_FLAG) != base
     assert _ident(tmp_path, lig_atoms=(5, 6, 8)) != base
     assert _ident(tmp_path, diags=[diag("ligand_receptor_periodic_separation")]) != base
-    monkeypatch.setattr(pol, "RULE_VERSION", "2")
+    monkeypatch.setattr(pol, "RULE_VERSION", pol.RULE_VERSION + "-test")
     assert _ident(tmp_path) != base
 
 

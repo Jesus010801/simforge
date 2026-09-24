@@ -49,6 +49,7 @@ def _candidate_to_record(
     *,
     inspect_trajectories: bool,
     gmx: str,
+    study_root: Optional[Path] = None,
 ) -> tuple[SystemRecord, list[Ambiguity]]:
     ambiguities: list[Ambiguity] = []
 
@@ -88,6 +89,9 @@ def _candidate_to_record(
     for w in det.warnings:
         rec.warnings.append(CampaignWarning("component_inference", w, Severity.INFO,
                                             scope=cand.sim_dir))
+
+    # persistent scientific annotations (never components)
+    ambiguities.extend(_resolve_annotations(rec, cand.sim_dir, study_root))
 
     # partner_type from resolved components
     peptide = det.by_type(ComponentType.PEPTIDE)
@@ -177,7 +181,7 @@ def build_manifest(
     for cand in disc.candidates:
         rec, ambs = _candidate_to_record(
             cand, receptor_hint,
-            inspect_trajectories=inspect_trajectories, gmx=gmx,
+            inspect_trajectories=inspect_trajectories, gmx=gmx, study_root=root,
         )
         records.append(rec)
         all_ambiguities.append(ambs)
@@ -329,12 +333,87 @@ _EXPLICIT_TYPES = {
 }
 
 
+def _resolve_annotations(rec: SystemRecord, sim_dir, study_root) -> list[Ambiguity]:
+    """Resolve annotation declarations; conflicts / proposals become ambiguities."""
+    from analysis.campaign.annotations import resolve_system_annotations
+    from analysis.campaign.models import AnnotationState
+    try:
+        records, notes = resolve_system_annotations(rec, sim_dir=sim_dir, study_root=study_root)
+    except Exception as exc:  # noqa: BLE001 — a broken annotation file must be visible
+        rec.warnings.append(CampaignWarning(
+            "annotations_invalid", f"annotations could not be loaded: {exc}", Severity.REVIEW,
+            scope=str(sim_dir)))
+        return []
+    rec.annotations = records
+    for n in notes:
+        rec.warnings.append(CampaignWarning("annotations", n, Severity.INFO, scope=str(sim_dir)))
+    ambs: list[Ambiguity] = []
+    for r in records:
+        if r.state == AnnotationState.REVIEW_REQUIRED and r.alternatives:
+            ambs.append(Ambiguity(
+                system_id="(pending)", kind="annotation_conflict",
+                message=f"annotation {r.annotation_id!r}: " + "; ".join(r.reasons),
+                options=[f"use:{r.annotation_id}:{i}" for i in range(len(r.alternatives))]))
+        elif r.state == AnnotationState.PROPOSED:
+            ambs.append(Ambiguity(
+                system_id="(pending)", kind="annotation_proposal",
+                message=f"proposed annotation {r.annotation_id!r} ({r.kind}, origin "
+                        f"{r.origin}) is inactive until accepted",
+                options=[f"accept:{r.annotation_id}", f"reject:{r.annotation_id}"]))
+        if r.state in (AnnotationState.UNRESOLVED, AnnotationState.UNSUPPORTED) or (
+                r.state == AnnotationState.REVIEW_REQUIRED and not r.alternatives):
+            rec.warnings.append(CampaignWarning(
+                "annotation_unresolved",
+                f"annotation {r.annotation_id!r} is {r.state}: " + "; ".join(r.reasons),
+                Severity.REVIEW, scope=str(sim_dir)))
+    return ambs
+
+
+def _apply_annotation_resolution(rec: SystemRecord, amb: Ambiguity) -> None:
+    from analysis.campaign.annotations import GROUP_PREFIX
+    from analysis.campaign.models import AnnotationCategory, AnnotationRecord, AnnotationState
+    verb, _, rest = amb.resolution.strip().partition(":")
+    ann_id, _, idx = rest.partition(":")
+    for i, r in enumerate(rec.annotations):
+        if r.annotation_id != ann_id:
+            continue
+        if amb.kind == "annotation_conflict" and verb == "use" and idx.isdigit() \
+                and int(idx) < len(r.alternatives):
+            chosen = AnnotationRecord.from_dict(r.alternatives[int(idx)])
+            others = [a for j, a in enumerate(r.alternatives) if j != int(idx)]
+            chosen.alternatives = others
+            chosen.conflicts.append({"resolution": f"chosen via manifest ({amb.resolution})"})
+            if chosen.state == AnnotationState.SUPERSEDED:
+                chosen.state = AnnotationState.ACTIVE
+            r = chosen
+        elif amb.kind == "annotation_proposal" and verb == "accept" \
+                and r.state == AnnotationState.PROPOSED:
+            r.state = AnnotationState.ACTIVE
+        elif amb.kind == "annotation_proposal" and verb == "reject":
+            r.state = AnnotationState.REJECTED
+        else:
+            rec.warnings.append(CampaignWarning(
+                "annotation_resolution_invalid",
+                f"cannot apply resolution {amb.resolution!r} to annotation {ann_id!r}",
+                Severity.REVIEW, scope=rec.system_id))
+            return
+        r.provenance["resolved_via"] = f"study_manifest: {amb.resolution}"
+        r.group_name = (GROUP_PREFIX + r.annotation_id
+                        if r.usable and r.category == AnnotationCategory.RESIDUE_SET else None)
+        rec.annotations[i] = r
+        rec.user_overridden = True
+        return
+
+
 def _apply_resolutions(manifest: StudyManifest) -> None:
     for amb in manifest.ambiguities:
         if not amb.resolution:
             continue
         rec = manifest.system(amb.system_id)
         if not rec:
+            continue
+        if amb.kind in ("annotation_conflict", "annotation_proposal"):
+            _apply_annotation_resolution(rec, amb)
             continue
         if amb.kind == "component_classification":
             # resolution format: "receptor=A;peptide=B" (chain assignments), plus

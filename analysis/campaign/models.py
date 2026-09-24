@@ -1378,6 +1378,94 @@ class DiagnosticReport:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Resolved scientific annotations (Phase 6)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class AnnotationState:
+    """Resolution state of a persistent annotation.
+
+    Only ACTIVE annotations are usable scientific selections (Ann_* groups,
+    observable/policy evidence).  PROPOSED ones are visible but inert.
+    """
+    ACTIVE = "active"                     # explicit (or accepted) and resolved
+    PROPOSED = "proposed"                 # derived, not accepted
+    REVIEW_REQUIRED = "review_required"   # conflicting explicit declarations
+    UNRESOLVED = "unresolved"             # selection matched nothing / missing referents
+    UNSUPPORTED = "unsupported"           # numbering / reference cannot be honoured
+    SUPERSEDED = "superseded"             # a higher-precedence declaration won
+    REJECTED = "rejected"
+
+    USABLE = (ACTIVE,)
+
+
+class AnnotationCategory:
+    RESIDUE_SET = "residue_set"
+    AXIS = "axis"
+    REFERENCE = "reference"
+
+
+@dataclass
+class AnnotationRecord:
+    annotation_id: str
+    category: str                         # AnnotationCategory.*
+    kind: str
+    origin: str
+    state: str                            # AnnotationState.*
+    definition: dict[str, Any] = field(default_factory=dict)   # the declared definition
+    numbering: Optional[str] = None
+    reference: dict[str, Any] = field(default_factory=dict)    # structure/file identity used
+    residues: list[str] = field(default_factory=list)          # "chain:resname:resnum"
+    atom_ids: list[int] = field(default_factory=list)
+    n_atoms: int = 0
+    atoms_sha256: Optional[str] = None
+    identity: Optional[str] = None
+    group_name: Optional[str] = None      # Ann_<id> when ACTIVE and atom-based
+    depends_on: list[str] = field(default_factory=list)       # referenced annotation ids
+    reasons: list[str] = field(default_factory=list)
+    conflicts: list[dict] = field(default_factory=list)
+    alternatives: list[dict] = field(default_factory=list)    # competing declarations
+    provenance: dict[str, Any] = field(default_factory=dict)
+    description: str = ""
+
+    @property
+    def usable(self) -> bool:
+        return self.state in AnnotationState.USABLE
+
+    def evidence(self) -> dict:
+        """Compact, identity-bearing evidence for definitions / policy."""
+        return {"id": self.annotation_id, "kind": self.kind, "category": self.category,
+                "state": self.state, "identity": self.identity,
+                "atoms_sha256": self.atoms_sha256, "n_atoms": self.n_atoms}
+
+    def to_dict(self) -> dict:
+        return {
+            "annotation_id": self.annotation_id, "category": self.category, "kind": self.kind,
+            "origin": self.origin, "state": self.state, "definition": self.definition,
+            "numbering": self.numbering, "reference": self.reference,
+            "residues": self.residues, "atom_ids": self.atom_ids, "n_atoms": self.n_atoms,
+            "atoms_sha256": self.atoms_sha256, "identity": self.identity,
+            "group_name": self.group_name, "depends_on": self.depends_on,
+            "reasons": self.reasons, "conflicts": self.conflicts,
+            "alternatives": self.alternatives, "provenance": self.provenance,
+            "description": self.description,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "AnnotationRecord":
+        return cls(
+            annotation_id=d["annotation_id"], category=d["category"], kind=d["kind"],
+            origin=d["origin"], state=d["state"], definition=dict(d.get("definition", {})),
+            numbering=d.get("numbering"), reference=dict(d.get("reference", {})),
+            residues=list(d.get("residues", [])), atom_ids=list(d.get("atom_ids", [])),
+            n_atoms=d.get("n_atoms", 0), atoms_sha256=d.get("atoms_sha256"),
+            identity=d.get("identity"), group_name=d.get("group_name"),
+            depends_on=list(d.get("depends_on", [])), reasons=list(d.get("reasons", [])),
+            conflicts=list(d.get("conflicts", [])), alternatives=list(d.get("alternatives", [])),
+            provenance=dict(d.get("provenance", {})), description=d.get("description", ""),
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # System / condition / manifest
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1421,6 +1509,8 @@ class SystemRecord:
     warnings: list[CampaignWarning] = field(default_factory=list)
     user_overridden: bool = False
     legacy_study: dict = field(default_factory=dict)
+    #: resolved persistent scientific annotations (never molecular components)
+    annotations: list["AnnotationRecord"] = field(default_factory=list)
 
     # -- helpers ----------------------------------------------------------------
     @property
@@ -1481,6 +1571,7 @@ class SystemRecord:
             "classification_state": self.classification_state,
             "user_overridden": self.user_overridden,
             "legacy_study": self.legacy_study,
+            "annotations": [a.to_dict() for a in self.annotations],
             "warnings": [w.to_dict() for w in self.warnings],
         }
 
@@ -1521,6 +1612,7 @@ class SystemRecord:
             warnings=[CampaignWarning.from_dict(w) for w in d.get("warnings", [])],
             user_overridden=d.get("user_overridden", False),
             legacy_study=dict(d.get("legacy_study", {})),
+            annotations=[AnnotationRecord.from_dict(a) for a in d.get("annotations", [])],
         )
 
 

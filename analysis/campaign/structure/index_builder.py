@@ -173,6 +173,7 @@ def build_semantic_index(
     out_ndx: str | Path,
     gmx: str = "gmx",
     existing_user_index: Optional[str | Path] = None,
+    annotations: Optional[list] = None,
 ) -> SemanticIndex:
     structure_path = Path(structure_path)
     idx = SemanticIndex(source_structure=str(structure_path.resolve()))
@@ -239,6 +240,14 @@ def build_semantic_index(
         requests.append((f"{base}_CA", f'{full} and name CA', f"{logic}; C-alpha atoms", []))
 
     requests.extend(extra_requests)
+    # ACTIVE residue-set annotations → Ann_<id> (exact atoms); inactive ones never
+    for ann in annotations or []:
+        if getattr(ann, "group_name", None) and ann.usable and ann.atom_ids:
+            ranges = _contiguous_ranges(ann.atom_ids)
+            expr = "atomnr " + " ".join(f"{lo} to {hi}" if hi > lo else f"{lo}"
+                                         for lo, hi in ranges)
+            requests.append((ann.group_name, f"({expr})",
+                             f"annotation {ann.annotation_id} ({ann.kind}, {ann.origin})", []))
     if not requests:
         idx.warnings.append("no semantic groups could be constructed")
         return idx

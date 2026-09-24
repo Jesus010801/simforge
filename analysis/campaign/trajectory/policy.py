@@ -30,7 +30,7 @@ from analysis.campaign.models import (
     TrajectoryRequirements,
 )
 
-RULE_VERSION = "1"
+RULE_VERSION = "2"   # 2: persistent annotations / reference intent as context
 POLICY_ENGINE = "simforge/preprocessing-policy/v1"
 
 _MEMBRANE_FRAME_PURPOSES = (P.MEMBRANE_FRAME_PROPERTY, P.DENSITY_PROFILE, P.SOLVENT_OCCUPANCY)
@@ -74,6 +74,7 @@ class PolicyContext:
     structure_path: Optional[str] = None
     index_path: Optional[str] = None
     diagnostics: Optional[DiagnosticReport] = None
+    annotations: list = field(default_factory=list)      # AnnotationRecord (Phase 6)
 
     @classmethod
     def from_system(cls, rec: SystemRecord, *, diagnostics: Optional[DiagnosticReport] = None
@@ -82,7 +83,31 @@ class PolicyContext:
         return cls(components=list(rec.components), topology_path=rec.topology_path,
                    structure_path=rec.structure_path,
                    index_path=idx.path if idx is not None and idx.path else None,
-                   diagnostics=diagnostics)
+                   diagnostics=diagnostics, annotations=list(rec.annotations))
+
+    # ── persistent annotations: evidence, never a bypass ──────────────────
+    def annotation_for_group(self, group: str):
+        if not group or not group.startswith("Ann_"):
+            return None
+        return next((a for a in self.annotations if a.group_name == group
+                     or f"Ann_{a.annotation_id}" == group), None)
+
+    def group_target(self, group: str) -> tuple[Optional[str], bool, dict]:
+        """(semantic type, resolved?, summary) — annotation STATE, or component STATE."""
+        if group.startswith("Ann_"):
+            ann = self.annotation_for_group(group)
+            if ann is None:
+                return "annotation", False, {"state": "absent"}
+            return "annotation", ann.usable, {"state": ann.state, "annotation": ann.evidence()}
+        ctype = _GROUP_COMPONENT.get(group.split("_")[0] if "_" in group else group)
+        if ctype is None:
+            return None, False, {"state": "unmapped"}
+        return ctype, self.resolved(ctype), self.component_summary(ctype)
+
+    def reference_intent(self, purpose: str):
+        cands = [a for a in self.annotations if a.category == "reference" and a.usable
+                 and a.definition.get("purpose") in (purpose, "any")]
+        return cands[0] if len(cands) == 1 else None
 
     # ── semantics (component STATE, not group existence) ───────────────────
     def components_of(self, ctype: str) -> list[MolecularComponent]:
@@ -129,13 +154,26 @@ class PolicyContext:
         return "tpr" if t and t.lower().endswith(".tpr") else None
 
     def fit_reference(self) -> dict:
-        """The -s file build_view uses for center/fit (structure first — recorded, not changed)."""
+        """The -s file build_view uses for center/fit (structure first — recorded, not
+        changed) and whether a persisted reference intent settles the choice."""
         ref = self.structure_path or self.topology_path
         kind = Path(ref).suffix.lower().lstrip(".") if ref else None
         alternatives = sorted({Path(p).suffix.lower().lstrip(".") for p in
                                (self.structure_path, self.topology_path) if p} - {kind})
-        return {"reference_file_type": kind, "alternative_reference_types": alternatives,
-                "ambiguous": kind != "tpr" and "tpr" in alternatives}
+        out = {"reference_file_type": kind, "alternative_reference_types": alternatives,
+               "ambiguous": kind != "tpr" and "tpr" in alternatives,
+               "intent": None, "intent_unexecutable": False}
+        intent = self.reference_intent("fit")
+        if intent is not None:
+            declared = intent.reference.get("file")
+            used = str(Path(ref).resolve()) if ref else None
+            out["intent"] = {"id": intent.annotation_id, "identity": intent.identity,
+                             "source": intent.definition.get("source")}
+            if declared and used and declared == used:
+                out["ambiguous"] = False          # explicit, and it is what will be executed
+            else:
+                out["intent_unexecutable"] = True
+        return out
 
     # ── diagnostics as evidence ────────────────────────────────────────────
     def diagnostics_available(self) -> bool:
@@ -257,9 +295,9 @@ def rule_center(req, purpose, ctx) -> Verdict:
     missing = _target_check(target, ctx)
     if missing:
         return missing
-    ctype = _GROUP_COMPONENT.get(target)
+    ctype, target_resolved, target_summary = ctx.group_target(target)
     context = {"target_group": target, "target_component": ctype,
-               "target_state": ctx.component_summary(ctype) if ctype else {"state": "unmapped"},
+               "target_state": target_summary,
                "membrane": ctx.state(ComponentType.MEMBRANE)}
     if purpose == P.DIFFUSION:
         return Verdict(REF, "center.removes_drift",
@@ -276,7 +314,7 @@ def rule_center(req, purpose, ctx) -> Verdict:
         if purpose == P.DISPLAY:
             return Verdict(VWI, "center.membrane_display",
                            "re-wrapping around the target can split the bilayer on display", context)
-    if ctype is None or not ctx.resolved(ctype):
+    if ctype is None or not target_resolved:
         return Verdict(VWI, "center.target_unresolved",
                        f"centring target '{target}' is not a RESOLVED component "
                        f"(state: {context['target_state']['state']})", context)
@@ -301,10 +339,8 @@ def rule_fit(req, purpose, ctx) -> Verdict:
     missing = _target_check(group, ctx)
     if missing:
         return missing
-    base = group.split("_")[0]
-    ctype = _GROUP_COMPONENT.get(base)
-    context = {"fit_group": group, "fit_component": ctype,
-               "component": ctx.component_summary(ctype) if ctype else {"state": "unmapped"},
+    ctype, group_resolved, group_summary = ctx.group_target(group)
+    context = {"fit_group": group, "fit_component": ctype, "component": group_summary,
                "membrane": ctx.state(ComponentType.MEMBRANE), "reference": ctx.fit_reference()}
     if purpose == P.DIFFUSION:
         return Verdict(REF, "fit.removes_motion",
@@ -317,7 +353,11 @@ def rule_fit(req, purpose, ctx) -> Verdict:
     if purpose in _MEMBRANE_FRAME_PURPOSES:
         return Verdict(VWI, "fit.rotating_spatial_frame",
                        "fitting rotates the spatial frame this quantity is binned in", context)
-    if ctype is None or not ctx.resolved(ctype):
+    if context["reference"]["intent_unexecutable"]:
+        return Verdict(UNS, "fit.reference_intent_unexecutable",
+                       "the persisted fit-reference intent names coordinates build_view would not "
+                       "use as -s (it fits against the structure file when one exists)", context)
+    if ctype is None or not group_resolved:
         return Verdict(VWI, "fit.group_unresolved",
                        f"fit group '{group}' is not a RESOLVED component "
                        f"(state: {context['component']['state']})", context)

@@ -281,6 +281,173 @@ class OrientationAnnotation(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Persistent scientific annotations (analysis-side reusable intent)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# An annotation declares scientific *intent* (a binding site, a gate, the
+# subunit that matters, an axis, the fit reference).  It never proves the
+# biology and it is never a molecular component.  Residue numbers are only
+# meaningful together with their numbering scheme: "residue N" in one
+# coordinate space is never assumed equal to "residue N" in another.
+
+#: author_pdb — residue numbers/chain ids as deposited (PDB author numbering)
+#: topology   — residue numbers of the prepared GROMACS system (.gro/.tpr), with
+#:              chains = SimForge polymer segment ids for chain-less files
+NumberingScheme = Literal["author_pdb", "topology"]
+
+AnnotationOrigin = Literal[
+    "user_cli", "explicit_api", "user_yaml", "study_manifest",
+    "imported_ndx", "build_spec", "derived",
+]
+
+#: declared lifecycle state — derived annotations start as "proposed"
+AnnotationDeclState = Literal["active", "proposed", "review_required", "rejected"]
+
+ResidueSetKind = Literal[
+    "binding_site", "catalytic_residues", "functional_residues", "gate",
+    "pore_lining", "selected_subunit", "transmembrane_segment", "domain", "custom",
+]
+
+_ANNOTATION_ID = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+
+
+def _validate_annotation_id(v: str) -> str:
+    if not _ANNOTATION_ID.match(v or ""):
+        raise ValueError(f"annotation id {v!r} must match [A-Za-z][A-Za-z0-9_]* "
+                         f"(it becomes the index group name Ann_<id>)")
+    return v
+
+
+class ResidueSelection(BaseModel):
+    """Residues (and optionally atoms) in an explicit numbering scheme."""
+    numbering: NumberingScheme                 # required — never guessed
+    chain: Optional[str] = None
+    residues: Optional[str] = None             # "684-692", "10,12,15-20"
+    resnames: list[str] = []
+    atom_names: list[str] = []
+    #: restrict matching to polymer (amino-acid / nucleotide) residues — residue
+    #: numbering in prepared systems continues into lipids/solvent
+    polymer_only: bool = False
+
+    @field_validator("residues")
+    @classmethod
+    def validate_residues(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_range_str(v) if v is not None else v
+
+    @model_validator(mode="after")
+    def validate_not_empty(self) -> "ResidueSelection":
+        if not (self.chain or self.residues or self.resnames):
+            raise ValueError("a residue selection needs at least a chain, residues or resnames")
+        return self
+
+    def canonical(self) -> dict:
+        """Order-independent definition used for identity."""
+        return {"numbering": self.numbering, "chain": self.chain,
+                "residues": sorted(residues_in_range(self.residues)) if self.residues else None,
+                "resnames": sorted(set(self.resnames)), "atom_names": sorted(set(self.atom_names)),
+                "polymer_only": self.polymer_only}
+
+
+class IndexGroupRef(BaseModel):
+    """An annotation defined by an existing .ndx group (identity = its atoms)."""
+    path: str
+    group: str
+
+
+class AnnotationProvenance(BaseModel):
+    origin: AnnotationOrigin
+    source_id: Optional[str] = None            # e.g. a knowledge-bundle claim id (future)
+    evidence_class: Optional[str] = None       # experimental | curated | homology_transferred | computational
+    loaded_from: Optional[str] = None          # file the declaration came from
+    notes: Optional[str] = None
+
+
+class ResidueSetAnnotation(BaseModel):
+    """A named, persistent residue/atom set with a scientific meaning."""
+    id: str
+    kind: ResidueSetKind
+    selection: Optional[ResidueSelection] = None
+    index_group: Optional[IndexGroupRef] = None
+    label: Optional[str] = None
+    description: str = ""                      # never part of the identity
+    state: AnnotationDeclState = "active"
+    provenance: AnnotationProvenance = AnnotationProvenance(origin="user_yaml")
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, v: str) -> str:
+        return _validate_annotation_id(v)
+
+    @model_validator(mode="after")
+    def validate_source(self) -> "ResidueSetAnnotation":
+        if (self.selection is None) == (self.index_group is None):
+            raise ValueError(f"annotation {self.id!r}: give exactly one of selection / index_group")
+        return self
+
+
+AxisType = Literal["explicit_vector", "com_to_com", "membrane_normal"]
+
+
+class AxisDefinition(BaseModel):
+    type: AxisType
+    vector: Optional[tuple[float, float, float]] = None   # explicit_vector
+    frame: Optional[str] = None                            # e.g. "box" for explicit vectors
+    from_annotation: Optional[str] = None                  # com_to_com
+    to_annotation: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_fields(self) -> "AxisDefinition":
+        if self.type == "explicit_vector":
+            if self.vector is None or not any(self.vector):
+                raise ValueError("explicit_vector needs a non-zero vector")
+            if not self.frame:
+                raise ValueError("explicit_vector needs its reference frame (e.g. 'box')")
+        if self.type == "com_to_com":
+            if not (self.from_annotation and self.to_annotation):
+                raise ValueError("com_to_com needs from_annotation and to_annotation")
+            if self.from_annotation == self.to_annotation:
+                raise ValueError("com_to_com endpoints must differ")
+        return self
+
+
+class AxisAnnotation(BaseModel):
+    """A persistent scientific axis *definition* (never computed here)."""
+    id: str
+    kind: str = "axis"                          # e.g. "pore_axis", "axis"
+    definition: AxisDefinition
+    description: str = ""
+    state: AnnotationDeclState = "active"
+    provenance: AnnotationProvenance = AnnotationProvenance(origin="user_yaml")
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, v: str) -> str:
+        return _validate_annotation_id(v)
+
+
+class ReferenceIntent(BaseModel):
+    """Which coordinates are the reference for a preprocessing purpose."""
+    id: str
+    purpose: Literal["fit", "center", "any"] = "fit"
+    source: Literal["topology", "structure", "file"]
+    file: Optional[str] = None
+    description: str = ""
+    state: AnnotationDeclState = "active"
+    provenance: AnnotationProvenance = AnnotationProvenance(origin="user_yaml")
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, v: str) -> str:
+        return _validate_annotation_id(v)
+
+    @model_validator(mode="after")
+    def validate_file(self) -> "ReferenceIntent":
+        if (self.source == "file") != bool(self.file):
+            raise ValueError("source 'file' requires file (and only then)")
+        return self
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Top-level structural annotation
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -303,6 +470,9 @@ class StructuralAnnotation(BaseModel):
     orientation: Optional[OrientationAnnotation] = None
     domains: list[BiologicalDomain] = []
     evidence: list[OrientationEvidence] = []
+    #: persistent analysis-side annotations (Phase 6); ignored by build steps
+    residue_sets: list[ResidueSetAnnotation] = []
+    axes: list[AxisAnnotation] = []
 
     def is_complete_for_orient(self) -> bool:
         """
@@ -427,3 +597,33 @@ def migrate_from_legacy_orientation(
         notes="Migrado desde environment.membrane.orientation (formato legacy)",
     )]
     return StructuralAnnotation(membrane_topology=topology, evidence=evidence)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Study-level annotation file (simforge_annotations.yaml)
+# ─────────────────────────────────────────────────────────────────────────────
+
+ANNOTATION_SET_SCHEMA = "simforge/annotations/v1"
+ANNOTATION_FILENAME = "simforge_annotations.yaml"
+
+
+class AnnotationSet(BaseModel):
+    """Versioned, human-editable persistence of annotations and intent.
+
+    ``accept`` lists ids of derived/proposed annotations the user has accepted
+    — the only way (besides a manifest ambiguity resolution) a proposal
+    becomes active.
+    """
+    schema_version: str = ANNOTATION_SET_SCHEMA
+    structural_annotation: StructuralAnnotation = StructuralAnnotation()
+    reference_intents: list[ReferenceIntent] = []
+    accept: list[str] = []
+    #: numbering of a .pdb reference structure (.gro/.tpr are always "topology")
+    reference_numbering: Optional[NumberingScheme] = None
+
+    @field_validator("schema_version")
+    @classmethod
+    def validate_schema(cls, v: str) -> str:
+        if v != ANNOTATION_SET_SCHEMA:
+            raise ValueError(f"unsupported annotation schema {v!r} (expected {ANNOTATION_SET_SCHEMA})")
+        return v

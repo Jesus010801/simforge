@@ -232,6 +232,7 @@ def _ensure_semantic_index(
     idx = build_semantic_index(
         structure_path=rec.structure_path, components=rec.components,
         out_ndx=ndx, gmx=gmx, existing_user_index=rec.index_path,
+        annotations=rec.annotations,
     )
     rec.semantic_index = idx
     for w in idx.warnings:
