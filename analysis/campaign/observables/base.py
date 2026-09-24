@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Optional, Protocol, runtime_checkable
 
 from analysis.campaign.models import (
-    AnalysisResult, SemanticIndex, SystemRecord, TrajectoryRequirements,
+    AnalysisResult, ResultArray, SemanticIndex, SystemRecord, TrajectoryRequirements,
     TrajectoryView,
 )
 
@@ -61,9 +61,35 @@ class ObservableSpec:
     category: str = "structural"
     required_components: tuple[str, ...] = ()
     supports_replicate_aggregation: bool = True
+    #: Scientific coordinate purpose (``models.ObservablePurpose``; open string).
+    #: Reserved for context-dependent preprocessing decisions — not acted on yet.
+    purpose: Optional[str] = None
 
     def parameters_schema(self) -> dict:
         return {}
+
+    def output_schema(self, params: Optional[dict] = None) -> list[ResultArray]:
+        """The result arrays this observable will produce, declared before
+        execution (same model as realised output, with ``storage=None``)."""
+        return []
+
+    def definition_evidence(self, ctx: "AnalysisContext") -> Optional[dict]:
+        """Explicit evidence of what is being computed, for
+        :meth:`definition_token`.  ``None`` = not enough evidence (no token).
+        Must not contain output paths, timestamps or other run-local values."""
+        return None
+
+    def definition_token(self, ctx: "AnalysisContext") -> Optional[str]:
+        evidence = self.definition_evidence(ctx)
+        if evidence is None:
+            return None
+        from analysis.campaign.results import definition_token
+        return definition_token(evidence)
+
+    def dependencies(self, params: Optional[dict] = None) -> list[tuple[str, dict]]:
+        """Reserved: ``(observable_id, parameters)`` this observable consumes.
+        Not orchestrated yet; must stay empty until it is."""
+        return []
 
     def trajectory_requirements(self, ctx_params: dict) -> TrajectoryRequirements:  # pragma: no cover
         raise NotImplementedError
@@ -80,4 +106,6 @@ class ObservableSpec:
             "required_components": list(self.required_components),
             "supports_replicate_aggregation": self.supports_replicate_aggregation,
             "parameters_schema": self.parameters_schema(),
+            "purpose": self.purpose,
+            "output_schema": [a.to_dict() for a in self.output_schema({})],
         }

@@ -97,7 +97,18 @@ def run_analyze(
     dry_run: bool = False,
     force: bool = False,
     parameters: Optional[dict] = None,
+    policy_intent=None,
+    diagnostics="auto",
+    diagnostics_cache_dir: Optional[str | Path] = None,
 ) -> CampaignRunResult:
+    """Discover/validate, then run the requested observables per system.
+
+    ``diagnostics``: ``"auto"`` (default) runs the read-only Phase 4 detectors
+    once per system and hands the report to the preprocessing policy;
+    ``"off"`` supplies none (policy stays conservative); a ``DiagnosticReport``
+    (or ``{system_id: report}``) is used after validating it against the
+    system's trajectory and semantic groups.
+    """
     registry.ensure_loaded()
     study_root = Path(study_root).resolve()
     out_dir = Path(output_dir) if output_dir else study_root / DEFAULT_OUTPUT_DIRNAME
@@ -141,6 +152,9 @@ def run_analyze(
     for rec in manifest.systems:
         sys_out = systems_dir / rec.system_id
         _ensure_semantic_index(rec, sys_out, gmx, result)
+        diag_report, diag_ref = _system_diagnostics(
+            rec, sys_out, gmx, result, diagnostics=diagnostics, dry_run=dry_run,
+            cache_dir=diagnostics_cache_dir)
 
         for analysis_id in valid_analyses:
             spec = registry.get(analysis_id)
@@ -160,7 +174,9 @@ def run_analyze(
                 continue
 
             req = spec.trajectory_requirements(parameters)
-            view = _resolve_view(rec, req, sys_out, gmx, force, result, dry_run=dry_run)
+            view = _resolve_view(rec, req, sys_out, gmx, force, result, dry_run=dry_run,
+                                 purpose=spec.purpose, intent=policy_intent,
+                                 diagnostics=diag_report, diagnostics_ref=diag_ref)
             ctx = AnalysisContext(
                 system=rec,
                 semantic_index=rec.semantic_index,
@@ -223,14 +239,51 @@ def _ensure_semantic_index(
             "semantic_index", w, Severity.INFO, scope=rec.system_id))
 
 
-_VIEW_CACHE: dict[tuple[str, str], object] = {}
+_VIEW_CACHE: dict[tuple, object] = {}
 
 
 def _resolve_view(rec, req, sys_out: Path, gmx: str, force: bool,
-                  result: CampaignRunResult, *, dry_run: bool = False):
-    key = (rec.system_id, req.cache_token(), dry_run)
+                  result: CampaignRunResult, *, dry_run: bool = False,
+                  purpose: Optional[str] = None, intent=None, diagnostics=None,
+                  diagnostics_ref: Optional[dict] = None):
+    # the semantic index content is part of the key: same group names with
+    # different atoms must never share an in-process view
+    idx = rec.semantic_index
+    idx_digest = ""
+    if idx is not None and idx.path and Path(idx.path).is_file():
+        from analysis.campaign.fingerprint import fingerprint_file
+        idx_digest = fingerprint_file(Path(idx.path)).digest
+    from analysis.campaign.trajectory.policy import (
+        PolicyContext, PolicyIntent, plan_preprocessing,
+    )
+    intent = intent or PolicyIntent()
+    diag_key = (diagnostics_ref or {}).get("report_identity")
+    key = (rec.system_id, req.cache_token(), dry_run, idx_digest, purpose,
+           intent.source, intent.operations, diag_key)
     if key in _VIEW_CACHE and not force:
         return _VIEW_CACHE[key]
+    # scientific admissibility first; build_view only executes admitted requests
+    plan = plan_preprocessing(req, purpose=purpose,
+                              context=PolicyContext.from_system(rec, diagnostics=diagnostics),
+                              intent=intent)
+    policy_ref = {"purpose": plan.purpose, "intent": intent.to_dict(),
+                  "diagnostics": dict(diagnostics_ref or {"execution": "not_supplied",
+                                                          "status": "unavailable"})}
+    if not plan.executable:
+        from analysis.campaign.models import TrajectoryView, ViewBuildStatus
+        view = TrajectoryView(kind=req.view_kind(), requirements=req, safe=False,
+                              build_status=ViewBuildStatus.FAILED, policy_planned=True,
+                              decisions=[d.to_dict() for d in plan.decisions],
+                              policy_ref=policy_ref)
+        view.warnings.append(CampaignWarning(
+            "policy_blocked",
+            "preprocessing not admitted: " + "; ".join(
+                f"{d.operation} = {d.classification} ({d.rule_id}): {d.reason}"
+                for d in plan.decisions if not d.applied),
+            Severity.REVIEW, scope=rec.system_id))
+        _VIEW_CACHE[key] = view
+        result.warnings.extend(view.warnings)
+        return view
     topo_fp = rec.source_fingerprints.get("topology")
     view = build_view(
         requirements=req,
@@ -243,6 +296,7 @@ def _resolve_view(rec, req, sys_out: Path, gmx: str, force: bool,
         topology_fingerprint=topo_fp,
         work_dir=sys_out / "trajectories",
         gmx=gmx, force=force, dry_run=dry_run,
+        decisions=plan.decisions, policy_ref=policy_ref,
     )
     _VIEW_CACHE[key] = view
     for w in view.warnings:
@@ -252,3 +306,90 @@ def _resolve_view(rec, req, sys_out: Path, gmx: str, force: bool,
 
 def clear_view_cache() -> None:
     _VIEW_CACHE.clear()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Diagnostics — once per system, handed to the (pure) policy
+# ═══════════════════════════════════════════════════════════════════════════════
+
+DIAGNOSTICS_DIRNAME = "diagnostics"
+
+
+def _system_diagnostics(rec, sys_out: Path, gmx: str, result: CampaignRunResult, *,
+                        diagnostics, dry_run: bool, cache_dir) -> tuple:
+    """Return ``(report | None, reference dict)``.  Read-only; never builds views.
+
+    Precedence: a supplied report (validated) > an automatically generated one.
+    """
+    from analysis.campaign.diagnostics import (
+        diagnose_system, diagnostics_status, report_identity, write_report,
+    )
+    from analysis.campaign.gmx import gmx_available
+
+    def unavailable(execution, reason):
+        return None, {"execution": execution, "status": "unavailable", "reason": reason}
+
+    supplied = diagnostics
+    if isinstance(diagnostics, dict) and not hasattr(diagnostics, "detectors"):
+        supplied = diagnostics.get(rec.system_id)
+        if supplied is None:
+            return unavailable("not_supplied", "no report supplied for this system")
+    if supplied is not None and not isinstance(supplied, str):
+        problem = _validate_report(supplied, rec)
+        if problem is None:
+            return supplied, {"execution": "supplied", "status": diagnostics_status(supplied),
+                              "report_identity": report_identity(supplied)}
+        result.warnings.append(CampaignWarning(
+            "diagnostics_report_rejected",
+            f"supplied diagnostics report not used: {problem}; generating a fresh one",
+            Severity.WARN, scope=rec.system_id))
+        diagnostics = "auto"
+    if diagnostics == "off":
+        return unavailable("off", "diagnostics disabled by caller")
+    if dry_run:
+        return unavailable("skipped", "dry run: no probes executed")
+    if not gmx_available(gmx):
+        return unavailable("skipped", f"'{gmx}' not available")
+    if len(rec.trajectory_paths) != 1:
+        return unavailable("skipped", f"{len(rec.trajectory_paths)} production trajectories; "
+                                      f"segments are not diagnosed as one timeline")
+    cache = Path(cache_dir) if cache_dir else sys_out / DIAGNOSTICS_DIRNAME / "cache"
+    try:
+        report = diagnose_system(rec, gmx=gmx, cache_dir=cache)
+    except Exception as exc:  # noqa: BLE001 — never silently drop: record it
+        result.warnings.append(CampaignWarning(
+            "diagnostics_failed", f"diagnostics could not run: {exc}", Severity.WARN,
+            scope=rec.system_id))
+        return None, {"execution": "auto", "status": "failed", "reason": str(exc)}
+    path = write_report(report, sys_out / DIAGNOSTICS_DIRNAME)
+    result.output_files.append(str(path))
+    return report, {"execution": "auto", "status": diagnostics_status(report),
+                    "report_identity": report_identity(report),
+                    "report_path": str(path.resolve()),
+                    "probe_cache": str(cache.resolve()),
+                    "probes_from_cache": all(p.get("from_cache") for p in report.probes)
+                    if report.probes else None}
+
+
+def _validate_report(report, rec) -> Optional[str]:
+    """A supplied report must describe this system's trajectory content and the
+    same atoms for every group it used."""
+    from analysis.campaign.fingerprint import fingerprint_file
+    from analysis.campaign.results import index_group_evidence
+    if len(rec.trajectory_paths) != 1:
+        return "system has no single production trajectory"
+    traj = Path(rec.trajectory_paths[0])
+    if not traj.is_file():
+        return "production trajectory missing"
+    fp = report.trajectory_fingerprint
+    if fp is None or fp.digest != fingerprint_file(traj).digest:
+        return "trajectory fingerprint does not match"
+    idx = rec.semantic_index
+    for role, g in (report.groups or {}).items():
+        name, ev = (g or {}).get("group"), (g or {}).get("evidence")
+        if not name or ev is None:
+            continue
+        cur = index_group_evidence(idx.path, name) if idx is not None and idx.path else None
+        if cur != ev:
+            return f"group '{name}' ({role}) atoms differ from the current semantic index"
+    return None

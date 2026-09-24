@@ -83,6 +83,81 @@ def _component_selection(
     return expr, logic, warns
 
 
+SYSTEM_GROUP = "System"
+
+#: Resolved molecular components exposed as single semantic groups (no
+#: backbone / CA derivatives — those are protein conventions).
+_COMPONENT_GROUPS = {
+    ComponentType.LIGAND: "Ligand",
+    ComponentType.COFACTOR: "Cofactor",
+    ComponentType.NUCLEIC_ACID: "NucleicAcid",
+}
+
+
+def _resolved_component_requests(
+    components: list[MolecularComponent], structure: StructureModel, idx: SemanticIndex,
+) -> list[tuple[str, str, str, list[str]]]:
+    """gmx-select requests for resolved Ligand / Cofactor / NucleicAcid components.
+
+    Membership comes only from what the component detector recorded — its
+    residue names and/or chain ids (nucleic acids reuse the polymer selection).
+    No residue-name inference happens here.  A component that is not RESOLVED
+    gets no group; several resolved components of one type get none either
+    (per-instance identity is not represented yet, and merging them would lose
+    it) — both with a warning.
+    """
+    out: list[tuple[str, str, str, list[str]]] = []
+    for ctype, name in _COMPONENT_GROUPS.items():
+        comps = [c for c in components if c.component_type == ctype]
+        resolved = [c for c in comps if c.classification_state == ClassificationState.RESOLVED]
+        for c in comps:
+            if c.classification_state != ClassificationState.RESOLVED:
+                idx.warnings.append(
+                    f"component '{c.label}' ({ctype}) is {c.classification_state}; "
+                    f"no '{name}' group generated")
+        if not resolved:
+            continue
+        if len(resolved) > 1:
+            idx.warnings.append(
+                f"{len(resolved)} resolved {ctype} components; per-instance groups are not "
+                f"defined yet and they are not merged — no '{name}' group generated")
+            continue
+        comp = resolved[0]
+        if comp.atom_ids:
+            # exact, atom-by-atom membership (resolved ligand / explicit resolution)
+            ranges = _contiguous_ranges(comp.atom_ids)
+            if len(set(comp.atom_ids)) != len(comp.atom_ids) or \
+                    sorted(comp.atom_ids) != list(comp.atom_ids):
+                idx.warnings.append(f"component '{comp.label}' atom list is not sorted/unique; "
+                                    f"canonicalised for the '{name}' group")
+            expr = "atomnr " + " ".join(f"{lo} to {hi}" if hi > lo else f"{lo}"
+                                         for lo, hi in ranges)
+            out.append((name, f"({expr})", f"explicit atoms {ranges}", []))
+            continue
+        if ctype == ComponentType.NUCLEIC_ACID:
+            expr, logic, w = _component_selection(comp, structure)
+            idx.warnings.extend(w)
+            if expr is None:
+                continue
+            out.append((name, f"({expr})", logic, []))
+            continue
+        chains = [c for c in comp.chain_ids if c not in ("_", " ")]
+        resn = " ".join(comp.resnames)
+        if resn and chains and structure.has_chain_ids:
+            ch = " ".join(sorted(chains))
+            out.append((name, f"(chain {ch} and resname {resn})",
+                        f"chain(s) {ch} and resname {resn}", []))
+        elif resn:
+            out.append((name, f"(resname {resn})", f"resname {resn}", []))
+        elif chains and structure.has_chain_ids:
+            ch = " ".join(sorted(chains))
+            out.append((name, f"(chain {ch})", f"chain(s) {ch}", []))
+        else:
+            idx.warnings.append(
+                f"component '{comp.label}' ({ctype}) records neither residue names nor "
+                f"usable chain ids; no '{name}' group generated")
+    return out
+
 _STANDARD_BACKBONE = {
     ComponentType.RECEPTOR: "Receptor",
     ComponentType.PEPTIDE: "Peptide",
@@ -123,6 +198,9 @@ def build_semantic_index(
 
     # Build the list of (name, selection-expression, logic) to request.
     requests: list[tuple[str, str, str, list[str]]] = []
+    # Ligand / Cofactor / NucleicAcid groups (appended after the pre-existing
+    # groups so their positions are unchanged, and before System).
+    extra_requests = _resolved_component_requests(components, structure, idx)
     for comp in components:
         if comp.component_type in (
             ComponentType.WATER, ComponentType.IONS, ComponentType.MEMBRANE,
@@ -160,9 +238,18 @@ def build_semantic_index(
                          f"{logic}; protein backbone atoms (N, CA, C — GROMACS 'Backbone' convention)", []))
         requests.append((f"{base}_CA", f'{full} and name CA', f"{logic}; C-alpha atoms", []))
 
+    requests.extend(extra_requests)
     if not requests:
         idx.warnings.append("no semantic groups could be constructed")
         return idx
+
+    # ``System``: every atom exactly once, in topology order — the structural
+    # primitive the center/fit preprocessing steps select alongside their
+    # semantic group (GROMACS' own default-group meaning).  Not a molecular
+    # component.  Appended last so existing groups keep their positions.
+    requests.append((SYSTEM_GROUP, "all",
+                     "all atoms of the reference structure, in topology order "
+                     "(GROMACS default 'System')", []))
 
     select_arg = "; ".join(f'"{name}" {expr}' for name, expr, _logic, _w in requests)
     out_ndx = Path(out_ndx)
@@ -180,7 +267,21 @@ def build_semantic_index(
 
     idx.path = str(out_ndx.resolve())
     _populate_group_sizes(idx, out_ndx, requests, structure)
+    _check_system_group(idx, structure_path)
     return idx
+
+
+def _check_system_group(idx: SemanticIndex, structure_path: Path) -> None:
+    """``System`` must cover every atom of the reference structure exactly once."""
+    from analysis.campaign.trajectory.inspector import _structure_atom_count
+    expected = _structure_atom_count(structure_path)
+    got = next((g.n_atoms for g in idx.groups if g.name == SYSTEM_GROUP), None)
+    if got is None:
+        idx.warnings.append("semantic group 'System' was not produced")
+    elif expected is not None and got != expected:
+        idx.warnings.append(
+            f"semantic group 'System' has {got} atoms but the reference structure "
+            f"has {expected}")
 
 
 def _populate_group_sizes(

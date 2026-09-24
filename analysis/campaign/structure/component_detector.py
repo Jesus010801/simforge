@@ -27,8 +27,15 @@ from analysis.campaign.models import (
 from analysis.campaign.structure.parsers import (
     ChainInfo, StructureModel, TopologyMolecules, parse_structure, parse_top_molecules,
 )
+from analysis.campaign.structure.entities import (
+    LIGAND_MIN_HEAVY_ATOMS, NonPolymerEntity, scan_ligand_candidates,
+)
 from analysis.campaign.structure.residue_classes import classify_resname
 from analysis.campaign.structure.spatial import analyse_membrane_embedding
+
+#: A nucleotide chain needs at least this many residues to be a nucleic-acid
+#: *polymer*; a lone nucleotide residue is not one (and is not a ligand either).
+NUCLEIC_MIN_RESIDUES = 2
 
 # A chain shorter than this (and clearly not transmembrane) is *peptide-like*.
 PEPTIDE_MAX_RESIDUES = 60
@@ -165,9 +172,29 @@ def detect_components(
 
     components: list[MolecularComponent] = _solvent_components(structure, topmol)
 
-    poly = _polymer_chains(structure)
+    # Nucleotide chains are nucleic-acid polymers, never protein roles: split
+    # them off before receptor/peptide reasoning (which then sees proteins only).
+    all_poly_raw = _polymer_chains(structure)
+    na_chains = [c for c in all_poly_raw if c.dominant_class() == "nucleotide"
+                 and c.residue_count >= NUCLEIC_MIN_RESIDUES]
+    for c in all_poly_raw:
+        if c.dominant_class() == "nucleotide" and c.residue_count < NUCLEIC_MIN_RESIDUES:
+            warnings.append(f"chain {c.chain_id}: single nucleotide residue — not a nucleic-acid "
+                            f"polymer; left unclassified")
+    poly = [c for c in all_poly_raw if c.dominant_class() == "amino_acid"]
+    all_poly = [c for c in all_poly_raw if c in poly or c in na_chains]
+    if na_chains:
+        components.append(_nucleic_component(na_chains))
+
+    lig = _ligand_component(Path(structure_path), bool(all_poly), warnings)
+    if lig is not None:
+        components.append(lig)
+
     if not poly:
-        warnings.append("no protein/nucleic polymer chain detected")
+        if na_chains:
+            _append_complex(components, all_poly)
+        else:
+            warnings.append("no protein/nucleic polymer chain detected")
         return ComponentDetectionResult(components, structure, membrane_present, warnings)
 
     tm_chains = set(embedding.transmembrane_chains()) if membrane_present else set()
@@ -190,8 +217,6 @@ def detect_components(
             ev.append(ComponentEvidence(
                 "membrane_system_soluble_chain",
                 "membrane present but this chain does not span it", 0.1))
-        if chain.dominant_class() == "nucleic_acid":
-            ctype, label = ComponentType.NUCLEIC_ACID, "primary nucleic acid"
         ev.append(ComponentEvidence(
             "study_role_assumed",
             "used as the 'receptor' study role for receptor-based analyses; this is a "
@@ -206,10 +231,11 @@ def detect_components(
             study_role="receptor (assumed — sole polymer chain)",
             evidence=ev,
         ))
-        # explicit: there is no partner
-        components.append(_no_partner_marker("only one polymer chain in the system"))
+        # explicit: there is no partner (a nucleic acid, when present, is its own component)
+        if not na_chains:
+            components.append(_no_partner_marker("only one polymer chain in the system"))
         # a single protein is still a valid "complex" of one (rmsd-complex == rmsd-receptor here)
-        _append_complex(components, [chain])
+        _append_complex(components, all_poly)
         return ComponentDetectionResult(components, structure, membrane_present, warnings)
 
     # ── Case B: multiple polymer chains ────────────────────────────────────
@@ -263,7 +289,7 @@ def detect_components(
             warnings=["treated as a homo-oligomeric receptor; there is no distinct peptide/ligand partner"],
         ))
         components.append(_no_partner_marker("homo-oligomeric receptor; no distinct partner chain"))
-        _append_complex(components, poly)
+        _append_complex(components, all_poly)
         return ComponentDetectionResult(components, structure, membrane_present, warnings)
 
     # B2: one clear membrane-embedded chain + short non-TM chain(s)
@@ -319,7 +345,7 @@ def detect_components(
                     0.0, value=opts)],
                 warnings=["multiple peptide-compatible chains; assign one in study_manifest.yaml"],
             ))
-        _append_complex(components, poly)
+        _append_complex(components, all_poly)
         return ComponentDetectionResult(components, structure, membrane_present, warnings)
 
     # B3: soluble multi-chain, one long + short(s) — weak, keep AMBIGUOUS
@@ -354,7 +380,7 @@ def detect_components(
                 classification_state=ClassificationState.AMBIGUOUS, evidence=p_ev,
                 warnings=["peptide role inferred from relative size only — verify"],
             ))
-        _append_complex(components, poly)
+        _append_complex(components, all_poly)
         return ComponentDetectionResult(components, structure, membrane_present, warnings)
 
     # B4: genuinely can't tell — every polymer chain a candidate
@@ -374,8 +400,103 @@ def detect_components(
         warnings=["assign receptor / partner chains in study_manifest.yaml before "
                   "running analyses that need the distinction"],
     ))
-    _append_complex(components, poly)
+    _append_complex(components, all_poly)
     return ComponentDetectionResult(components, structure, membrane_present, warnings)
+
+
+def _nucleic_component(chains: list[ChainInfo]) -> MolecularComponent:
+    ids = [c.chain_id for c in chains]
+    ev = [ComponentEvidence(
+        "nucleotide_polymer",
+        f"chain(s) {ids}: dominant residue class 'nucleotide', "
+        f"{[c.residue_count for c in chains]} residues", 1.0,
+        value={c.chain_id: c.residue_count for c in chains})]
+    return MolecularComponent(
+        component_type=ComponentType.NUCLEIC_ACID,
+        label="nucleic acid" if len(chains) == 1 else f"nucleic acid ({len(chains)} chains)",
+        selection="NucleicAcid", chain_ids=ids,
+        resnames=sorted(set().union(*(c.resname_set for c in chains))),
+        residue_count=sum(c.residue_count for c in chains),
+        confidence=_confidence_from_evidence(ev),
+        classification_state=ClassificationState.RESOLVED, evidence=ev,
+    )
+
+
+def _ligand_component(structure_path: Path, has_polymer: bool,
+                      warnings: list[str]) -> Optional[MolecularComponent]:
+    """Conservative ligand resolution from non-polymer candidates.
+
+    RESOLVED only for exactly one plausible candidate (>= LIGAND_MIN_HEAVY_ATOMS
+    heavy atoms) in a system that has a polymer; several plausible candidates
+    give one AMBIGUOUS component listing them (never merged, never ranked).
+    """
+    scan = scan_ligand_candidates(structure_path)
+    for r in scan.embedded_nonstandard:
+        warnings.append(f"non-standard residue {r['resname']} {r['chain']}:{r['resid']} is "
+                        f"embedded in a polymer sequence; treated as part of it, not a ligand")
+    plausible = [e for e in scan.candidates if e.heavy_atoms >= LIGAND_MIN_HEAVY_ATOMS]
+    small = [e for e in scan.candidates if e.heavy_atoms < LIGAND_MIN_HEAVY_ATOMS]
+    if small:
+        warnings.append(
+            "small non-polymer molecule(s) below the "
+            f"{LIGAND_MIN_HEAVY_ATOMS}-heavy-atom ligand threshold left unresolved: "
+            + ", ".join(f"{e.resname} {e.chain}:{e.resseq} ({e.heavy_atoms})" for e in small))
+    if not plausible:
+        return None
+    if not has_polymer:
+        warnings.append("no polymer chain present; ligand candidate(s) "
+                        + ", ".join(f"{e.resname} {e.chain}:{e.resseq}" for e in plausible)
+                        + " left unresolved")
+        return None
+
+    common = [ComponentEvidence(
+        "excluded_known_classes",
+        "residues of known classes were excluded before considering ligand candidates",
+        0.1, value=scan.excluded_classes)]
+    if small:
+        common.append(ComponentEvidence(
+            "small_molecules_not_considered",
+            f"below {LIGAND_MIN_HEAVY_ATOMS} heavy atoms", 0.0,
+            value=[e.to_dict() for e in small]))
+    if scan.embedded_nonstandard:
+        common.append(ComponentEvidence(
+            "embedded_nonstandard_residues_skipped",
+            "non-standard residues inside polymer sequences are not candidates", 0.0,
+            value=scan.embedded_nonstandard))
+
+    if len(plausible) == 1:
+        e: NonPolymerEntity = plausible[0]
+        ev = [ComponentEvidence(
+            "non_polymer_candidate",
+            f"{e.resname} {e.chain}:{e.resseq} — residue name in no known class, not embedded "
+            f"in a polymer, {e.heavy_atoms} heavy atoms", 0.3, value=e.to_dict()),
+            *common,
+            ComponentEvidence(
+                "sole_plausible_candidate",
+                f"the only non-polymer candidate with >= {LIGAND_MIN_HEAVY_ATOMS} heavy atoms",
+                0.4)]
+        return MolecularComponent(
+            component_type=ComponentType.LIGAND, label="ligand", selection="Ligand",
+            chain_ids=[e.chain] if e.chain not in ("_", " ") else [],
+            resnames=[e.resname], residue_count=1, atom_count=len(e.atom_ids),
+            atom_ids=list(e.atom_ids),
+            confidence=_confidence_from_evidence(ev),
+            classification_state=ClassificationState.RESOLVED, evidence=ev,
+        )
+
+    opts = [e.to_dict() for e in plausible]
+    return MolecularComponent(
+        component_type=ComponentType.LIGAND, label="ligand (ambiguous)", selection="Ligand",
+        chain_ids=sorted({e.chain for e in plausible if e.chain not in ("_", " ")}),
+        resnames=sorted({e.resname for e in plausible}),
+        confidence=0.0, classification_state=ClassificationState.AMBIGUOUS,
+        evidence=[ComponentEvidence(
+            "multiple_plausible_candidates",
+            f"{len(plausible)} non-polymer molecules could be the ligand; not merged, not ranked",
+            0.0, value=opts), *common],
+        warnings=["declare the ligand in study_manifest.yaml, e.g. "
+                  "resolution: 'ligand=chain:A,resname:LIG,resid:301'"],
+    )
 
 
 def _no_partner_marker(reason: str) -> MolecularComponent:

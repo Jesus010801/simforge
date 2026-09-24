@@ -94,7 +94,7 @@ def _candidate_to_record(
     ligand = det.by_type(ComponentType.LIGAND)
     if peptide and peptide.classification_state == ClassificationState.RESOLVED:
         rec.partner_type = "peptide"
-    elif ligand:
+    elif ligand and ligand.classification_state == ClassificationState.RESOLVED:
         rec.partner_type = "ligand"
 
     # ── classification state roll-up ──────────────────────────────────────
@@ -117,7 +117,7 @@ def _candidate_to_record(
                 system_id="(pending)", kind="component_classification",
                 message=f"{comp.label}: {comp.classification_state}. "
                         + "; ".join(comp.warnings or [e.detail for e in comp.evidence]),
-                options=[f"chain {c}" for c in comp.chain_ids],
+                options=_ambiguity_options(comp),
             ))
 
     # ── trajectory inspection (PRODUCTION trajectories only) ─────────────
@@ -309,6 +309,26 @@ def load_manifest(path: str | Path) -> StudyManifest:
     return manifest
 
 
+def _ambiguity_options(comp) -> list[str]:
+    if comp.component_type == ComponentType.LIGAND:
+        for e in comp.evidence:
+            if e.kind == "multiple_plausible_candidates" and isinstance(e.value, list):
+                return [f"ligand=chain:{c['chain']},resname:{c['resname']},resid:{c['resid']}"
+                        if c.get("chain") not in ("_", " ", None) else
+                        f"ligand=resname:{c['resname']},resid:{c['resid']}" for c in e.value]
+    return [f"chain {c}" for c in comp.chain_ids]
+
+
+#: Non-polymer / nucleic components declarable explicitly in a manifest
+#: resolution, e.g. "ligand=chain:A,resname:LIG,resid:301", "cofactor=resname:HEM",
+#: "ligand=group:MyLig" (user index), "nucleic_acid=chain:N".
+_EXPLICIT_TYPES = {
+    "ligand": ComponentType.LIGAND,
+    "cofactor": ComponentType.COFACTOR,
+    "nucleic_acid": ComponentType.NUCLEIC_ACID,
+}
+
+
 def _apply_resolutions(manifest: StudyManifest) -> None:
     for amb in manifest.ambiguities:
         if not amb.resolution:
@@ -317,15 +337,114 @@ def _apply_resolutions(manifest: StudyManifest) -> None:
         if not rec:
             continue
         if amb.kind == "component_classification":
-            # resolution format: "receptor=A;peptide=B" (chain assignments)
+            # resolution format: "receptor=A;peptide=B" (chain assignments), plus
+            # explicit non-polymer declarations for the _EXPLICIT_TYPES keys
             assigns = dict(
                 part.split("=", 1) for part in amb.resolution.split(";") if "=" in part
             )
+            assigns = {k.strip(): v for k, v in assigns.items()}
+            explicit = {k: v for k, v in assigns.items() if k in _EXPLICIT_TYPES}
+            polymer = {k: v for k, v in assigns.items() if k not in _EXPLICIT_TYPES}
             for comp in rec.components:
                 key = comp.component_type
-                if key in assigns:
-                    comp.chain_ids = [assigns[key].strip()]
+                if key in polymer:
+                    comp.chain_ids = [polymer[key].strip()]
                     comp.classification_state = ClassificationState.RESOLVED
                     comp.warnings.append("chain assignment set manually via manifest")
-            rec.classification_state = ClassificationState.RESOLVED
+            for key, text in explicit.items():
+                _apply_explicit_component(rec, _EXPLICIT_TYPES[key], key, text.strip())
+            if polymer:
+                rec.classification_state = ClassificationState.RESOLVED
             rec.user_overridden = True
+
+
+def _apply_explicit_component(rec, ctype: str, key: str, text: str) -> None:
+    """Explicit manifest intent → a RESOLVED component with an exact atom set.
+
+    Automatic components of the same type are superseded (recorded, removed);
+    automatic claims that disagree — a different resolved atom set, or another
+    residue-name component covering the selected residues — are recorded as
+    conflicts and the explicit declaration wins.
+    """
+    from analysis.campaign.models import ComponentEvidence, MolecularComponent
+    from analysis.campaign.results import atom_set_hash
+    from analysis.campaign.structure.entities import parse_selection, select_atoms
+    from analysis.campaign.structure.spatial import _iter_atoms
+
+    def warn(msg):
+        rec.warnings.append(CampaignWarning("explicit_resolution_failed", msg, Severity.REVIEW,
+                                            scope=rec.system_id))
+    try:
+        sel = parse_selection(text)
+    except ValueError as exc:
+        return warn(f"{key}={text}: {exc}")
+    if not rec.structure_path or not Path(rec.structure_path).is_file():
+        return warn(f"{key}={text}: no reference structure to resolve the selection against")
+    try:
+        ids = select_atoms(rec.structure_path, sel, rec.index_path)
+    except ValueError as exc:
+        return warn(f"{key}={text}: {exc}")
+    if not ids:
+        return warn(f"{key}={text}: selection matched no atoms in {Path(rec.structure_path).name}")
+
+    idset = set(ids)
+    atoms = [a for a in _iter_atoms(Path(rec.structure_path), first_model_only=True)
+             if a.index in idset]
+    resnames = sorted({a.resname for a in atoms})
+    chains = sorted({a.chain for a in atoms if a.chain not in ("_", " ")})
+
+    superseded, conflicts, kept = [], [], []
+    for c in rec.components:
+        if c.component_type == ctype:
+            superseded.append({"component_type": c.component_type, "label": c.label,
+                               "classification_state": c.classification_state,
+                               "resnames": c.resnames, "chain_ids": c.chain_ids,
+                               "n_atoms": len(c.atom_ids) if c.atom_ids else None})
+            same = (set(c.atom_ids) == idset if c.atom_ids
+                    else (set(c.chain_ids) == set(chains) if ctype == ComponentType.NUCLEIC_ACID
+                          else set(c.resnames) == set(resnames)))
+            if c.classification_state == ClassificationState.RESOLVED and not same:
+                conflicts.append({"component_type": c.component_type, "label": c.label,
+                                  "action": "superseded by explicit resolution"})
+            continue
+        overlap = sorted(set(c.resnames) & set(resnames)) if not c.chain_ids else []
+        if overlap and c.component_type in (ComponentType.COFACTOR, ComponentType.WATER,
+                                            ComponentType.IONS, ComponentType.MEMBRANE,
+                                            ComponentType.LIGAND):
+            c.resnames = [r for r in c.resnames if r not in overlap]
+            conflicts.append({"component_type": c.component_type, "label": c.label,
+                              "overlap_resnames": overlap,
+                              "action": "residue names reassigned to the explicit component"
+                                        + ("; component removed" if not c.resnames else "")})
+            c.warnings.append(f"residue name(s) {overlap} reassigned by an explicit manifest "
+                              f"resolution ({key})")
+            if not c.resnames:
+                continue
+        kept.append(c)
+
+    ev = [ComponentEvidence(
+        "explicit_resolution", "declared in the study manifest", 1.0,
+        value={"intent_source": "manifest", "selection": sel, "n_atoms": len(ids),
+               "atoms_sha256": atom_set_hash(ids)})]
+    if superseded:
+        ev.append(ComponentEvidence("superseded_automatic_interpretation",
+                                    "automatic interpretation(s) replaced by explicit intent",
+                                    0.0, value=superseded))
+    comp = MolecularComponent(
+        component_type=ctype, label=f"{key.replace('_', ' ')} (explicit)",
+        selection={"ligand": "Ligand", "cofactor": "Cofactor",
+                   "nucleic_acid": "NucleicAcid"}[key],
+        chain_ids=chains, resnames=resnames,
+        residue_count=len({(a.chain, a.resnum, a.resname) for a in atoms}),
+        atom_count=len(ids), atom_ids=sorted(ids), confidence=1.0,
+        classification_state=ClassificationState.RESOLVED, evidence=ev,
+    )
+    if conflicts:
+        comp.evidence.append(ComponentEvidence(
+            "conflict_with_automatic",
+            "automatic interpretation disagreed; explicit intent preserved", 0.0,
+            value=conflicts))
+        comp.warnings.append("explicit manifest resolution overrides automatic interpretation: "
+                             + "; ".join(f"{c['component_type']} ({c['action']})"
+                                         for c in conflicts))
+    rec.components = kept + [comp]

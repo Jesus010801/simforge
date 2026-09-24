@@ -24,24 +24,31 @@ class _Atom:
     resname: str
     atomname: str
     z: float
+    resnum: int = 0          # residue number as written in the file
+    index: int = 0           # 1-based atom position in the file (topology order)
 
 
-def _iter_atoms(path: Path):
+def _iter_atoms(path: Path, *, first_model_only: bool = False):
     p = Path(path)
     suffix = p.suffix.lower()
     text = p.read_text(errors="replace").splitlines()
     if suffix == ".pdb":
+        idx = 0
         for line in text:
+            if first_model_only and line[:6].strip() == "ENDMDL":
+                break
             if line[:6].strip() not in ("ATOM", "HETATM"):
                 continue
+            idx += 1
             try:
                 chain = line[21:22].strip() or "_"
                 resname = line[17:20].strip()
                 atomname = line[12:16].strip()
+                resnum = int(line[22:26])
                 z = float(line[46:54])
             except (ValueError, IndexError):
                 continue
-            yield _Atom(chain, resname, atomname, z)
+            yield _Atom(chain, resname, atomname, z, resnum, idx)
     elif suffix == ".gro":
         if len(text) < 3:
             return
@@ -56,7 +63,7 @@ def _iter_atoms(path: Path):
         cur_chain = "_"
         prev_resnum: Optional[int] = None
         prev_is_poly: Optional[bool] = None
-        for line in text[2:2 + n]:
+        for idx, line in enumerate(text[2:2 + n], 1):
             if len(line) < 44:
                 continue
             try:
@@ -72,7 +79,7 @@ def _iter_atoms(path: Path):
             if prev_is_poly is None or reset or flip:
                 cur_chain = next(poly_letters, "_") if is_poly else "_"
             prev_resnum, prev_is_poly = resnum, is_poly
-            yield _Atom(cur_chain if is_poly else "_", resname, atomname, z)
+            yield _Atom(cur_chain if is_poly else "_", resname, atomname, z, resnum, idx)
 
 
 @dataclass
