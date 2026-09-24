@@ -1,0 +1,15 @@
+schema_version: "0.1"
+request_id: example-egfr-gefitinib
+system:
+  protein:
+    identifier:
+      namespace: uniprot
+      accession: P00533
+  ligand:
+    query: Gefitinib
+environment:
+  pH: 7.4
+  ionic_strength_M: 0.15
+policies:
+  structure_selection: high_fidelity_structure_selection@1
+  protonation: physiological_protonation@1

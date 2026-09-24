@@ -1,0 +1,17 @@
+policy_name: high_fidelity_structure_selection
+version: 1
+rules:
+  - action: REQUIRE
+    predicates:
+      structure_type: experimental
+      resolution_angstrom_lte: 2.5
+  - action: FALLBACK
+    predicates:
+      structure_type: experimental
+      resolution_angstrom_lte: 3.0
+  - action: FALLBACK
+    predicates:
+      structure_type: predicted
+      plddt_gte: 90.0
+  - action: ABORT
+    message: No suitable high-fidelity structure found.

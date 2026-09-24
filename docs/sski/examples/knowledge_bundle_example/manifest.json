@@ -1,0 +1,14 @@
+{
+  "bundle_id": "sfkb:EXAMPLE",
+  "schema_version": "0.1.0",
+  "immutable": true,
+  "knowledge_snapshot_id": "sfsnap:EXAMPLE",
+  "artifacts": [
+    {
+      "artifact_id": "sf:artifact:EXAMPLE",
+      "role": "receptor_structure",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "path": "artifacts/structures/example.cif"
+    }
+  ]
+}
