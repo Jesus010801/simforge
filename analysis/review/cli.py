@@ -33,6 +33,13 @@ def _requests(show, request_file):
     return reqs
 
 
+def _progress(msg: str) -> None:
+    """Live progress on stderr (stdout stays the report / JSON)."""
+    import sys
+    import time
+    print(f"  {time.strftime('%H:%M:%S')}  {msg}", file=sys.stderr, flush=True)
+
+
 def review_fn(
     target: Annotated[Path, typer.Argument(help="RUN_DIR (campaign discovery) or a TRAJECTORY file.")],
     topology: Annotated[Optional[Path], typer.Option("--topology", "-s",
@@ -117,7 +124,7 @@ def review_fn(
                               manifest=manifest, system=system, output=output, reuse=reuse,
                               reuse_from=tuple(reuse_from or ()), cache_dir=cache_dir,
                               dry_run=dry_run, force=force, gmx=gmx, profile=prof,
-                              hide=tuple(hide or ()))
+                              hide=tuple(hide or ()), progress=_progress)
     except (ReviewError, RequestError, ProfileError) as exc:
         _console.print(f"[red]Error:[/red] {exc}")
         raise typer.Exit(2)
@@ -225,6 +232,10 @@ def render_preparation(prep) -> None:
                    + (f"  warnings={counts.get('warnings', 0)} review={counts.get('review_required', 0)} "
                       f"errors={counts.get('errors', 0)}" if counts else f"  {dg.get('reason', '')}"))
     _console.print("Observables")
+    if not ds.observables:
+        _console.print("  [yellow]none requested[/yellow] — the dashboard will show the trajectory "
+                       "timeline but no plots. Add a profile (e.g. --profile general; list them with "
+                       "`simforge trajectory review-profiles`) or --show <observable>.")
     for o in ds.observables:
         colour = _STATE_STYLE.get(o.state, "white")
         how = o.availability if o.state == "available" else o.state
@@ -242,6 +253,9 @@ def render_preparation(prep) -> None:
         for d in o.dependencies:                      # shared intermediates (provenance)
             _console.print(f"      [dim]└── {d.get('key')}  [{d.get('status')}] "
                            f"{(d.get('artifact_identity') or '')[:12]}[/dim]")
+    if prep.reused_session:
+        _console.print("[dim]            (counts below are as recorded when the session was first "
+                       "prepared; nothing was recomputed now)[/dim]")
     _console.print(f"Summary     computed={s['observables']['computed']} "
                    f"reused={s['observables']['cached']} blocked={s['observables']['blocked']} "
                    f"not_applicable={s['observables']['not_applicable']} "

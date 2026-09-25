@@ -427,12 +427,15 @@ def prepare_review(
     topology=None, structure=None, index=None, manifest: Optional[str] = None,
     system: Optional[str] = None, output=None, reuse: bool = True,
     reuse_from: tuple = (), cache_dir=None, dry_run: bool = False, force: bool = False,
-    gmx: str = "gmx", profile=None, hide: tuple = (),
+    gmx: str = "gmx", profile=None, hide: tuple = (), progress=None,
 ) -> Preparation:
     """``profile`` (a composed :class:`ReviewProfile`) is resolved against the
     selected system into ordinary observable instances, merged with the
     explicit ``request`` (user display wins; ``hide`` removes profile
-    requests), then prepared exactly like any other request."""
+    requests), then prepared exactly like any other request.
+
+    ``progress`` (optional callable taking one message string) is told what is
+    happening during long preparations; it has no effect on the result."""
     from analysis.campaign.manifest import build_manifest, load_manifest
     from analysis.campaign.results import definition_token
     from analysis.review.validate import load_review_dataset, validate_review_dataset
@@ -442,6 +445,9 @@ def prepare_review(
     mf = (load_manifest(manifest) if manifest
           else build_manifest(study_root, inspect_trajectories=False, gmx=gmx))
     rec = _select_system(mf, system)
+    say = progress or (lambda msg: None)
+    say(f"system {rec.system_id}: {len(rec.trajectory_paths)} production trajectory, "
+        f"components {', '.join(c.component_type for c in rec.components)}")
     request, profile_ctx = _apply_profile(profile, rec, request, hide)
     evidence = session_identity_evidence(
         rec, request, profile.definition_identity if profile is not None else None)
@@ -457,6 +463,7 @@ def prepare_review(
             old = load_review_dataset(session_dir)
             check = validate_review_dataset(old, session_dir)
             if old.session_id == session_id and check.valid:
+                say("an identical, still valid session exists — reusing it (nothing recomputed)")
                 return Preparation(old, session_dir, session_dir / DATASET_FILENAME,
                                    reused_session=True, dry_run=dry_run)
             replaced = check.problems or ["session identity mismatch"]
@@ -474,7 +481,7 @@ def prepare_review(
     try:
         ds = _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root,
                        inputs, work, review_root, build, cache, reuse, list(reuse_from),
-                       dry_run, force, gmx, profile_ctx)
+                       dry_run, force, gmx, profile_ctx, say)
         if dry_run:
             return Preparation(ds, None, None, replaced=replaced, dry_run=True)
         (build / DATASET_FILENAME).write_text(json.dumps(ds.to_dict(), indent=2) + "\n")
@@ -545,7 +552,7 @@ def _profile_record(ctx, request: ReviewRequest, entries) -> Optional[dict]:
 
 def _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root, inputs,
               work, review_root, build, cache, reuse, reuse_from, dry_run, force, gmx,
-              profile_ctx=None) -> ReviewDataset:
+              profile_ctx=None, say=lambda msg: None) -> ReviewDataset:
     from analysis.campaign.compatibility import RESOLVER_VERSION
     from analysis.campaign.gmx import gmx_version
     from analysis.campaign.manifest import write_manifest
@@ -576,10 +583,18 @@ def _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root,
     # observable instances
     entries: list[ObservableEntry] = []
     views: dict[str, dict] = {}
-    for req in request.observables:
-        entries.append(_run_instance(req, rec, study_root, analysis_root, review_root, work,
-                                     manifest_path, cache, reuse, reuse_from, dry_run, force,
-                                     gmx, refs, views))
+    n = len(request.observables)
+    for i, req in enumerate(request.observables, 1):
+        import time as _time
+        t0 = _time.monotonic()
+        say(f"[{i}/{n}] {req.instance_id} — checking for a reusable result"
+            + ("" if dry_run else "; may read the whole trajectory if it must be computed"))
+        entry = _run_instance(req, rec, study_root, analysis_root, review_root, work,
+                              manifest_path, cache, reuse, reuse_from, dry_run, force,
+                              gmx, refs, views)
+        entries.append(entry)
+        how = entry.availability if entry.state == CapabilityState.AVAILABLE else entry.state
+        say(f"[{i}/{n}] {req.instance_id} → {how} ({_time.monotonic() - t0:.0f} s)")
 
     # timeline (after the observables: a fresh diagnostics pass may have indexed it)
     tic = time_index_cache_dir(sys_dir, diag_ref, cache)

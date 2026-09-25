@@ -358,3 +358,21 @@ def test_real_unresolved_annotations_block(tmp_path):
     assert "unresolved" in rg.message and "401, 402, 403, 404" in rg.message
     assert dist.status == AnalysisStatus.REVIEW_REQUIRED and "intracellular_1" in dist.message
     assert rg.arrays == [] and dist.arrays == []
+
+
+def test_gmx_failure_message_is_the_gromacs_explanation():
+    from analysis.campaign.gmx import gmx_error_summary
+    stderr = ("Reading frame 0 time 0.000\n"
+              "-------------------------------------------------------\n"
+              "Program:     gmx hbond, version 2025.2\n"
+              "Source file: src/gromacs/trajectoryanalysis/modules/hbond.cpp (line 612)\n"
+              "Function:    void gmx::analysismodules::(anonymous namespace)::Hbond::linkDA("
+              "gmx::analysismodules::(anonymous namespace)::t_info *)\n\n"
+              "Inconsistency in user input:\n"
+              "Selection Ligand' has no donors AND has no acceptors! Nothing to be done.\n\n"
+              "For more information and tips for troubleshooting, please check the GROMACS\n"
+              "website at https://manual.gromacs.org/current/user-guide/run-time-errors.html\n"
+              "-------------------------------------------------------\n")
+    assert gmx_error_summary(stderr) == ("Inconsistency in user input: Selection Ligand' has no "
+                                         "donors AND has no acceptors! Nothing to be done.")
+    assert gmx_error_summary("plain failure text") == "plain failure text"

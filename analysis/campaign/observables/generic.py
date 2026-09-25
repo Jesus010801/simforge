@@ -204,7 +204,9 @@ class _GenericObservable(ObservableSpec):
                        f"\nSTDOUT:\n{res.stdout}\n")
         if not res.ok or not out.is_file():
             result.status = AnalysisStatus.FAILED
-            result.message = f"gmx {self.tool} failed (rc={res.returncode}): {res.stderr.strip()[-400:]}"
+            from analysis.campaign.gmx import gmx_error_summary
+            result.message = (f"gmx {self.tool} failed (rc={res.returncode}): "
+                              f"{gmx_error_summary(res.stderr)}")
             result.warnings.append(CampaignWarning(f"gmx_{self.tool}_failed", result.message,
                                                    Severity.ERROR))
             return result

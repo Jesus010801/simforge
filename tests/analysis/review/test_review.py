@@ -480,3 +480,30 @@ def test_cli_dry_run_strict_json_and_trajectory_mode(tmp_path):
     refs = {s["ref"]: s for s in listing["selections"]}
     assert refs["annotation:tm_1"]["usable"] and not refs["annotation:tm_6"]["usable"]
     assert {o["id"] for o in listing["observables"]} >= {"rg", "rmsd-receptor"}
+
+
+def test_empty_request_explains_how_to_get_plots(capsys):
+    from analysis.review.cli import render_preparation
+    from analysis.review.dataset import ReviewDataset
+    from analysis.review.prepare import Preparation
+    ds = ReviewDataset(session_id="s", identity_evidence={}, timeline={"state": "valid",
+                       "n_frames": 1, "start_time_ps": 0.0, "end_time_ps": 0.0},
+                       display_view={"status": "available", "request": {"mode": "raw"}})
+    render_preparation(Preparation(ds))
+    out = capsys.readouterr().out
+    assert "none requested" in out and "--profile" in out and "--show" in out
+
+
+@requires_gmx
+@requires_real_traj
+def test_progress_is_reported_during_preparation(tmp_path):
+    run = _run_dir(tmp_path)
+    msgs = []
+    _prepare(run, show=["rg(selection=component:receptor)", "rg(selection=annotation:tm_6)"],
+             progress=msgs.append)
+    assert msgs[0].startswith("system ") and any("[1/2]" in m and "→ computed" in m for m in msgs)
+    assert any("[2/2]" in m and "review_required" in m for m in msgs)
+    again = []
+    _prepare(run, show=["rg(selection=component:receptor)", "rg(selection=annotation:tm_6)"],
+             progress=again.append)
+    assert any("reusing it (nothing recomputed)" in m for m in again)

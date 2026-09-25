@@ -53,6 +53,29 @@ class GmxResult:
         }
 
 
+def gmx_error_summary(stderr: str, limit: int = 400) -> str:
+    """The user-facing part of a GROMACS failure.
+
+    GROMACS frames fatal errors between two ``-----`` rules after a
+    ``Program:`` / ``Source file:`` header; the explanation is the text after
+    the source line (e.g. ``Inconsistency in user input: …``).  Falls back to
+    the stderr tail when no such block exists.
+    """
+    text = (stderr or "").strip()
+    blocks = text.split("-------------------------------------------------------")
+    for block in reversed(blocks):
+        if "Program:" in block and ("Source file:" in block or "Fatal error" in block):
+            lines = [l.strip() for l in block.strip().splitlines()]
+            body = [l for l in lines if l and not l.startswith(("Program:", "Source file:",
+                                                               "Function:", "MPI rank:"))
+                    and not l.startswith("For more information")]
+            body = [l for l in body if not l.startswith("website at ")]
+            msg = " ".join(body)
+            if msg:
+                return msg[:limit]
+    return text[-limit:]
+
+
 def gmx_available(gmx: str = "gmx") -> bool:
     return shutil.which(gmx) is not None or Path(gmx).is_file()
 
