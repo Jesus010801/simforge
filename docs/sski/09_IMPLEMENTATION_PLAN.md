@@ -64,9 +64,35 @@ Deferred: physical bundle/compiler/runtime guarantees, persistence, federation, 
 ---
 
 ## PHASE 2 — Universal Entity Registry
-**Status:** READY FOR DESIGN
+**Status:** IMPLEMENTED — READY FOR REVIEW (UNCOMMITTED)
 
-Registry protocol + in-memory implementation + aliases/deprecation semantics.
+Implemented the accepted descriptor-only registry foundation and ADR-011:
+immutable per-entity descriptor/registry histories, mutable current heads and
+non-resolving alias index, typed records/errors and five-method EntityRegistry
+protocol, and synchronized InMemoryEntityRegistry. Successful-operation journals
+belong to logical registry state; exact retries return original results before
+CAS checks. Administrative withdrawal preserves historical source declarations.
+Phase 1 production and tests remain unchanged. No Phase 3 functionality,
+persistence, scientific resolution, or runtime integration was introduced.
+
+Initial implementation validation: 205 Phase 2 tests passed; the subsequent
+targeted remediation validation passed 234 Phase 2 tests, 548 frozen domain
+tests, and 782 combined domain/identity tests. The established focused regression
+gate passed 770 tests with 2 skipped. The broad gate passed 3484 tests, with
+16 skipped, 4 deselected, 8 xfailed, 1 xpassed, and 5 failed. The five failures
+exactly match the recorded pre-existing baseline (3250 passed before Phase 1):
+the four previously documented ligand hydrogenation failures and the membrane
+one-scale topology failure. No new failures were introduced. The adversarial
+implementation review reported 0 BLOCKER, 2 MAJOR, and 2 MINOR findings. All
+four were remediated and the targeted failure-injection, nested-validation,
+structured-error, stale-lookup, and concurrency negative controls passed. The
+architecture audit has no unresolved Phase 2 BLOCKER/MAJOR findings. Allowlist,
+whitespace, unchanged Phase 1, and unstaged-work checks passed.
+
+See [Phase 2 implementation audit](audits/PHASE_2_IMPLEMENTATION_AUDIT.md) for the
+exact public API, changed files, reusable backend-conformance suite, architectural
+findings, commands, limitations, and actual baseline/final results. No staging
+or commit is authorized or performed.
 
 ## PHASE 3 — Artifact Registry/content addressing
 **Status:** TODO
