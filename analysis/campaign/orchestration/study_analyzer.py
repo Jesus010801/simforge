@@ -201,6 +201,12 @@ def run_analyze(
             if blocked is not None:
                 result.results.append(blocked)                # only this consumer is blocked
                 continue
+            req, why = observable_requirements(spec, rec, parameters, gmx)
+            if why:
+                result.results.append(AnalysisResult(
+                    analysis_id=analysis_id, system_id=rec.system_id,
+                    status=AnalysisStatus.REVIEW_REQUIRED, message=why))
+                continue
             tic = _time_index_cache(sys_out, diag_ref, diagnostics_cache_dir)
             evaluated: list = []
             would_reuse = None
@@ -210,7 +216,7 @@ def run_analyze(
                 cached, evaluated = _try_reuse(
                     spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters,
                     policy_intent, diag_report, diag_ref, tic, reuse_roots or [],
-                    write_record=not dry_run, intermediates=direct)
+                    write_record=not dry_run, intermediates=direct, requirements=req)
                 if cached is not None and not dry_run:
                     cached.dependencies = [r.reference() for r in direct.values()]
                     result.results.append(cached)
@@ -218,7 +224,6 @@ def run_analyze(
                     continue
                 would_reuse = cached
 
-            req = spec.trajectory_requirements(parameters)
             view = _resolve_view(rec, req, sys_out, gmx, force, result, dry_run=dry_run,
                                  purpose=spec.purpose, intent=policy_intent,
                                  diagnostics=diag_report, diagnostics_ref=diag_ref)
@@ -363,6 +368,28 @@ def clear_view_cache() -> None:
     _VIEW_CACHE.clear()
 
 
+def apply_assembly(requirements, rec, groups, gmx: str = "gmx") -> tuple:
+    """``(requirements, blocked_reason)``: add a finite-assembly reconstruction
+    when ``groups`` span several topological molecules (Phase 13.5).  Generic —
+    driven by the declared groups and the topology, never by observable ids."""
+    from dataclasses import replace
+    from analysis.campaign.trajectory.assembly import decide_assembly
+    dec = decide_assembly(rec, rec.semantic_index, groups or (), gmx)
+    if dec is None:
+        return requirements, None
+    if dec.blocked:
+        return requirements, dec.blocked
+    if dec.needed:
+        requirements = replace(requirements, cluster_groups=dec.groups)
+    return requirements, None
+
+
+def observable_requirements(spec, rec, parameters, gmx: str = "gmx") -> tuple:
+    """An observable's own requirements plus its geometry requirement."""
+    return apply_assembly(spec.trajectory_requirements(parameters), rec,
+                          spec.assembly_groups(rec, parameters, rec.semantic_index), gmx)
+
+
 # ── public single-system entry points (Phase 9 review preparation) ─────────────
 
 def prepare_system(rec: SystemRecord, sys_out: Path, *, gmx: str = "gmx", diagnostics="auto",
@@ -423,7 +450,7 @@ def _requested_timeline(view, tic: Path, gmx: str) -> Optional[list[float]]:
 
 def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, intent,
                diag_report, diag_ref, tic, extra_roots, *, write_record: bool = True,
-               intermediates: Optional[dict] = None):
+               intermediates: Optional[dict] = None, requirements=None):
     """(CACHED result | None, evaluations).  Order: current applicability ->
     candidates -> policy-planned view identity (no build) -> definition
     evidence -> per-dimension compatibility.  ``write_record=False`` (dry run)
@@ -438,7 +465,11 @@ def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, in
         candidates += discover_candidates(root, rec.system_id, spec.id, current_dir=obs_out)
     if not candidates:
         return None, []
-    planned = _resolve_view(rec, spec.trajectory_requirements(parameters), sys_out, gmx, False,
+    if requirements is None:
+        requirements, why = observable_requirements(spec, rec, parameters, gmx)
+        if why:
+            return None, []
+    planned = _resolve_view(rec, requirements, sys_out, gmx, False,
                             result, dry_run=True, purpose=spec.purpose, intent=intent,
                             diagnostics=diag_report, diagnostics_ref=diag_ref)
     if not planned.safe or not planned.cache_key:
@@ -547,9 +578,12 @@ def _system_dependencies(rec, analyses, parameters, sys_out, gmx, force, result,
         result.dependency_plans[rec.system_id] = {"error": str(exc), "cycle": exc.path}
         return _Dependencies(error=str(exc), consumers=ids, system_id=rec.system_id)
 
-    def view_resolver(requirements, purpose):
+    def view_resolver(requirements, purpose, assembly_groups=()):
         # the intermediate's own view, judged by the policy for its own purpose
         # (AUTO intent): never inherited from a consumer
+        requirements, why = apply_assembly(requirements, rec, assembly_groups, gmx)
+        if why:
+            return why
         return _resolve_view(rec, requirements, sys_out, gmx, force, result, dry_run=dry_run,
                              purpose=purpose, diagnostics=diag_report, diagnostics_ref=diag_ref)
     results = resolve_plan(plan, system=rec, semantic_index=rec.semantic_index,

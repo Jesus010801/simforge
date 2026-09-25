@@ -71,7 +71,9 @@ def get(detector_id: str) -> DetectorSpec:
 
 def _ensure_loaded() -> None:
     # importing the modules registers the built-in detectors (idempotent)
-    from analysis.campaign.diagnostics import box, deferred, motion, timeline  # noqa: F401
+    from analysis.campaign.diagnostics import (  # noqa: F401
+        box, deferred, molecules, motion, timeline,
+    )
 
 
 def detector_identity(spec: DetectorSpec, ctx: DiagnosticContext) -> str:

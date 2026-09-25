@@ -100,12 +100,27 @@ def _plan_steps(requirements, src, topology_path, structure_path, semantic_index
         steps.append({"op": op, "args": args, "stdin": stdin, "reason": reason,
                       "validation": validation, "uses_index": uses_index})
 
-    if requirements.requires_whole_molecules:
+    if requirements.requires_whole_molecules or requirements.cluster_groups:
         out = out_dir / "whole.xtc"
         add("make_whole",
             ["trjconv", "-s", topology_path, "-f", current, "-o", str(out), "-pbc", "whole"],
             "System", "make molecules whole across periodic boundaries",
             "required before any fitting or geometric measurement", False)
+        current = str(out)
+
+    if requirements.cluster_groups:
+        ndx, err = _assembly_index(requirements.cluster_groups, topology_path, semantic_index,
+                                   out_dir.parent / "assemblies")
+        if err is not None:
+            return None, err
+        out = out_dir / "clustered.xtc"
+        add("cluster_assembly",
+            ["trjconv", "-s", topology_path, "-f", current, "-o", str(out), "-pbc", "cluster"],
+            "Assembly\nSystem",
+            f"put every molecule of {' ∪ '.join(requirements.cluster_groups)} into one periodic "
+            f"image (lattice translations of whole molecules only)",
+            "finite multi-molecule assembly; molecular geometry unchanged", True)
+        steps[-1]["index"] = str(ndx)
         current = str(out)
 
     if requirements.requires_nojump:
@@ -150,8 +165,50 @@ def _plan_steps(requirements, src, topology_path, structure_path, semantic_index
     if semantic_index and semantic_index.path:
         index_args = ["-n", semantic_index.path]
     for st in steps:
-        st["full_args"] = list(st["args"]) + (index_args if st["uses_index"] else [])
+        own = ["-n", st["index"]] if st.get("index") else index_args
+        st["full_args"] = list(st["args"]) + (own if st["uses_index"] else [])
     return steps, None
+
+
+def _assembly_index(groups, topology_path, semantic_index, directory: Path):
+    """``(path, None)`` of an index holding ``Assembly`` — every atom of every
+    topological molecule the union of ``groups`` touches — and ``System``;
+    ``(None, warning)`` when that cannot be established.  Content-addressed,
+    so identical assemblies share one file."""
+    import hashlib
+    from analysis.campaign.structure.molecules import MoleculePartitionError, molecule_partition
+    if not topology_path or not str(topology_path).lower().endswith(".tpr"):
+        return None, CampaignWarning(
+            "assembly_needs_tpr", "assembly reconstruction needs the .tpr molecule topology",
+            Severity.ERROR)
+    if not semantic_index or not semantic_index.path:
+        return None, CampaignWarning("missing_semantic_index", "no semantic index", Severity.ERROR)
+    from analysis.campaign.structure.index_groups import resolve_index_group
+    atoms: set[int] = set()
+    for g in groups:
+        grp = resolve_index_group(semantic_index.path, g)
+        if grp is None:
+            return None, CampaignWarning(
+                "missing_semantic_group", f"assembly group '{g}' is not in the semantic index; "
+                f"refusing to guess", Severity.ERROR)
+        atoms.update(grp.atom_ids)
+    try:
+        part = molecule_partition(topology_path)
+    except MoleculePartitionError as exc:
+        return None, CampaignWarning("molecule_partition_failed", str(exc), Severity.ERROR)
+    assembly = part.closure(atoms)
+    sys_grp = resolve_index_group(semantic_index.path, "System")
+    system = list(sys_grp.atom_ids) if sys_grp is not None else list(range(1, part.n_atoms + 1))
+    body = "".join(f"[ {name} ]\n" + "\n".join(" ".join(map(str, ids[i:i + 15]))
+                                               for i in range(0, len(ids), 15)) + "\n"
+                   for name, ids in (("Assembly", assembly), ("System", system)))
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"assembly_{hashlib.sha256(body.encode()).hexdigest()[:20]}.ndx"
+    if not path.is_file():
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(body)
+        os.replace(tmp, path)
+    return path, None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -190,7 +247,7 @@ def _identity_evidence(requirements, kind, steps, src_fps, fp_cache, index_path,
                 continue
             i += 1
         sel = [g for g in (st["stdin"] or "").split("\n") if g]
-        gev = [_group_evidence(index_path, g, st["uses_index"]) for g in sel]
+        gev = [_group_evidence(st.get("index") or index_path, g, st["uses_index"]) for g in sel]
         groups.extend(gev)
         ops.append({"operation": st["op"], "args": templ, "stdin": st["stdin"],
                     "groups": gev})

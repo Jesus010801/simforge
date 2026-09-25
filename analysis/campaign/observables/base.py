@@ -75,6 +75,18 @@ class ObservableSpec:
     #: Phase 8: True only if results on *different* coordinate views are
     #: scientifically interchangeable for this observable.  Never assumed.
     view_invariant: bool = False
+    #: Phase 13.5: periodic geometry this observable needs of its selection(s)
+    #: (``GeometryRequirement.*``); FINITE_ASSEMBLY observables name the groups
+    #: that must share one periodic image via :meth:`assembly_groups`.
+    geometry_requirement: str = "single_molecule_whole"
+
+    def assembly_groups(self, system, params: Optional[dict] = None, semantic_index=None
+                        ) -> tuple:
+        """Semantic groups whose union must be globally coherent (one periodic
+        image) for this calculation; empty when per-molecule geometry or
+        pairwise minimum-image geometry is enough.  Orchestration decides from
+        the topology whether that needs a reconstructed (clustered) view."""
+        return ()
 
     def parameters_schema(self) -> dict:
         return {}

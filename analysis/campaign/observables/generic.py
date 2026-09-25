@@ -153,7 +153,25 @@ class _GenericObservable(ObservableSpec):
                          "role": "masses / bonds for in-memory whole molecules"},
             "trajectory_view": {"kind": view.kind, "cache_key": view.cache_key},
             "backend": {"tool": f"gmx {self.tool}", "version": gmx_version(ctx.gmx)},
-        }
+        } | self._assembly_evidence(view)
+
+    @staticmethod
+    def _assembly_evidence(view) -> dict:
+        from analysis.campaign.trajectory.assembly import assembly_evidence
+        ev = assembly_evidence(view)
+        return {"assembly": ev} if ev else {}
+
+    #: FINITE_ASSEMBLY observables: the selection parameters whose union must be
+    #: globally coherent (empty for pairwise minimum-image observables)
+    assembly_params: tuple[str, ...] = ()
+
+    def assembly_groups(self, system, params=None, semantic_index=None) -> tuple:
+        if not self.assembly_params:
+            return ()
+        resolved, errors = self.resolve(system, _params(params, self.id), semantic_index)
+        if errors:
+            return ()                          # applicability reports the problem
+        return tuple(resolved[p].group for p in self.assembly_params if p in resolved)
 
     def build_command(self, ctx, resolved, params, out: Path) -> tuple[list[str], Optional[str]]:
         raise NotImplementedError
@@ -277,13 +295,18 @@ class RadiusOfGyration(_GenericObservable):
     value_column = 1                                  # total Rg (then Rx, Ry, Rz)
     coordinate_semantics = {"molecules": "made whole in memory from .tpr bonds (-rmpbc)",
                             "weighting": "mass (-mode mass)"}
+    geometry_requirement = "finite_assembly"
+    assembly_params = ("selection",)
 
     def default_selection(self, name, system):
         return _default_receptor(system)
 
     def trajectory_requirements(self, ctx_params):
-        return TrajectoryRequirements(rationale="gyrate makes molecules whole in memory (-rmpbc); "
-                                                "raw coordinates suffice")
+        # -rmpbc makes each *molecule* whole; it does not put the molecules of a
+        # multi-molecule selection into one periodic image — orchestration adds
+        # a clustered (assembled) view when the selection spans several molecules
+        return TrajectoryRequirements(rationale="gyrate makes each molecule whole in memory "
+                                                "(-rmpbc); raw coordinates suffice for one molecule")
 
     def build_command(self, ctx, resolved, params, out):
         return (["gyrate", "-s", ctx.topology_path, "-f", ctx.trajectory_view.path,
@@ -305,6 +328,9 @@ class SolventAccessibleSurface(_GenericObservable):
     value_column = 2                                  # the output selection's area
     coordinate_semantics = {"molecules": "made whole in memory (-rmpbc)",
                             "pbc": "periodic neighbour search (-pbc)"}
+    #: verified on split HMG frames: gmx sasa's neighbour search is periodic, so
+    #: buried interfaces are found whichever image each chain sits in (Phase 13.5)
+    geometry_requirement = "pairwise_minimum_image"
 
     def default_selection(self, name, system):
         return _default_receptor(system)
@@ -333,6 +359,9 @@ class SolventAccessibleSurface(_GenericObservable):
 class _PairObservable(_GenericObservable):
     purpose = ObservablePurpose.INTER_COMPONENT_GEOMETRY
     selection_params = ("selection_a", "selection_b")
+    #: verified on split HMG frames: minimum-image pair geometry does not depend
+    #: on which periodic image each molecule sits in (Phase 13.5 audit)
+    geometry_requirement = "pairwise_minimum_image"
 
     def trajectory_requirements(self, ctx_params):
         # minimum-image geometry on raw coordinates — never a reconstructed trajectory
@@ -352,6 +381,10 @@ class ComDistance(_PairObservable):
                             "molecules": "made whole in memory (-rmpbc)",
                             "pbc": "minimum-image distance vector (-pbc)",
                             "output_resolution_nm": 0.001}
+    #: a centre of mass is a global property of each selection: the union A ∪ B
+    #: must be one coherent assembly (COM of a split multi-molecule group is wrong)
+    geometry_requirement = "finite_assembly"
+    assembly_params = ("selection_a", "selection_b")
 
     def build_command(self, ctx, resolved, params, out):
         a, b = resolved["selection_a"], resolved["selection_b"]

@@ -138,7 +138,20 @@ class _RmsdBase(ObservableSpec):
             # other observables and must not change this definition
             "parameters": {k: v for k, v in (ctx.parameters or {}).items()
                            if not isinstance(v, dict)},
-        }
+        } | self._assembly_evidence(view)
+
+    @staticmethod
+    def _assembly_evidence(view) -> dict:
+        from analysis.campaign.trajectory.assembly import assembly_evidence
+        ev = assembly_evidence(view)
+        return {"assembly": ev} if ev else {}
+
+    #: a fit + RMSD over several molecules needs them in one periodic image first
+    #: (verified: 5.5 nm vs 0.24 nm on split HMG frames — the fit does not repair it)
+    geometry_requirement = "finite_assembly"
+
+    def assembly_groups(self, system, params=None, semantic_index=None) -> tuple:
+        return tuple(dict.fromkeys((self.fit_group, self.measure_group)))
 
     def _result_array(self, ctx: AnalysisContext, xvg: Path, token) -> ResultArray:
         """Typed description of the XVG gmx rms just wrote (file untouched)."""

@@ -105,6 +105,26 @@ class ViewKind:
     NOJUMP = "nojump"              # unwrapped, no PBC jumps (diffusion-safe)
     CENTERED = "centered"          # a semantic target centred in the box
     FITTED = "fitted"             # rot+trans least-squares fit to a reference
+    CLUSTERED = "clustered"       # a finite multi-molecule assembly in one periodic image
+
+
+class GeometryRequirement:
+    """What periodic geometry a calculation needs of its selection(s) (Phase 13.5).
+
+    SINGLE_MOLECULE_WHOLE   one topological molecule made whole is enough
+    FINITE_ASSEMBLY         the global geometry of the selection (or pair union):
+                            every molecule it spans must be in one common
+                            periodic image — per-molecule "whole" is NOT enough
+    PAIRWISE_MINIMUM_IMAGE  pair distances with minimum-image convention; the
+                            image of each molecule does not matter
+    PERIODIC_EXTENDED       the selection is a periodically extended object (a
+                            membrane sheet, solvent): a finite global shape is
+                            undefined — needs domain-specific geometry
+    """
+    SINGLE_MOLECULE_WHOLE = "single_molecule_whole"
+    FINITE_ASSEMBLY = "finite_assembly"
+    PAIRWISE_MINIMUM_IMAGE = "pairwise_minimum_image"
+    PERIODIC_EXTENDED = "periodic_extended"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -528,6 +548,10 @@ class TrajectoryRequirements:
     #: requested component reconstruction (e.g. "cluster"); no executor yet —
     #: representable so policy can evaluate (and refuse to fake) it
     reconstruction: Optional[str] = None
+    #: Phase 13.5: semantic groups whose union must be assembled into one periodic
+    #: image (finite multi-molecule assembly; clustered on the complete molecules
+    #: the union spans).  Empty = no assembly reconstruction.
+    cluster_groups: tuple[str, ...] = ()
 
     def view_kind(self) -> str:
         if self.fit_selection:
@@ -536,6 +560,8 @@ class TrajectoryRequirements:
             return ViewKind.CENTERED
         if self.requires_nojump:
             return ViewKind.NOJUMP
+        if self.cluster_groups:
+            return ViewKind.CLUSTERED
         if self.requires_whole_molecules:
             return ViewKind.WHOLE
         return ViewKind.RAW
@@ -548,6 +574,7 @@ class TrajectoryRequirements:
             f":fit={self.fit_selection or '-'}"
             + (f":fitmode={self.fit_mode}" if self.fit_mode != "rot+trans" else "")
             + (f":reconstruct={self.reconstruction}" if self.reconstruction else "")
+            + (f":cluster={'+'.join(self.cluster_groups)}" if self.cluster_groups else "")
         )
 
     def to_dict(self) -> dict:
@@ -561,6 +588,7 @@ class TrajectoryRequirements:
             "rationale": self.rationale,
             "fit_mode": self.fit_mode,
             "reconstruction": self.reconstruction,
+            "cluster_groups": list(self.cluster_groups),
         }
 
     @classmethod
@@ -574,6 +602,7 @@ class TrajectoryRequirements:
             rationale=d.get("rationale", ""),
             fit_mode=d.get("fit_mode", "rot+trans"),
             reconstruction=d.get("reconstruction"),
+            cluster_groups=tuple(d.get("cluster_groups", ())),
         )
 
 

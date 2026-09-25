@@ -22,8 +22,8 @@ from analysis.campaign.models import (
 PARTNER_ROLES = ("ligand", "peptide", "cofactor")
 
 _SPLIT_CAVEAT = ("centres are computed from stored (possibly wrapped) coordinates; a "
-                 "component split across the boundary has a displaced centre, which "
-                 "molecule-split diagnostics (deferred) would need to rule out")
+                 "component split across the boundary has a displaced centre; "
+                 "molecule_periodic_image_change examines the molecules individually")
 
 
 def _present_roles(ctx: DiagnosticContext, candidates) -> list[str]:

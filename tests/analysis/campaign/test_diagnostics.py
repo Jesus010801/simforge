@@ -68,7 +68,10 @@ def test_registry_levels_and_deferred():
     specs = {s.id: s for s in all_detectors()}
     assert {"timeline_integrity", "duplicate_timestamps", "non_monotonic_time", "time_gaps",
             "box_behaviour", "component_periodic_jump", "partner_receptor_separation"} <= set(specs)
-    assert specs["molecule_split"].deferred and specs["molecule_split"].level == 3
+    # Phase 13.5: the molecule-level detector is implemented (no longer reserved)
+    assert "molecule_split" not in specs
+    mol = specs["molecule_periodic_image_change"]
+    assert not mol.deferred and mol.level == 3
     for mid in ("membrane_split_z", "leaflet_discontinuity", "membrane_normal_rotation"):
         assert specs[mid].deferred and specs[mid].level == 4
     assert [s.level for s in all_detectors()] == sorted(s.level for s in all_detectors())
@@ -449,7 +452,8 @@ def test_real_trajectory_diagnostics(tmp_path):
     status = {r.detector_id: r.status for r in rep.detectors}
     assert status["component_periodic_jump"] == DetectorRunStatus.RAN
     assert status["partner_receptor_separation"] == DetectorRunStatus.NOT_APPLICABLE
-    assert status["molecule_split"] == DetectorRunStatus.DEFERRED
+    assert status["membrane_split_z"] == DetectorRunStatus.DEFERRED
+    assert status["molecule_periodic_image_change"] == DetectorRunStatus.NOT_APPLICABLE
     motion = [p for p in rep.probes if p["probe"] == "component_motion"]
     assert motion and all(p["convention"] == "center_of_mass" for p in motion)
     assert {d.code for d in rep.diagnostics} <= {"box_shape_drift"}   # observed result

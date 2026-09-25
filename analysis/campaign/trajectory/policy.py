@@ -30,7 +30,7 @@ from analysis.campaign.models import (
     TrajectoryRequirements,
 )
 
-RULE_VERSION = "2"   # 2: persistent annotations / reference intent as context
+RULE_VERSION = "3"   # 2: annotations / reference intent; 3: cluster_assembly (finite multi-molecule assemblies)
 POLICY_ENGINE = "simforge/preprocessing-policy/v1"
 
 _MEMBRANE_FRAME_PURPOSES = (P.MEMBRANE_FRAME_PROPERTY, P.DENSITY_PROFILE, P.SOLVENT_OCCUPANCY)
@@ -375,6 +375,60 @@ def rule_minimum_image(req, purpose, ctx) -> Verdict:
                    "transformed", evidence=_pbc_pair_evidence(ctx))
 
 
+#: periodically extended objects: a finite compact cluster of them is not a
+#: scientific representation (membrane sheets, solvent) — domain geometry instead
+_EXTENDED_TYPES = (ComponentType.MEMBRANE, ComponentType.WATER, ComponentType.IONS, "system")
+
+
+def rule_cluster_assembly(req, purpose, ctx) -> Verdict:
+    """Finite multi-molecule assembly reconstruction (``trjconv -pbc cluster``).
+
+    It only moves whole molecules by lattice vectors, so molecular geometry is
+    unchanged; for a *finite* assembly it is the representation in which the
+    assembly's global geometry (Rg, COM, RMSD) is defined at all — hence VALID
+    without user intent for shape / inter-component purposes.  A membrane sheet
+    or solvent is periodically extended: clustering it is refused.
+    """
+    groups = list(req.cluster_groups)
+    targets = {}
+    for g in groups:
+        missing = _target_check(g, ctx)
+        if missing:
+            return missing
+        targets[g] = ctx.group_target(g)
+    context = {"groups": groups,
+               "targets": {g: {"type": t[0], "state": t[2].get("state")} for g, t in targets.items()},
+               "connectivity_source": ctx.connectivity_source()}
+    extended = [g for g, t in targets.items() if t[0] in _EXTENDED_TYPES]
+    if extended:
+        return Verdict(REF, "cluster.periodically_extended",
+                       f"{extended} is a periodically extended object; a finite compact cluster "
+                       f"of it is not a scientific representation (needs domain geometry)", context)
+    unresolved = [g for g, t in targets.items() if not t[1]]
+    if unresolved:
+        return Verdict(VWI, "cluster.target_unresolved",
+                       f"assembly group(s) {unresolved} are not RESOLVED components / ACTIVE "
+                       f"annotations", context)
+    if ctx.connectivity_source() != "tpr":
+        return Verdict(UNS, "cluster.no_molecule_topology",
+                       "molecule membership and bonds come from the .tpr; none available", context)
+    if purpose == P.DIFFUSION:
+        return Verdict(REF, "cluster.rewraps_history",
+                       "clustering re-images molecules per frame, destroying the unwrapped history "
+                       "diffusion needs", context)
+    if purpose in (P.INTRAMOLECULAR_SHAPE, P.INTER_COMPONENT_GEOMETRY):
+        return Verdict(V, "cluster.finite_assembly_geometry",
+                       "whole molecules translated by lattice vectors into one periodic image; "
+                       "required for the global geometry of a finite multi-molecule assembly",
+                       context, evidence=_molecule_image_evidence(ctx))
+    return Verdict(VWI, "cluster.purpose_unspecified",
+                   f"assembly reconstruction for '{purpose}' needs an explicit choice", context)
+
+
+def _molecule_image_evidence(ctx):
+    return ctx.evidence(lambda d: d.code == "molecule_periodic_image_change")
+
+
 def rule_reconstruction(req, purpose, ctx) -> Verdict:
     return Verdict(UNS, "reconstruction.no_executor",
                    f"component reconstruction '{req.reconstruction}' has no executor in "
@@ -393,11 +447,13 @@ _OPERATIONS: list[tuple[str, Callable, Callable, Callable]] = [
      lambda r: {"target": r.centering_target}, rule_center),
     ("fit", lambda r: bool(r.fit_selection),
      lambda r: {"group": r.fit_selection, "mode": r.fit_mode}, rule_fit),
+    ("cluster_assembly", lambda r: bool(r.cluster_groups),
+     lambda r: {"groups": list(r.cluster_groups)}, rule_cluster_assembly),
     ("reconstruction", lambda r: bool(r.reconstruction),
      lambda r: {"method": r.reconstruction}, rule_reconstruction),
     ("minimum_image", lambda r: r.minimum_image_distances, lambda r: {}, rule_minimum_image),
 ]
-_TRANSFORMATIONS = ("make_whole", "nojump", "center", "fit", "reconstruction")
+_TRANSFORMATIONS = ("make_whole", "nojump", "center", "fit", "reconstruction", "cluster_assembly")
 
 #: detectors whose outcome (including "ran, found nothing") bears on each operation
 _COVERAGE: dict[str, tuple[str, ...]] = {
@@ -407,6 +463,7 @@ _COVERAGE: dict[str, tuple[str, ...]] = {
     "fit": ("box_behaviour",),
     "minimum_image": ("partner_receptor_separation",),
     "reconstruction": ("component_periodic_jump", "partner_receptor_separation"),
+    "cluster_assembly": ("molecule_periodic_image_change",),
 }
 
 

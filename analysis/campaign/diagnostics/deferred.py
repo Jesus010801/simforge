@@ -1,18 +1,14 @@
 """Reserved detectors — registered so reports state they were NOT run.
 
-``molecule_split`` needs per-molecule connectivity (bonds / molecule blocks
-from the .tpr) plus sampled per-atom coordinates; a centre-of-mass heuristic
-cannot establish splitting and is deliberately not shipped.
+Membrane / leaflet detectors are domain-specific (Level 4) and deferred.
 """
 from __future__ import annotations
 
 from analysis.campaign.diagnostics.registry import DetectorSpec, register
 
+# ``molecule_split`` (reserved until Phase 13.5) is now implemented as
+# ``molecule_periodic_image_change`` (diagnostics/molecules.py).
 _RESERVED = [
-    ("molecule_split", 3,
-     "molecules split across periodic boundaries",
-     "needs .tpr molecule/bond connectivity and sampled per-atom coordinates; "
-     "not derivable robustly from centre series — deferred"),
     ("membrane_split_z", 4, "bilayer split across the periodic z boundary",
      "membrane-specific (Level 4) — deferred"),
     ("leaflet_discontinuity", 4, "leaflet assignment discontinuities",

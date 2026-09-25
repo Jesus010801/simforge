@@ -85,7 +85,12 @@ def resolve_plan(plan: DependencyPlan, *, system, semantic_index, topology_path:
             if view_resolver is None:
                 blocked("no coordinate view resolver supplied", spec=spec)
                 continue
-            view = view_resolver(reqs, spec.purpose)
+            view = view_resolver(reqs, spec.purpose,
+                                 assembly_groups=spec.assembly_groups(system, req.params,
+                                                                      semantic_index))
+            if isinstance(view, str):                  # the assembly decision blocked it
+                blocked(view, spec=spec)
+                continue
             if not view.safe or not view.cache_key:
                 blocked("coordinate view not admitted: " + "; ".join(
                     w.message for w in view.warnings) or "unsafe view", spec=spec)

@@ -38,6 +38,11 @@ CONVENTIONS = ("com", "cog")
 PBC_MODES = {"whole": ["-rmpbc", "-nopbc"], "stored": ["-normpbc", "-nopbc"]}
 
 
+def _assembly(view):
+    from analysis.campaign.trajectory.assembly import assembly_evidence
+    return assembly_evidence(view)
+
+
 def _tpr(path) -> bool:
     return bool(path) and str(path).lower().endswith(".tpr") and Path(path).is_file()
 
@@ -69,6 +74,12 @@ class SelectionCentreSeries(IntermediateSpec):
     def _resolve(self, system, params, semantic_index):
         from analysis.campaign.observables.selections import SelectionRef, resolve_selection
         return resolve_selection(SelectionRef.parse(params["selection"]), system, semantic_index)
+
+    def assembly_groups(self, system, params, semantic_index) -> tuple:
+        # a centre is a global property of the selection: all its molecules must
+        # share one periodic image (single-molecule selections are unaffected)
+        r = self._resolve(system, params, semantic_index)
+        return (r.group,) if r.ok and r.group else ()
 
     def applicability(self, system, params, semantic_index) -> dict:
         reasons = []
@@ -108,7 +119,8 @@ class SelectionCentreSeries(IntermediateSpec):
                                "none (geometric centre)",
                 "topology": fingerprint_file(Path(tpr)).digest if tpr else None,
                 "coordinate_frame": "box",
-                "backend": {"tool": "gmx trajectory", "version": gmx_version(ctx.gmx)}}
+                "backend": {"tool": "gmx trajectory", "version": gmx_version(ctx.gmx)}} | (
+                    {"assembly": ev} if (ev := _assembly(ctx.trajectory_view)) else {})
 
     def compute(self, ctx: IntermediateContext):
         from analysis.campaign.gmx import run_gmx

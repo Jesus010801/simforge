@@ -165,6 +165,10 @@ class IntermediateSpec:
                       semantic_index: Optional[SemanticIndex]) -> dict:
         return {"applicable": True, "reasons": []}
 
+    def assembly_groups(self, system, params: dict, semantic_index) -> tuple:
+        """Semantic groups that must share one periodic image (finite assembly)."""
+        return ()
+
     def trajectory_requirements(self, params: dict) -> Optional[TrajectoryRequirements]:
         """The coordinate view it reads (judged by the Phase 5 policy with
         ``purpose``); None for structure-static intermediates."""
