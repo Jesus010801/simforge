@@ -98,6 +98,11 @@ def sync_metadata(array: ResultArray, timeline_times: Optional[Sequence[float]],
     return out
 
 
+def frames_matching(times: Sequence[float], t: float) -> list[int]:
+    """Public alias: frames whose recorded time equals ``t`` within printed precision."""
+    return _frames_at(times, t)
+
+
 def _frames_at(times: Sequence[float], t: float) -> list[int]:
     """Frames whose recorded time equals ``t`` (printed-precision tolerance).
     ``times`` must be non-decreasing; otherwise a linear scan is used."""
@@ -149,6 +154,10 @@ class ReviewTimeline:
 
     def display_frame_to_time(self, frame: int) -> float:
         return self._display_map.frame_to_time(frame)
+
+    def display_frames_at(self, time_ps: float) -> list[int]:
+        """Every display frame recorded at exactly ``time_ps`` (duplicates kept)."""
+        return self._display_map.frames_at(time_ps)
 
     def display_frame_to_source_frames(self, frame: int) -> list[int]:
         """Identity when the display timeline is the source's; else by exact time."""

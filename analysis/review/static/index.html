@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimForge Review</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header>
+  <div class="title">SimForge trajectory review <span class="muted">(review only — no analysis runs here)</span></div>
+  <div id="identity" class="muted">loading…</div>
+</header>
+
+<section id="sync" class="card">
+  <div class="row">
+    <label>Frame <input id="frame" type="number" min="0" step="1"></label>
+    <label>Time (ps) <input id="time" type="number" step="any"></label>
+    <span id="mapping" class="muted"></span>
+  </div>
+  <input id="slider" type="range" min="0" value="0" step="1" aria-label="display frame">
+  <div class="row muted">
+    <span id="timeline"></span>
+    <span id="viewer"></span>
+    <span id="connection">disconnected</span>
+  </div>
+  <div id="display" class="display"></div>
+</section>
+
+<main>
+  <section id="panels"></section>
+  <aside>
+    <section class="card"><h2>Blocked / unavailable requests</h2><div id="blocked"></div></section>
+    <section class="card"><h2>Diagnostics</h2><div id="diagnostics"></div></section>
+    <section class="card"><h2>Annotations</h2><div id="annotations"></div></section>
+  </aside>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -73,12 +73,21 @@ def review_fn(
         help="Re-prepare even if an identical valid session exists (results may still be reused).")] = False,
     gmx: Annotated[str, typer.Option("--gmx", help="GROMACS binary.")] = "gmx",
     as_json: Annotated[bool, typer.Option("--json", help="Emit the ReviewDataset as JSON.")] = False,
+    serve: Annotated[bool, typer.Option("--serve",
+        help="After preparing, serve the session on a local dashboard (see `trajectory serve`).")] = False,
+    no_browser: Annotated[bool, typer.Option("--no-browser",
+        help="With --serve: do not open a browser; just print the URL.")] = False,
+    viewer: Annotated[str, typer.Option("--viewer",
+        help="With --serve: viewer adapter (null | fake). No molecular viewer yet.")] = "null",
 ) -> None:
-    """Prepare a reproducible trajectory review session (headless)."""
+    """Prepare a reproducible trajectory review session (headless by default)."""
     from analysis.review.prepare import ReviewError, prepare_review
     from analysis.review.request import DisplayRequest, RequestError, ReviewRequest
-    if not prepare_only:
-        _console.print("[red]Error:[/red] only --prepare-only is available; no viewer exists yet")
+    if serve and (dry_run or as_json):
+        _console.print("[red]Error:[/red] --serve needs a real preparation (no --dry-run / --json)")
+        raise typer.Exit(2)
+    if not prepare_only and not serve:
+        _console.print("[red]Error:[/red] nothing to do: use --prepare-only (default) or --serve")
         raise typer.Exit(2)
     reqs = _requests(show, request_file)
     try:
@@ -99,7 +108,44 @@ def review_fn(
             "review_dataset": prep.dataset.to_dict()}, indent=2))
     else:
         render_preparation(prep)
-    raise typer.Exit(1 if strict and failures else 0)
+    if strict and failures:
+        raise typer.Exit(1)
+    if serve:
+        _serve(prep.dataset_path, no_browser=no_browser, viewer=viewer)
+    raise typer.Exit(0)
+
+
+def _serve(dataset_path, *, no_browser: bool, viewer: str, host: str = "127.0.0.1",
+           port: int = 0) -> None:
+    from analysis.review.runtime.server import ReviewServeError, ReviewServer, serve_forever
+    from analysis.review.runtime.viewer import make_viewer
+    try:
+        server = ReviewServer(dataset_path, host=host, port=port, viewer=make_viewer(viewer))
+    except (ReviewServeError, ValueError) as exc:
+        _console.print(f"[red]Refusing to serve:[/red] {exc}")
+        raise typer.Exit(1)
+    serve_forever(server, open_browser=not no_browser,
+                  echo=lambda m: print(m, flush=True))      # the URL must reach pipes now
+
+
+def serve_fn(
+    dataset: Annotated[Path, typer.Argument(help="review_dataset.json or its session directory.")],
+    no_browser: Annotated[bool, typer.Option("--no-browser",
+        help="Do not open a browser; print the URL only (headless use).")] = False,
+    host: Annotated[str, typer.Option("--host",
+        help="Bind address (default loopback only).")] = "127.0.0.1",
+    port: Annotated[int, typer.Option("--port", help="Port (0 = any free port).")] = 0,
+    viewer: Annotated[str, typer.Option("--viewer",
+        help="Viewer adapter: null (default) | fake. No molecular viewer yet.")] = "null",
+) -> None:
+    """Serve an already prepared, valid review session on a local dashboard.
+
+    Presentation only: nothing is discovered, analysed or re-prepared; a stale
+    or invalid session is refused."""
+    if host not in ("127.0.0.1", "localhost", "::1"):
+        _console.print(f"[yellow]warning:[/yellow] binding to {host} exposes the session "
+                       f"beyond this machine (token still required)")
+    _serve(dataset, no_browser=no_browser, viewer=viewer, host=host, port=port)
 
 
 _STATE_STYLE = {"available": "green", "planned": "cyan", "not_applicable": "dim",

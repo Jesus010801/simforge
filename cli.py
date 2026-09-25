@@ -2531,15 +2531,17 @@ def _show_temporal_events(synthesis) -> None:
 # ── Trajectory review sub-app (simforge trajectory review|review-observables) ──
 _trajectory_app = typer.Typer(
     name="trajectory",
-    help="Trajectory review sessions (headless preparation; no viewer yet).",
+    help="Trajectory review sessions: headless preparation and a local dashboard.",
     no_args_is_help=True,
 )
 from analysis.review.cli import (  # noqa: E402
     review_fn as _trajectory_review_fn,
     review_observables_fn as _trajectory_review_observables_fn,
+    serve_fn as _trajectory_serve_fn,
 )
 _trajectory_app.command(name="review")(_trajectory_review_fn)
 _trajectory_app.command(name="review-observables")(_trajectory_review_observables_fn)
+_trajectory_app.command(name="serve")(_trajectory_serve_fn)
 cli.add_typer(_trajectory_app)
 
 
