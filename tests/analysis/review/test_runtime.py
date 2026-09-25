@@ -283,7 +283,10 @@ class _SSE:
         deadline = time.monotonic() + timeout
         event, data = None, None
         while time.monotonic() < deadline:
-            line = self.resp.readline().decode().rstrip("\n")
+            try:
+                line = self.resp.readline().decode().rstrip("\n")
+            except (TimeoutError, socket.timeout):
+                break                                 # idle stream (heartbeat is 10 s)
             if line.startswith("event:"):
                 event = line.split(":", 1)[1].strip()
             elif line.startswith("data:"):

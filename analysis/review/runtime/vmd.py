@@ -58,6 +58,40 @@ def find_vmd(explicit: Optional[str] = None) -> str:
     return found
 
 
+#: VMD keeps every frame in memory: 3 float32 coordinates per atom per frame
+VMD_BYTES_PER_ATOM_FRAME = 12
+#: refuse to launch when the coordinates alone would exceed this share of MemAvailable
+VMD_MEMORY_FRACTION = 0.8
+
+
+def mem_available_bytes() -> Optional[int]:
+    try:
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) * 1024
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def vmd_memory_check(n_atoms: Optional[int], n_frames: int,
+                     available: Optional[int] = None) -> Optional[str]:
+    """A reason not to launch VMD, or None.  Loading a trajectory VMD cannot
+    hold would push the whole machine into the kernel OOM killer (which can
+    kill unrelated work); the dashboard itself does not need it."""
+    if not n_atoms:
+        return None
+    need = n_atoms * n_frames * VMD_BYTES_PER_ATOM_FRAME
+    avail = available if available is not None else mem_available_bytes()
+    if avail is None or need <= VMD_MEMORY_FRACTION * avail:
+        return None
+    gb = 1024 ** 3
+    return (f"not launching VMD: it keeps every frame in memory and this display trajectory "
+            f"needs about {need / gb:.0f} GB ({n_atoms:,} atoms × {n_frames:,} frames) but only "
+            f"{avail / gb:.0f} GB are available; loading it could make the system kill other "
+            f"processes. The dashboard works without VMD.")
+
+
 def display_inputs(dataset, session_dir) -> dict:
     """The exact files VMD must show, re-validated against the dataset.
 
@@ -160,6 +194,10 @@ class VMDViewerAdapter:
         self.runtime_dir = Path(tempfile.mkdtemp(prefix="simforge-vmd-", dir=self.runtime_parent))
         self.log_path = self.runtime_dir / "vmd.log"
         if self.launch:
+            too_big = vmd_memory_check(self.n_atoms, self.n_frames)
+            if too_big:
+                self._fail(ViewerState.ERROR, too_big)
+                return
             try:
                 self._launch()
             except (VMDError, OSError) as exc:
@@ -215,7 +253,10 @@ class VMDViewerAdapter:
         if self.runtime_dir is not None:
             bridge = self.runtime_dir / "bridge.tcl"
             bridge.unlink(missing_ok=True)
-            if was != ViewerState.ERROR:               # keep logs of a failed start
+            log = self.log_path
+            keep = (was == ViewerState.ERROR and log is not None and log.is_file()
+                    and log.stat().st_size > 0)        # keep only a failed start's real log
+            if not keep:
                 shutil.rmtree(self.runtime_dir, ignore_errors=True)
         if self.state != ViewerState.ERROR:
             self.state = ViewerState.STOPPED
@@ -316,11 +357,19 @@ class VMDViewerAdapter:
         except (OSError, ValueError):
             pass
         finally:
+            code = None
+            if self._proc is not None and not self._done.is_set():
+                # the bridge closes just before VMD exits: reap it here so a VMD the
+                # user quit does not linger as a zombie until SimForge stops
+                try:
+                    code = self._proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    code = None
             if self.state in (ViewerState.READY, ViewerState.LOADING, ViewerState.STARTING) \
                     and not self._done.is_set():
                 self._fail(ViewerState.DISCONNECTED, "VMD bridge connection closed"
-                           + (f"; VMD exit code {self._proc.poll()}" if self._proc and
-                              self._proc.poll() is not None else ""))
+                           + (f"; VMD exited (code {code})" if code is not None else
+                              "; VMD process still running"))
             self._ready.set()
 
     def _serve(self, reader) -> None:

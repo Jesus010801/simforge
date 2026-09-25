@@ -111,6 +111,7 @@ puts "clean [::simforge::clean "a\\nb\\x01c"]"
     assert "clean a b c" in lines
 
 
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Adapter against a fake bridge peer (no VMD)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -229,6 +230,7 @@ def test_frame_or_atom_count_mismatch_refuses_sync(frames, atoms, needle):
         assert a.status()["last_command_applied"] is False
     finally:
         a.stop()
+    assert not a.runtime_dir.exists()               # no log was written: nothing kept
 
 
 def test_disconnect_and_commands_before_ready():
@@ -400,6 +402,9 @@ def test_real_vmd_unexpected_exit_is_reported(tmp_path):
         assert a.wait_ready(120)
         _console(a, "quit")
         assert wait(lambda: a.state == "disconnected", 20)
+        # reaped when the bridge closed (no zombie until SimForge stops)
+        assert wait(lambda: a._proc.returncode is not None, 15)
+        assert "VMD exited (code 0)" in a.reason
         a.goto_frame(3, 99)
         assert a.status()["last_command_applied"] is False
     finally:
@@ -490,3 +495,23 @@ def test_cli_serve_with_vmd_and_clean_interrupt(tmp_path):
         p.send_signal(signal.SIGINT)
         assert p.wait(timeout=30) == 0
     assert wait(lambda: not (_vmd_bridge_pids() - before), 10)          # no orphan VMD
+
+
+
+def test_vmd_is_not_launched_when_the_trajectory_cannot_fit_in_memory(monkeypatch):
+    from analysis.review.runtime import vmd as vmdmod
+    gb = 1024 ** 3
+    # HMG-CoA-R + A1: 284,597 atoms × 20,001 frames ≈ 64 GB of coordinates
+    why = vmdmod.vmd_memory_check(284597, 20001, available=44 * gb)
+    assert why and "about 64 GB" in why and "44 GB" in why and "dashboard works" in why
+    assert vmdmod.vmd_memory_check(283331, 51, available=44 * gb) is None      # GLP-1R: fine
+    assert vmdmod.vmd_memory_check(None, 20001, available=1) is None           # unknown: no guess
+    monkeypatch.setattr(vmdmod, "mem_available_bytes", lambda: 1 * gb)
+    a = adapter(frames=100000, atoms=100000)
+    a.launch = True
+    a.start({})
+    try:
+        assert a.state == "error" and "not launching VMD" in a.reason
+        assert a._proc is None                                                  # nothing started
+    finally:
+        a.stop()
