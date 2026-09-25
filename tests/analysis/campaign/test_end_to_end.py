@@ -56,7 +56,10 @@ def test_second_run_reuses_cached_trajectory_view(two_replicate_study):
     mtime_after_first = whole.stat().st_mtime_ns
 
     clear_view_cache()          # drop the in-process cache; disk cache remains
-    res2 = run_analyze(two_replicate_study, ["rmsd-receptor"], inspect_trajectories=True)
+    # reuse=False: this checks view reuse during a recomputation (Phase 8 would
+    # otherwise reuse the whole result)
+    res2 = run_analyze(two_replicate_study, ["rmsd-receptor"], inspect_trajectories=True,
+                       reuse=False)
 
     prov = json.loads(Path(res2.results[0].provenance_path).read_text())
     assert prov["trajectory_view"]["reused"] is True

@@ -1816,6 +1816,9 @@ class AnalysisResult:
     arrays: list[ResultArray] = field(default_factory=list)
     definition_token: Optional[str] = None
     definition_evidence: dict[str, Any] = field(default_factory=dict)
+    # ── Phase 8: reuse (CACHED results reference, never copy, the original) ─
+    reused_from: Optional[dict[str, Any]] = None
+    compatibility: Optional[dict[str, Any]] = None
 
     def to_dict(self) -> dict:
         return {
@@ -1837,6 +1840,8 @@ class AnalysisResult:
             "arrays": [a.to_dict() for a in self.arrays],
             "definition_token": self.definition_token,
             "definition_evidence": self.definition_evidence,
+            "reused_from": self.reused_from,
+            "compatibility": self.compatibility,
         }
 
     @classmethod
@@ -1859,6 +1864,8 @@ class AnalysisResult:
             arrays=[ResultArray.from_dict(a) for a in d.get("arrays", [])],
             definition_token=d.get("definition_token"),
             definition_evidence=dict(d.get("definition_evidence", {})),
+            reused_from=d.get("reused_from"),
+            compatibility=d.get("compatibility"),
         )
 
 

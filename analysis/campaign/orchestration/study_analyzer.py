@@ -100,6 +100,9 @@ def run_analyze(
     policy_intent=None,
     diagnostics="auto",
     diagnostics_cache_dir: Optional[str | Path] = None,
+    reuse: bool = True,
+    reuse_roots: Optional[list] = None,
+    use_imported: Optional[dict] = None,
 ) -> CampaignRunResult:
     """Discover/validate, then run the requested observables per system.
 
@@ -108,6 +111,12 @@ def run_analyze(
     ``"off"`` supplies none (policy stays conservative); a ``DiagnosticReport``
     (or ``{system_id: report}``) is used after validating it against the
     system's trajectory and semantic groups.
+
+    ``reuse`` (Phase 8): before computing, stored native results under this
+    output root (and ``reuse_roots``) are checked for scientific compatibility;
+    a fully compatible one is returned as CACHED without running GROMACS.
+    ``use_imported``: ``{analysis_id: ResultArray}`` explicitly chosen
+    external series — labelled externally supplied, never verified equivalent.
     """
     registry.ensure_loaded()
     study_root = Path(study_root).resolve()
@@ -173,6 +182,20 @@ def run_analyze(
                     message=st.reason + " | " + st.remediation))
                 continue
 
+            if use_imported and analysis_id in use_imported:
+                result.results.append(_explicit_import(spec, rec, use_imported[analysis_id]))
+                continue
+            tic = _time_index_cache(sys_out, diag_ref, diagnostics_cache_dir)
+            evaluated: list = []
+            if reuse and not dry_run and not force:
+                cached, evaluated = _try_reuse(
+                    spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters,
+                    policy_intent, diag_report, diag_ref, tic, reuse_roots or [])
+                if cached is not None:
+                    result.results.append(cached)
+                    result.output_files.extend(cached.output_files)
+                    continue
+
             req = spec.trajectory_requirements(parameters)
             view = _resolve_view(rec, req, sys_out, gmx, force, result, dry_run=dry_run,
                                  purpose=spec.purpose, intent=policy_intent,
@@ -187,7 +210,7 @@ def run_analyze(
                 parameters=parameters,
                 gmx=gmx,
                 dry_run=dry_run,
-                time_index_cache_dir=_time_index_cache(sys_out, diag_ref, diagnostics_cache_dir),
+                time_index_cache_dir=tic,
             )
             try:
                 ares = spec.execute(ctx)
@@ -200,6 +223,9 @@ def run_analyze(
                     "observable_exception", ares.message, Severity.ERROR, scope=rec.system_id))
 
             ares.trajectory_view_kind = view.kind
+            if evaluated:
+                ares.compatibility = {"decision": "recomputed",
+                                      "evaluated": [e.to_dict() for e in evaluated]}
             if ares.status in (AnalysisStatus.SUCCESS, AnalysisStatus.PLANNED,
                                AnalysisStatus.FAILED):
                 prov = build_observable_provenance(
@@ -315,6 +341,104 @@ def clear_view_cache() -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 DIAGNOSTICS_DIRNAME = "diagnostics"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Phase 8 — reuse of scientifically compatible results
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _requested_timeline(view, tic: Path, gmx: str) -> Optional[list[float]]:
+    """The planned view's frame times from an existing Phase 1 cache (no scan)."""
+    from analysis.campaign.gmx import gmx_version
+    from analysis.campaign.trajectory.time_index import GromacsTimeIndexBackend, load_cached_index
+    if not view.path or not Path(view.path).is_file():
+        return None
+    backend = GromacsTimeIndexBackend(gmx)
+    for cache in (tic, Path(view.path).parent.parent / "time_index"):
+        idx = load_cached_index(view.path, cache_dir=cache, backend_id=backend.id,
+                                backend_version=gmx_version(gmx))
+        if idx is not None:
+            return list(idx.times_ps)
+    return None
+
+
+def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, intent,
+               diag_report, diag_ref, tic, extra_roots):
+    """(CACHED result | None, evaluations).  Order: current applicability ->
+    candidates -> policy-planned view identity (no build) -> definition
+    evidence -> per-dimension compatibility."""
+    from analysis.campaign.compatibility import (
+        definition_identity, discover_candidates, resolve_compatible_result,
+    )
+    if not spec.applicability(rec, parameters, rec.semantic_index)["applicable"]:
+        return None, []                                  # current state decides first
+    candidates = []
+    for root in [out_dir, *extra_roots]:
+        candidates += discover_candidates(root, rec.system_id, spec.id, current_dir=obs_out)
+    if not candidates:
+        return None, []
+    planned = _resolve_view(rec, spec.trajectory_requirements(parameters), sys_out, gmx, False,
+                            result, dry_run=True, purpose=spec.purpose, intent=intent,
+                            diagnostics=diag_report, diagnostics_ref=diag_ref)
+    if not planned.safe or not planned.cache_key:
+        return None, []                                  # the current policy blocks it
+    ctx = AnalysisContext(system=rec, semantic_index=rec.semantic_index, trajectory_view=planned,
+                          topology_path=rec.topology_path or (rec.structure_path or ""),
+                          structure_path=rec.structure_path, output_dir=obs_out,
+                          parameters=parameters, gmx=gmx, dry_run=True, time_index_cache_dir=tic)
+    evidence = spec.definition_evidence(ctx)
+    if evidence is None:
+        return None, []
+    from analysis.campaign.observables.generic import _params
+    chosen, reports = resolve_compatible_result(
+        candidates, requested_evidence=evidence, requested_view_ref=planned.cache_key,
+        requested_schema=spec.output_schema(_params(parameters, spec.id)),
+        requested_timeline=_requested_timeline(planned, tic, gmx),
+        view_invariant=spec.view_invariant)
+    if chosen is None:
+        return None, reports
+    orig = chosen.candidate.result
+    cached = AnalysisResult.from_dict(orig.to_dict())     # a new record; the stored one is untouched
+    cached.status = AnalysisStatus.CACHED
+    cached.cached = True
+    cached.message = f"reused compatible result ({chosen.candidate.source})"
+    cached.provenance_path = chosen.candidate.source
+    cached.reused_from = {"provenance": chosen.candidate.source,
+                          "definition_token": orig.definition_token,
+                          "definition_identity": definition_identity(orig.definition_evidence),
+                          "original_status": orig.status}
+    cached.compatibility = {"decision": "reused", "chosen": chosen.to_dict(),
+                            "evaluated": [r.to_dict() for r in reports]}
+    obs_out.mkdir(parents=True, exist_ok=True)
+    record = obs_out / "reuse.json"                        # never overwrites provenance.json
+    record.write_text(json.dumps({"resolver": chosen.resolver, "reused": cached.reused_from,
+                                  "compatibility": cached.compatibility,
+                                  "requested_definition_identity": definition_identity(evidence)},
+                                 indent=2) + "\n")
+    cached.output_files = [a.storage.path for a in cached.arrays if a.storage] + [str(record.resolve())]
+    return cached, reports
+
+
+def _explicit_import(spec, rec, array) -> AnalysisResult:
+    """A user-chosen external series: labelled, integrity-checked, never 'equivalent'."""
+    from analysis.campaign.compatibility import Candidate, ProvenanceTier, evaluate, storage_integrity
+    res = AnalysisResult(analysis_id=spec.id, system_id=rec.system_id,
+                         status=AnalysisStatus.CACHED, cached=True, arrays=[array])
+    ok, why = storage_integrity(res)
+    if not ok:
+        res.status = AnalysisStatus.REVIEW_REQUIRED
+        res.arrays = []
+        res.message = f"explicitly imported series not usable: {why}"
+        return res
+    report = evaluate(Candidate(source=array.storage.path, tier=ProvenanceTier.DECLARED, result=res),
+                      requested_evidence=None, requested_view_ref=None,
+                      requested_schema=spec.output_schema({}))
+    res.message = ("EXPLICIT IMPORT: externally supplied series chosen by the user — "
+                   "definition not independently verified")
+    res.reused_from = {"external_file": array.storage.path,
+                       "fingerprint": array.storage.fingerprint.digest, "user_selected": True}
+    res.compatibility = {"decision": "explicit_import", "chosen": report.to_dict()}
+    return res
 
 
 def _time_index_cache(sys_out: Path, diag_ref: Optional[dict], cache_dir) -> Path:

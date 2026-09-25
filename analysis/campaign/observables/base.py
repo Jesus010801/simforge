@@ -69,6 +69,9 @@ class ObservableSpec:
     #: ids of persistent annotations this observable is defined on (Phase 6);
     #: their identities belong in its definition evidence
     required_annotations: tuple[str, ...] = ()
+    #: Phase 8: True only if results on *different* coordinate views are
+    #: scientifically interchangeable for this observable.  Never assumed.
+    view_invariant: bool = False
 
     def parameters_schema(self) -> dict:
         return {}
