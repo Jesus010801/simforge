@@ -346,6 +346,7 @@ def test_identical_request_reuses_session_and_results(glp, monkeypatch):
     assert again.reused_session and again.dataset.session_id == prep.dataset.session_id
     forced = _prepare(run, force=True)                   # re-prepare: Phase 8 reuse, no gmx
     assert not forced.reused_session and forced.dataset.session_id == prep.dataset.session_id
+    assert len(forced.dataset.available()) == 3                 # not vacuous
     for o in forced.dataset.available():
         assert o.availability == "cached" and o.reuse["decision"] == "reused"
     # reopening needs no discovery / analysis at all

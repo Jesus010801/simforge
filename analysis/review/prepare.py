@@ -513,7 +513,7 @@ def _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root,
     dview, dw = plan_view(rec, request.display.requirements(), sys_dir,
                           purpose=ObservablePurpose.DISPLAY,
                           intent=request.display.policy_intent(), diagnostics=report,
-                          diagnostics_ref=diag_ref, gmx=gmx, dry_run=dry_run, force=force)
+                          diagnostics_ref=diag_ref, gmx=gmx, dry_run=dry_run)
     display = _display_record(dview, request, refs, dry_run)
 
     # observable instances
@@ -650,7 +650,9 @@ def _run_instance(req, rec, study_root, analysis_root, review_root, work, manife
     inst = (work / "instances" / key) if dry_run else real_inst
     roots = ([real_inst] if dry_run else []) + [analysis_root, *map(Path, reuse_from)]
     res = run_analyze(study_root, [req.observable], output_dir=inst, manifest_path=manifest_path,
-                      gmx=gmx, inspect_trajectories=False, dry_run=dry_run, force=force,
+                      # --force re-prepares the *session*; validated views and compatible
+                      # results are still reused (--no-reuse is the way to recompute)
+                      gmx=gmx, inspect_trajectories=False, dry_run=dry_run,
                       parameters=params, diagnostics="auto", diagnostics_cache_dir=cache,
                       reuse=reuse, reuse_roots=roots)
     ares = next((r for r in res.results if r.system_id == rec.system_id), None)
