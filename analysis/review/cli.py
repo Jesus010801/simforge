@@ -78,7 +78,11 @@ def review_fn(
     no_browser: Annotated[bool, typer.Option("--no-browser",
         help="With --serve: do not open a browser; just print the URL.")] = False,
     viewer: Annotated[str, typer.Option("--viewer",
-        help="With --serve: viewer adapter (null | fake). No molecular viewer yet.")] = "null",
+        help="With --serve: viewer (null | fake | vmd).")] = "null",
+    vmd: Annotated[Optional[str], typer.Option("--vmd",
+        help="VMD executable (default: `vmd` on PATH).")] = None,
+    vmd_headless: Annotated[bool, typer.Option("--vmd-headless",
+        help="Run VMD in text mode (no graphics; testing / development).")] = False,
 ) -> None:
     """Prepare a reproducible trajectory review session (headless by default)."""
     from analysis.review.prepare import ReviewError, prepare_review
@@ -111,17 +115,27 @@ def review_fn(
     if strict and failures:
         raise typer.Exit(1)
     if serve:
-        _serve(prep.dataset_path, no_browser=no_browser, viewer=viewer)
+        _serve(prep.dataset_path, no_browser=no_browser, viewer=viewer, vmd=vmd,
+               vmd_headless=vmd_headless)
     raise typer.Exit(0)
 
 
 def _serve(dataset_path, *, no_browser: bool, viewer: str, host: str = "127.0.0.1",
-           port: int = 0) -> None:
+           port: int = 0, vmd: Optional[str] = None, vmd_headless: bool = False) -> None:
     from analysis.review.runtime.server import ReviewServeError, ReviewServer, serve_forever
-    from analysis.review.runtime.viewer import make_viewer
+    from analysis.review.runtime.vmd import VMDError
+    opts = {"vmd": vmd, "headless": vmd_headless} if viewer == "vmd" else {}
+    if viewer == "vmd":
+        from analysis.review.runtime.vmd import find_vmd
+        try:
+            find_vmd(vmd)                        # actionable error before anything starts
+        except VMDError as exc:
+            _console.print(f"[red]Error:[/red] {exc}")
+            raise typer.Exit(1)
     try:
-        server = ReviewServer(dataset_path, host=host, port=port, viewer=make_viewer(viewer))
-    except (ReviewServeError, ValueError) as exc:
+        server = ReviewServer(dataset_path, host=host, port=port, viewer=viewer,
+                              viewer_options=opts)
+    except (ReviewServeError, VMDError, ValueError) as exc:
         _console.print(f"[red]Refusing to serve:[/red] {exc}")
         raise typer.Exit(1)
     serve_forever(server, open_browser=not no_browser,
@@ -136,7 +150,11 @@ def serve_fn(
         help="Bind address (default loopback only).")] = "127.0.0.1",
     port: Annotated[int, typer.Option("--port", help="Port (0 = any free port).")] = 0,
     viewer: Annotated[str, typer.Option("--viewer",
-        help="Viewer adapter: null (default) | fake. No molecular viewer yet.")] = "null",
+        help="Viewer: null (default) | fake | vmd (loads the session's display trajectory).")] = "null",
+    vmd: Annotated[Optional[str], typer.Option("--vmd",
+        help="VMD executable (default: `vmd` on PATH; nothing else is searched).")] = None,
+    vmd_headless: Annotated[bool, typer.Option("--vmd-headless",
+        help="Run VMD in text mode (no graphics; testing / development).")] = False,
 ) -> None:
     """Serve an already prepared, valid review session on a local dashboard.
 
@@ -145,7 +163,8 @@ def serve_fn(
     if host not in ("127.0.0.1", "localhost", "::1"):
         _console.print(f"[yellow]warning:[/yellow] binding to {host} exposes the session "
                        f"beyond this machine (token still required)")
-    _serve(dataset, no_browser=no_browser, viewer=viewer, host=host, port=port)
+    _serve(dataset, no_browser=no_browser, viewer=viewer, host=host, port=port, vmd=vmd,
+           vmd_headless=vmd_headless)
 
 
 _STATE_STYLE = {"available": "green", "planned": "cyan", "not_applicable": "dim",

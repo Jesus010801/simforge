@@ -94,7 +94,8 @@ class _HTTPServer(ThreadingHTTPServer):
 
 class ReviewServer:
     def __init__(self, dataset_path: str | Path, *, host: str = "127.0.0.1", port: int = 0,
-                 viewer=None, min_interval: float = 0.05, clock=time.monotonic):
+                 viewer=None, viewer_options: Optional[dict] = None,
+                 min_interval: float = 0.05, clock=time.monotonic):
         from analysis.review.sync import ReviewTimeline
         from analysis.review.validate import _dataset_file, open_review_session
         f = _dataset_file(dataset_path)
@@ -113,6 +114,10 @@ class ReviewServer:
         self.dataset, self.session_dir = ds, f.parent
         self.timeline = ReviewTimeline.from_dataset(ds, self.session_dir)
         self.catalog = ResultCatalog(ds, self.session_dir, self.timeline)
+        if isinstance(viewer, str):
+            from analysis.review.runtime.viewer import make_viewer
+            viewer = make_viewer(viewer, dataset=ds, session_dir=self.session_dir,
+                                 **(viewer_options or {}))
         self.viewer = viewer or NullViewerAdapter()
         self.hub = SyncHub(self.timeline, ds.session_id, viewer=self.viewer)
         self.host, self.port = host, port
@@ -135,7 +140,8 @@ class ReviewServer:
                                         name=f"simforge-review-{self.port}")
         self._thread.start()
         self.viewer.start({"session_id": self.dataset.session_id,
-                           "n_frames": self.timeline.n_frames})
+                           "n_frames": self.timeline.n_frames,
+                           "current_frame": lambda: self.hub.frame})
         return self
 
     def stop(self) -> None:
@@ -280,8 +286,10 @@ class _Handler(BaseHTTPRequestHandler):
                 ev = hub.set_time(body.get("time_ps"), origin=Origin.BROWSER, client_event_id=cid)
         except SyncError as exc:
             return self._error(HTTPStatus.BAD_REQUEST, str(exc))
+        # the hub state changed; whether a viewer applied it is reported separately
         return self._json(HTTPStatus.OK, {"event": ev.to_dict() if ev else None,
-                                          "state": hub.state()})
+                                          "state": hub.state(),
+                                          "viewer": self.review.viewer.status()})
 
     def do_PUT(self):
         self._error(HTTPStatus.METHOD_NOT_ALLOWED, "method not allowed")
@@ -336,8 +344,17 @@ def serve_forever(server: ReviewServer, *, open_browser: bool = True, echo=print
                 echo("(no browser could be opened; open the URL manually)")
         except Exception as exc:  # noqa: BLE001 — convenience only
             echo(f"(browser launch failed: {exc}; open the URL manually)")
+    last = None
     try:
         while True:
+            st = server.viewer.status()
+            key = (st.get("state"), st.get("reason"))
+            if st.get("state") and key != last:          # viewer lifecycle is reported, the
+                last = key                                # dashboard keeps running regardless
+                detail = (f" ({st.get('numframes')} frames, {st.get('numatoms')} atoms, "
+                          f"VMD {st.get('version')})" if st.get("state") == "ready" else "")
+                echo(f"viewer {st.get('kind')}: {st.get('state')}{detail}"
+                     + (f" — {st['reason']}" if st.get("reason") else ""))
             time.sleep(0.5)
     except KeyboardInterrupt:
         echo("stopping…")

@@ -14,6 +14,10 @@ and remembers it as the *pending viewer command*.  A later viewer report is:
   cannot echo sequences) reports exactly the pending frame — → consumed, no
   new event;
 * a **no-op** — it reports the frame the hub already holds → no new event;
+* **stale** — the viewer declares ``acknowledges = True`` (it reports in
+  order and acks every command) and an un-acked report arrives while a
+  command is outstanding: it was emitted before the viewer processed the
+  command (e.g. playback frames in flight) → no new event;
 * an **independent move** otherwise → a new ``viewer`` event, which is
   never sent back to the viewer.
 
@@ -159,6 +163,12 @@ class SyncHub:
             if ack_sequence is not None and ack_sequence < self._sequence:
                 self.suppressed += 1
                 return None                                  # acknowledges a superseded command
+            if (pending is not None and ack_sequence is None
+                    and getattr(self.viewer, "acknowledges", False)):
+                # an acknowledging viewer reports in order: an un-acked report
+                # while our command is outstanding was emitted *before* it
+                self.suppressed += 1
+                return None
             t, dups = self.resolve_frame(frame)
             return self._apply(Origin.VIEWER, frame, t, MappingStatus.FRAME,
                                requested_frame=frame, duplicate_frames=dups)

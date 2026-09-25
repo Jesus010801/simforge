@@ -43,13 +43,23 @@ function flushFrame() {
   if (pendingFrame === null) return;
   const f = pendingFrame; pendingFrame = null;
   api("/api/sync/frame", { frame: f, client_event_id: "b" + (++clientSeq) })
-    .then((r) => r.event && showMapping(r.event)).catch((e) => showError(e));
+    .then((r) => { showViewer(r.viewer); if (r.event) showMapping(r.event); }).catch((e) => showError(e));
 }
 function requestTime(t) {
   api("/api/sync/time", { time_ps: t, client_event_id: "b" + (++clientSeq) })
-    .then((r) => r.event && showMapping(r.event)).catch((e) => showError(e));
+    .then((r) => { showViewer(r.viewer); if (r.event) showMapping(r.event); }).catch((e) => showError(e));
 }
 function showError(e) { $("mapping").textContent = "⚠ " + e.message; }
+function showViewer(v) {
+  if (!v) return;
+  const st = v.state || (v.connected ? "connected" : "not connected");
+  let t = `viewer: ${v.kind} (${st})`;
+  if (v.kind === "vmd" && v.state === "ready") t += ` · VMD ${v.version} · ${v.numframes} frames`;
+  if (v.reason) t += ` — ${v.reason}`;
+  if (v.last_command && v.last_command_applied === false && v.state !== "ready")
+    t += " · last frame request NOT applied to the viewer";
+  $("viewer").textContent = t;
+}
 
 function showMapping(ev) {
   let t = `${ev.origin} → frame ${ev.frame} at ${ev.time_ps} ps (${ev.mapping_status})`;
@@ -246,7 +256,7 @@ async function main() {
   const tl = s.timeline;
   $("timeline").textContent = `${tl.n_frames} frames · ${tl.start_time_ps} → ${tl.end_time_ps} ps · timeline ${tl.state}` +
     (tl.n_duplicate_groups ? ` · ${tl.n_duplicate_groups} duplicate-time groups (kept)` : "");
-  $("viewer").textContent = `viewer: ${s.viewer.kind}${s.viewer.connected ? "" : " (not connected)"}`;
+  showViewer(s.viewer);
   const dv = s.display_view;
   $("display").textContent = `Displayed coordinates: ${dv.kind} (${dv.status}; purpose ${dv.purpose}; frames ${tl.display_relation})` +
     (dv.reason ? ` — ${dv.reason}` : "");
