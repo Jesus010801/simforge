@@ -2528,6 +2528,21 @@ def _show_temporal_events(synthesis) -> None:
     ))
 
 
+# ── Trajectory review sub-app (simforge trajectory review|review-observables) ──
+_trajectory_app = typer.Typer(
+    name="trajectory",
+    help="Trajectory review sessions (headless preparation; no viewer yet).",
+    no_args_is_help=True,
+)
+from analysis.review.cli import (  # noqa: E402
+    review_fn as _trajectory_review_fn,
+    review_observables_fn as _trajectory_review_observables_fn,
+)
+_trajectory_app.command(name="review")(_trajectory_review_fn)
+_trajectory_app.command(name="review-observables")(_trajectory_review_observables_fn)
+cli.add_typer(_trajectory_app)
+
+
 # ── Study-campaign sub-app (simforge study inspect|analyze|analyses) ─────────
 # `study` predates these as a flat command taking a positional <path>, so — like
 # `analyze md` — we keep it flat and intercept the sub-command tokens.

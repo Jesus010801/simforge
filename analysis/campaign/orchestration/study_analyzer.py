@@ -187,14 +187,19 @@ def run_analyze(
                 continue
             tic = _time_index_cache(sys_out, diag_ref, diagnostics_cache_dir)
             evaluated: list = []
-            if reuse and not dry_run and not force:
+            would_reuse = None
+            if reuse and not force:
+                # a dry run evaluates compatibility too (read-only) and reports
+                # the expected decision on its PLANNED result
                 cached, evaluated = _try_reuse(
                     spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters,
-                    policy_intent, diag_report, diag_ref, tic, reuse_roots or [])
-                if cached is not None:
+                    policy_intent, diag_report, diag_ref, tic, reuse_roots or [],
+                    write_record=not dry_run)
+                if cached is not None and not dry_run:
                     result.results.append(cached)
                     result.output_files.extend(cached.output_files)
                     continue
+                would_reuse = cached
 
             req = spec.trajectory_requirements(parameters)
             view = _resolve_view(rec, req, sys_out, gmx, force, result, dry_run=dry_run,
@@ -223,8 +228,11 @@ def run_analyze(
                     "observable_exception", ares.message, Severity.ERROR, scope=rec.system_id))
 
             ares.trajectory_view_kind = view.kind
-            if evaluated:
-                ares.compatibility = {"decision": "recomputed",
+            if would_reuse is not None:
+                ares.compatibility = {**would_reuse.compatibility, "decision": "would_reuse",
+                                      "reuse_from": would_reuse.reused_from}
+            elif evaluated:
+                ares.compatibility = {"decision": "would_recompute" if dry_run else "recomputed",
                                       "evaluated": [e.to_dict() for e in evaluated]}
             if ares.status in (AnalysisStatus.SUCCESS, AnalysisStatus.PLANNED,
                                AnalysisStatus.FAILED):
@@ -336,6 +344,38 @@ def clear_view_cache() -> None:
     _VIEW_CACHE.clear()
 
 
+# ── public single-system entry points (Phase 9 review preparation) ─────────────
+
+def prepare_system(rec: SystemRecord, sys_out: Path, *, gmx: str = "gmx", diagnostics="auto",
+                   cache_dir=None, dry_run: bool = False) -> tuple:
+    """Semantic index + diagnostics for one system, exactly as ``run_analyze``
+    does per system.  Returns ``(report | None, diagnostics_ref, warnings)``."""
+    from types import SimpleNamespace
+    sink = SimpleNamespace(warnings=[], output_files=[])
+    _ensure_semantic_index(rec, Path(sys_out), gmx, sink)
+    report, ref = _system_diagnostics(rec, Path(sys_out), gmx, sink, diagnostics=diagnostics,
+                                      dry_run=dry_run, cache_dir=cache_dir)
+    return report, ref, sink.warnings
+
+
+def plan_view(rec: SystemRecord, requirements, sys_out: Path, *, purpose: str, intent=None,
+              diagnostics=None, diagnostics_ref: Optional[dict] = None, gmx: str = "gmx",
+              dry_run: bool = False, force: bool = False) -> tuple:
+    """Policy-plan (and, unless ``dry_run``, build or reuse) one view.
+    Returns ``(TrajectoryView, warnings)``."""
+    from types import SimpleNamespace
+    sink = SimpleNamespace(warnings=[])
+    view = _resolve_view(rec, requirements, Path(sys_out), gmx, force, sink, dry_run=dry_run,
+                         purpose=purpose, intent=intent, diagnostics=diagnostics,
+                         diagnostics_ref=diagnostics_ref)
+    return view, sink.warnings
+
+
+def time_index_cache_dir(sys_out: Path, diagnostics_ref: Optional[dict], cache_dir=None) -> Path:
+    """The Phase 1 time-index cache observables of this system align against."""
+    return _time_index_cache(Path(sys_out), diagnostics_ref, cache_dir)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Diagnostics — once per system, handed to the (pure) policy
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -363,10 +403,11 @@ def _requested_timeline(view, tic: Path, gmx: str) -> Optional[list[float]]:
 
 
 def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, intent,
-               diag_report, diag_ref, tic, extra_roots):
+               diag_report, diag_ref, tic, extra_roots, *, write_record: bool = True):
     """(CACHED result | None, evaluations).  Order: current applicability ->
     candidates -> policy-planned view identity (no build) -> definition
-    evidence -> per-dimension compatibility."""
+    evidence -> per-dimension compatibility.  ``write_record=False`` (dry run)
+    evaluates only: nothing is written."""
     from analysis.campaign.compatibility import (
         definition_identity, discover_candidates, resolve_compatible_result,
     )
@@ -409,6 +450,8 @@ def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, in
                           "original_status": orig.status}
     cached.compatibility = {"decision": "reused", "chosen": chosen.to_dict(),
                             "evaluated": [r.to_dict() for r in reports]}
+    if not write_record:
+        return cached, reports
     obs_out.mkdir(parents=True, exist_ok=True)
     record = obs_out / "reuse.json"                        # never overwrites provenance.json
     record.write_text(json.dumps({"resolver": chosen.resolver, "reused": cached.reused_from,

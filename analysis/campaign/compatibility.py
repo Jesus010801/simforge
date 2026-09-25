@@ -334,6 +334,12 @@ def evaluate(candidate: Candidate, *, requested_evidence: Optional[dict],
     return res
 
 
+def same_time(a: float, b: float) -> bool:
+    """Two recorded timestamps denote the same frame time (printed-precision
+    tolerance: 1e-3 ps or float32 relative precision, whichever is larger)."""
+    return abs(a - b) <= max(1e-3, 6e-6 * abs(b))
+
+
 def _timeline_check(r: AnalysisResult, requested: Optional[list[float]]) -> CompatibilityCheck:
     """Exact sample match only (no slicing, no interpolation, order preserved)."""
     from analysis.campaign.results import read_column
@@ -355,7 +361,7 @@ def _timeline_check(r: AnalysisResult, requested: Optional[list[float]]) -> Comp
             return CompatibilityCheck("timeline", CheckOutcome.MISMATCH,
                                       f"{len(times)} samples vs {len(requested)} requested frames")
         bad = next((i for i, (a, b) in enumerate(zip(times, requested))
-                    if abs(a - b) > max(1e-3, 6e-6 * abs(b))), None)
+                    if not same_time(a, b)), None)
         if bad is not None:
             return CompatibilityCheck("timeline", CheckOutcome.MISMATCH,
                                       f"sample {bad}: {times[bad]} ps vs requested {requested[bad]} ps")
