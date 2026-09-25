@@ -464,3 +464,32 @@ def annotation_evidence(records: Iterable[AnnotationRecord], ann_id: str) -> Opt
         if r.annotation_id == ann_id:
             return r.evidence() if r.usable else None
     return None
+
+
+def evaluate_com_to_com_axis(axis: AnnotationRecord, com_series: dict, *, eps_nm: float = 1e-6):
+    """Evaluate an ACTIVE ``com_to_com`` axis from per-frame centres.
+
+    ``com_series`` maps annotation id -> (n_frames, 3) array (nm).  Returns
+    ``(vectors, lengths, unit_vectors)``; frames whose endpoints coincide keep
+    NaN unit vectors (undefined direction) — never silently normalised.
+    Pure: computing the centres is the caller's (observable's) job.
+    """
+    import numpy as np
+    if not axis.usable or axis.category != AnnotationCategory.AXIS:
+        raise ValueError(f"axis {axis.annotation_id!r} is not an ACTIVE axis annotation")
+    dfn = axis.definition.get("definition", {})
+    if dfn.get("type") != "com_to_com":
+        raise ValueError(f"axis {axis.annotation_id!r} is {dfn.get('type')!r}, not com_to_com")
+    a, b = dfn["from_annotation"], dfn["to_annotation"]
+    missing = [x for x in (a, b) if x not in com_series]
+    if missing:
+        raise ValueError(f"missing centre series for {missing}")
+    pa, pb = np.asarray(com_series[a], float), np.asarray(com_series[b], float)
+    if pa.shape != pb.shape:
+        raise ValueError("endpoint series have different shapes")
+    vec = pb - pa
+    length = np.linalg.norm(vec, axis=1)
+    unit = np.full_like(vec, np.nan)
+    ok = length > eps_nm
+    unit[ok] = vec[ok] / length[ok, None]
+    return vec, length, unit

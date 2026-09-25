@@ -187,6 +187,7 @@ def run_analyze(
                 parameters=parameters,
                 gmx=gmx,
                 dry_run=dry_run,
+                time_index_cache_dir=_time_index_cache(sys_out, diag_ref, diagnostics_cache_dir),
             )
             try:
                 ares = spec.execute(ctx)
@@ -314,6 +315,15 @@ def clear_view_cache() -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 DIAGNOSTICS_DIRNAME = "diagnostics"
+
+
+def _time_index_cache(sys_out: Path, diag_ref: Optional[dict], cache_dir) -> Path:
+    """The Phase 1 time-index cache the diagnostics pass used (so observables
+    align against an already-indexed timeline instead of rescanning)."""
+    probe = (diag_ref or {}).get("probe_cache")
+    base = Path(probe) if probe else (Path(cache_dir) if cache_dir
+                                      else sys_out / DIAGNOSTICS_DIRNAME / "cache")
+    return base / "time_index"
 
 
 def _system_diagnostics(rec, sys_out: Path, gmx: str, result: CampaignRunResult, *,

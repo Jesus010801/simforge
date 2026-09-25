@@ -32,6 +32,8 @@ class AnalysisContext:
     parameters: dict
     gmx: str = "gmx"
     dry_run: bool = False
+    #: Phase 1 time-index cache shared with the diagnostics pass (timeline reuse)
+    time_index_cache_dir: Optional[Path] = None
 
 
 @runtime_checkable
@@ -70,6 +72,26 @@ class ObservableSpec:
 
     def parameters_schema(self) -> dict:
         return {}
+
+    def applicability(self, system: SystemRecord, params: Optional[dict] = None,
+                      semantic_index: Optional[SemanticIndex] = None) -> dict:
+        """Can this observable run on ``system``?  Never executes anything.
+
+        ``{"applicable": bool, "reasons": [...], "missing_components": [...],
+        "missing_annotations": [...]}`` — enough for a later capability listing.
+        """
+        from analysis.campaign.annotations import annotation_evidence
+        from analysis.campaign.models import ClassificationState
+        miss_c = [c for c in self.required_components
+                  if not any(x.component_type == c and
+                             x.classification_state == ClassificationState.RESOLVED
+                             for x in system.components)]
+        miss_a = [a for a in self.required_annotations
+                  if annotation_evidence(system.annotations, a) is None]
+        reasons = ([f"component '{c}' not RESOLVED" for c in miss_c]
+                   + [f"annotation '{a}' not ACTIVE" for a in miss_a])
+        return {"applicable": not reasons, "reasons": reasons,
+                "missing_components": miss_c, "missing_annotations": miss_a}
 
     def annotation_evidence(self, ctx: "AnalysisContext") -> Optional[dict]:
         """``{id: evidence}`` for ``required_annotations`` — None if any is

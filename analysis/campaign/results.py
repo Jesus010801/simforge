@@ -123,3 +123,55 @@ def _read_csv_column(path: Path, column: int) -> list[float]:
             except IndexError:
                 raise ValueError(f"{path.name}: column {column} out of range") from None
     return out
+
+
+_GRACE_MARKUP = {"\\S2\\N": "^2", "\\S3\\N": "^3", "\\S-1\\N": "^-1"}
+
+
+def normalize_unit(unit: Optional[str]) -> Optional[str]:
+    """Normalise xmgrace markup in a unit label (``nm\\S2\\N`` → ``nm^2``)."""
+    if not unit:
+        return None
+    for k, v in _GRACE_MARKUP.items():
+        unit = unit.replace(k, v)
+    return unit.strip() or None
+
+
+def import_external_series(path: str | Path, *, quantity: str, unit: str, time_unit: str,
+                           value_column: int = 1, fmt: Optional[str] = None,
+                           description: str = "") -> "ResultArray":
+    """Explicitly declare an existing XVG/CSV series as a ResultArray.
+
+    Meaning comes only from the caller's declaration — never from the filename.
+    A unit/time unit that contradicts the file header is refused.  The result is
+    marked externally supplied, is fingerprinted, and is never reused
+    automatically (compatibility is a separate, later decision).
+    """
+    from analysis.campaign.fingerprint import fingerprint_file
+    from analysis.campaign.models import Axis, AxisKind, MissingSemantics, ResultArray
+    p = Path(path)
+    if not p.is_file():
+        raise FileNotFoundError(p)
+    fmt = fmt or p.suffix.lower().lstrip(".")
+    if fmt not in (StorageFormat.XVG, StorageFormat.CSV):
+        raise ValueError(f"unsupported format {fmt!r} (xvg or csv)")
+    header = {"x": None, "y": None}
+    if fmt == StorageFormat.XVG:
+        x_unit, y_unit = xvg_units(p)
+        header = {"x": x_unit, "y": normalize_unit(y_unit)}
+        if header["x"] and header["x"] != time_unit:
+            raise ValueError(f"declared time unit {time_unit!r} contradicts the header ({header['x']!r})")
+        if header["y"] and header["y"] != unit:
+            raise ValueError(f"declared unit {unit!r} contradicts the header ({header['y']!r})")
+    values = StorageRef(path=str(p.resolve()), format=fmt, column=value_column,
+                        fingerprint=fingerprint_file(p))
+    read_column(values)                               # must be readable as declared
+    return ResultArray(
+        name=quantity, quantity=quantity, unit=unit,
+        axes=[Axis(name="time", kind=AxisKind.TIME, unit=time_unit,
+                   values_ref=StorageRef(path=str(p.resolve()), format=fmt, column=0),
+                   attrs={"unit_source": "xvg header" if header["x"] else "declared"})],
+        storage=values, missing=MissingSemantics.UNSPECIFIED,
+        attrs={"externally_supplied": True, "declared_by": "caller",
+               "unit_source": "xvg header" if header["y"] else "declared",
+               "description": description})

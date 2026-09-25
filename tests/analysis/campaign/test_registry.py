@@ -8,11 +8,13 @@ from analysis.campaign.observables import registry
 from analysis.campaign.observables.base import ObservableSpec
 
 _BUILTINS = [
+    "com-distance", "hbond-count", "min-distance", "rg",
     "rmsd-complex", "rmsd-peptide-intrinsic", "rmsd-peptide-receptor-frame", "rmsd-receptor",
+    "sasa",
 ]
 
 
-def test_ids_are_the_four_builtins_sorted():
+def test_ids_are_the_builtins_sorted():
     assert registry.ids() == _BUILTINS
 
 

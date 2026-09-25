@@ -65,6 +65,8 @@ def _load_builtins() -> None:
     # unlike a one-shot import side-effect.
     from analysis.campaign.observables.rmsd import register_builtins
     register_builtins()
+    from analysis.campaign.observables.generic import register_builtins as register_generic
+    register_generic()
 
 
 def ensure_loaded() -> None:

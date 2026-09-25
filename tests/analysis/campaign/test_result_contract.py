@@ -222,7 +222,7 @@ def test_observable_spec_defaults_are_inert():
 
 
 def test_rmsd_specs_declare_output_schema_and_purpose():
-    for spec in registry.all_specs():
+    for spec in [s for s in registry.all_specs() if s.id.startswith("rmsd-")]:
         (arr,) = spec.output_schema()
         assert arr.quantity == "rmsd" and arr.unit == "nm" and not arr.realised
         assert arr.axis_signature() == ("time",) and arr.axes[0].unit == "ps"

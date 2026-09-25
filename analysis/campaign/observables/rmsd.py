@@ -134,7 +134,10 @@ class _RmsdBase(ObservableSpec):
             "trajectory_view": {"kind": view.kind, "cache_key": view.cache_key},
             "backend": {"tool": "gmx rms", "version": gmx_version(ctx.gmx),
                         "flags": ["-tu", "ps"] + (["-nofit"] if self.use_prefit_view else [])},
-            "parameters": dict(ctx.parameters or {}),
+            # flat parameters only: per-observable blocks ({"rg": {...}}) belong to
+            # other observables and must not change this definition
+            "parameters": {k: v for k, v in (ctx.parameters or {}).items()
+                           if not isinstance(v, dict)},
         }
 
     def _result_array(self, ctx: AnalysisContext, xvg: Path, token) -> ResultArray:

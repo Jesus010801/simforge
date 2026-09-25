@@ -53,6 +53,8 @@ def test_analyses_json():
     assert {e["id"] for e in data} == {
         "rmsd-receptor", "rmsd-complex", "rmsd-peptide-intrinsic",
         "rmsd-peptide-receptor-frame",
+        # Phase 7 generic observables
+        "rg", "sasa", "com-distance", "min-distance", "hbond-count",
     }
 
 
