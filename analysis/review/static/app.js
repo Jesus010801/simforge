@@ -220,7 +220,20 @@ function panelFor(desc) {
 }
 
 // ── side panels (stored text only) ──────────────────────────────────────────
+function renderProfile(p) {
+  const d = $("profile");
+  if (!p) { d.append(el("div", "muted", "none — explicit requests only")); return; }
+  const h = el("div"); h.append(el("b", null, `${p.id} v${p.version} `), badge(p.status));
+  d.append(h, el("div", "muted", `${p.source} · definition ${p.definition_identity.slice(0, 12)} · display from ${p.overrides.display_source}`));
+  for (const r of p.requirements) d.append(el("div", "muted", `${r.ok ? "✓" : "✗"} ${r.requirement} ${r.component}${r.reason ? " — " + r.reason : ""}`));
+  for (const o of p.optional) d.append(el("div", "muted", o.outcome === "included"
+    ? `optional included: ${o.instance_id}` : `optional ${o.outcome}: ${o.request} — ${o.reason}`));
+  if (p.overrides.added.length || p.overrides.hidden.length)
+    d.append(el("div", "muted", `user added: ${p.overrides.added.join(", ") || "—"} · hidden: ${p.overrides.hidden.join(", ") || "—"}`));
+}
+
 function renderSide(s) {
+  renderProfile(s.profile);
   const b = $("blocked");
   if (!s.blocked.length) b.append(el("div", "muted", "none — every requested observable is available"));
   for (const o of s.blocked) {
@@ -252,7 +265,8 @@ function renderSide(s) {
 async function main() {
   const s = await api("/api/session");
   state.session = s; state.times = s.timeline.times_ps;
-  $("identity").textContent = `session ${s.session_id} · system ${s.system.system_id} · ${s.sources.trajectory || ""}`;
+  $("identity").textContent = `session ${s.session_id} · system ${s.system.system_id}` +
+    (s.profile ? ` · profile ${s.profile.id} v${s.profile.version}` : "") + ` · ${s.sources.trajectory || ""}`;
   const tl = s.timeline;
   $("timeline").textContent = `${tl.n_frames} frames · ${tl.start_time_ps} → ${tl.end_time_ps} ps · timeline ${tl.state}` +
     (tl.n_duplicate_groups ? ` · ${tl.n_duplicate_groups} duplicate-time groups (kept)` : "");

@@ -268,4 +268,8 @@ def session_payload(ds, timeline, catalog: ResultCatalog, viewer_status: dict) -
                     for o in ds.observables if not o.available],
         "summary": ds.summary(),
         "viewer": viewer_status,
+        # provenance only: why the session was configured this way (never drives rendering)
+        "profile": ({k: (ds.provenance.get("profile") or {}).get(k) for k in (
+            "id", "version", "source", "status", "definition_identity", "requirements",
+            "optional", "overrides")} if (ds.provenance or {}).get("profile") else None),
     }

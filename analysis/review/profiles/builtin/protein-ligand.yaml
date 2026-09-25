@@ -1,0 +1,36 @@
+schema: simforge/review-profile/v1
+id: protein-ligand
+version: 1
+description: >
+  Protein + small-molecule ligand, generic geometry only. Distances and
+  hydrogen bonds are measured against the WHOLE receptor component (every
+  receptor chain) — geometrically exact, biologically coarse for oligomers;
+  they are not binding-site metrics. Site-level requests appear only for an
+  ACTIVE annotation that is explicitly declared.
+display: raw
+requirements:
+  components: [receptor, ligand]
+observables:
+  - observable: rg
+    parameters: {selection: "component:receptor"}
+  - observable: rg
+    parameters: {selection: "component:ligand"}
+  - observable: com-distance
+    parameters: {selection_a: "component:ligand", selection_b: "component:receptor"}
+  - observable: min-distance
+    parameters: {selection_a: "component:ligand", selection_b: "component:receptor"}
+  - observable: hbond-count
+    parameters: {selection_a: "component:ligand", selection_b: "component:receptor"}
+optional_observables:
+  - when: {annotation: selected_subunit}
+    observable: rg
+    parameters: {selection: "annotation:selected_subunit"}
+  - when: {annotation: selected_subunit}
+    observable: com-distance
+    parameters: {selection_a: "component:ligand", selection_b: "annotation:selected_subunit"}
+  - when: {annotation_kind: binding_site}
+    observable: min-distance
+    parameters: {selection_a: "component:ligand", selection_b: "annotation:{match}"}
+  - when: {annotation_kind: binding_site}
+    observable: com-distance
+    parameters: {selection_a: "component:ligand", selection_b: "annotation:{match}"}

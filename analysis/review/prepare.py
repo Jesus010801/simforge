@@ -147,8 +147,12 @@ def _select_system(manifest: StudyManifest, system_id: Optional[str]) -> SystemR
 # Identity
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def session_identity_evidence(rec: SystemRecord, request: ReviewRequest) -> dict:
-    """Scientific inputs only — never paths, output location, time or process."""
+def session_identity_evidence(rec: SystemRecord, request: ReviewRequest,
+                              profile_identity: Optional[str] = None) -> dict:
+    """Scientific inputs only — never paths, output location, time or process.
+
+    With a profile, its definition identity (content, not path or wording) is
+    added so the session records exactly which profile version produced it."""
     from analysis.campaign.results import atom_set_hash
     from analysis.campaign.trajectory.policy import RULE_VERSION
     comps = sorted(
@@ -168,7 +172,14 @@ def session_identity_evidence(rec: SystemRecord, request: ReviewRequest) -> dict
                               for o in request.observables),
         "policy_rule_version": RULE_VERSION,
         "window": None, "stride": None,
-    }
+    } | ({"profile": profile_identity} if profile_identity else {})
+
+
+def resolved_request_identity(request: ReviewRequest) -> str:
+    from analysis.campaign.results import definition_token
+    return definition_token({"observables": sorted([o.observable, sorted(o.params.items())]
+                                                   for o in request.observables),
+                             "display": request.display.to_dict()})
 
 
 def instance_key(req: ObservableRequest) -> str:
@@ -416,8 +427,12 @@ def prepare_review(
     topology=None, structure=None, index=None, manifest: Optional[str] = None,
     system: Optional[str] = None, output=None, reuse: bool = True,
     reuse_from: tuple = (), cache_dir=None, dry_run: bool = False, force: bool = False,
-    gmx: str = "gmx",
+    gmx: str = "gmx", profile=None, hide: tuple = (),
 ) -> Preparation:
+    """``profile`` (a composed :class:`ReviewProfile`) is resolved against the
+    selected system into ordinary observable instances, merged with the
+    explicit ``request`` (user display wins; ``hide`` removes profile
+    requests), then prepared exactly like any other request."""
     from analysis.campaign.manifest import build_manifest, load_manifest
     from analysis.campaign.results import definition_token
     from analysis.review.validate import load_review_dataset, validate_review_dataset
@@ -427,7 +442,9 @@ def prepare_review(
     mf = (load_manifest(manifest) if manifest
           else build_manifest(study_root, inspect_trajectories=False, gmx=gmx))
     rec = _select_system(mf, system)
-    evidence = session_identity_evidence(rec, request)
+    request, profile_ctx = _apply_profile(profile, rec, request, hide)
+    evidence = session_identity_evidence(
+        rec, request, profile.definition_identity if profile is not None else None)
     session_id = definition_token(evidence)
     review_root = analysis_root / REVIEW_DIRNAME
     sessions = review_root / SESSIONS_DIRNAME
@@ -457,7 +474,7 @@ def prepare_review(
     try:
         ds = _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root,
                        inputs, work, review_root, build, cache, reuse, list(reuse_from),
-                       dry_run, force, gmx)
+                       dry_run, force, gmx, profile_ctx)
         if dry_run:
             return Preparation(ds, None, None, replaced=replaced, dry_run=True)
         (build / DATASET_FILENAME).write_text(json.dumps(ds.to_dict(), indent=2) + "\n")
@@ -486,9 +503,49 @@ def _publish(build: Path, final: Path) -> None:
         shutil.rmtree(stale, ignore_errors=True)
 
 
+def _apply_profile(profile, rec, request: ReviewRequest, hide) -> tuple:
+    """Profile data → the same ReviewRequest type the generic path prepares."""
+    from dataclasses import replace as _replace
+    from analysis.review.request import DisplayRequest
+    if profile is None:
+        if hide:
+            raise ReviewError("--hide removes profile requests; it needs --profile")
+        if request.display is None:
+            request = _replace(request, display=DisplayRequest())
+        return request, None
+    from analysis.review.profiles import ProfileError, ProfileStatus, merge_request, resolve_profile
+    resolution = resolve_profile(profile, rec)
+    if resolution.status == ProfileStatus.NOT_APPLICABLE:
+        raise ReviewError(f"profile {profile.id!r} is not applicable to {rec.system_id}: "
+                          + "; ".join(resolution.reasons))
+    try:
+        merged, overrides = merge_request(resolution, request, hide)
+    except ProfileError as exc:
+        raise ReviewError(str(exc)) from exc
+    return merged, {"resolution": resolution, "overrides": overrides}
+
+
+def _profile_record(ctx, request: ReviewRequest, entries) -> Optional[dict]:
+    """Why this session was configured this way (provenance; not the definition
+    of any observable)."""
+    if ctx is None:
+        return None
+    from analysis.review.profiles import PROFILE_SCHEMA, final_status
+    res, p = ctx["resolution"], ctx["resolution"].profile
+    return {"id": p.id, "version": p.version, "schema": PROFILE_SCHEMA, "source": p.source,
+            "description": p.description, "definition_identity": p.definition_identity,
+            "composition": p.composition, "duplicates_dropped": p.duplicates_dropped,
+            "status": final_status(res, entries), "requirements": res.requirements,
+            "requests": [r.instance_id for r in res.requests], "optional": res.optional,
+            "display": p.display, "overrides": ctx["overrides"],
+            "resolved_request_identity": resolved_request_identity(request),
+            "policy_intent": "none — a profile never authorises transformations; its display "
+                             "preference is judged like an unflagged request"}
+
+
 def _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root, inputs,
-              work, review_root, build, cache, reuse, reuse_from, dry_run, force, gmx
-              ) -> ReviewDataset:
+              work, review_root, build, cache, reuse, reuse_from, dry_run, force, gmx,
+              profile_ctx=None) -> ReviewDataset:
     from analysis.campaign.compatibility import RESOLVER_VERSION
     from analysis.campaign.gmx import gmx_version
     from analysis.campaign.manifest import write_manifest
@@ -578,6 +635,7 @@ def _assemble(rec, mf, request, evidence, session_id, study_root, analysis_root,
                     "simforge_version": mf.simforge_version, "gmx_version": gmx_version(gmx),
                     "compatibility_resolver": RESOLVER_VERSION, "policy_engine": POLICY_ENGINE,
                     "policy_rule_version": RULE_VERSION,
+                    "profile": _profile_record(profile_ctx, request, entries),
                     "preparation": {"reuse": reuse, "reuse_from": [str(p) for p in reuse_from],
                                     "dry_run": dry_run, "force": force},
                     "prepared_at_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(

@@ -1,0 +1,13 @@
+schema: simforge/review-profile/v1
+id: soluble-protein
+version: 1
+description: >
+  Soluble protein: generic receptor shape and exposure plus receptor RMSD with
+  its own (internal-fit) analysis view. The display stays raw; the RMSD view
+  never becomes the displayed coordinates.
+extends: [general]
+requirements:
+  components: [receptor]
+  absent_components: [membrane]
+observables:
+  - observable: rmsd-receptor

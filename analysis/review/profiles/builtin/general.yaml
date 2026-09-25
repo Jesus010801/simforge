@@ -1,0 +1,13 @@
+schema: simforge/review-profile/v1
+id: general
+version: 1
+description: >
+  Conservative generic review: size and solvent exposure of the receptor
+  component when one is resolved. No requirements; requests that do not apply
+  are recorded as not applicable, never forced.
+display: raw
+observables:
+  - observable: rg
+    parameters: {selection: "component:receptor"}
+  - observable: sasa
+    parameters: {selection: "component:receptor", surface: "component:receptor"}

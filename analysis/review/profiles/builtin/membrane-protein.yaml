@@ -1,0 +1,13 @@
+schema: simforge/review-profile/v1
+id: membrane-protein
+version: 1
+description: >
+  Membrane-embedded protein, generic observables only (no membrane, leaflet or
+  pore metrics exist yet). The display stays raw — no protein-fitted display,
+  which the preprocessing policy refuses for membrane systems anyway. RMSD keeps
+  its own analysis view.
+extends: [general]
+requirements:
+  components: [receptor, membrane]
+observables:
+  - observable: rmsd-receptor

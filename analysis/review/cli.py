@@ -47,9 +47,15 @@ def review_fn(
     show: Annotated[Optional[list[str]], typer.Option("--show", help=_SHOW_HELP)] = None,
     request_file: Annotated[Optional[Path], typer.Option("--request",
         help="YAML/JSON file with an 'observables' list (observable + parameters).")] = None,
-    display: Annotated[str, typer.Option("--display",
+    display: Annotated[Optional[str], typer.Option("--display",
         help="Display view: raw (default; source coordinates) | whole | center:<Group> | "
-             "fit:<Group>. Judged by the preprocessing policy for purpose 'display'.")] = "raw",
+             "fit:<Group>. Judged by the preprocessing policy for purpose 'display'. "
+             "An explicit choice replaces a profile's preference.")] = None,
+    profile: Annotated[Optional[str], typer.Option("--profile",
+        help="Review profile: a built-in id (see `trajectory review-profiles`) or a YAML "
+             "file. Its requests are merged with --show/--request.")] = None,
+    hide: Annotated[Optional[list[str]], typer.Option("--hide",
+        help="Remove a profile request (instance id or observable id; repeatable).")] = None,
     display_intent: Annotated[bool, typer.Option("--display-intent",
         help="Explicitly choose an interpretation-changing display transformation "
              "(recorded as user_flag intent; applies to the display view only).")] = False,
@@ -94,13 +100,25 @@ def review_fn(
         _console.print("[red]Error:[/red] nothing to do: use --prepare-only (default) or --serve")
         raise typer.Exit(2)
     reqs = _requests(show, request_file)
+    from analysis.review.profiles import ProfileError, get_profile
     try:
-        req = ReviewRequest(reqs, DisplayRequest.parse(display, intent=display_intent))
+        prof = get_profile(profile) if profile else None
+        if display is not None:
+            disp = DisplayRequest.parse(display, intent=display_intent)
+        elif display_intent and prof is not None and prof.display:
+            # the user explicitly authorises the profile's display preference
+            disp = DisplayRequest.parse(prof.display, intent=True)
+        elif display_intent:
+            disp = DisplayRequest.parse("raw", intent=True)
+        else:
+            disp = None
+        req = ReviewRequest(reqs, disp)
         prep = prepare_review(target, req, topology=topology, structure=structure, index=index,
                               manifest=manifest, system=system, output=output, reuse=reuse,
                               reuse_from=tuple(reuse_from or ()), cache_dir=cache_dir,
-                              dry_run=dry_run, force=force, gmx=gmx)
-    except (ReviewError, RequestError) as exc:
+                              dry_run=dry_run, force=force, gmx=gmx, profile=prof,
+                              hide=tuple(hide or ()))
+    except (ReviewError, RequestError, ProfileError) as exc:
         _console.print(f"[red]Error:[/red] {exc}")
         raise typer.Exit(2)
     failures = prep.strict_failures()
@@ -193,6 +211,7 @@ def render_preparation(prep) -> None:
                        f"{tl['end_time_ps']} ps, timeline {tl['state']}{dup})")
     else:
         _console.print(f"Frames      [yellow]{tl.get('state')}[/yellow] {tl.get('reason', '')}")
+    _render_profile((ds.provenance or {}).get("profile"))
     dv = ds.display_view
     colour = _STATE_STYLE.get(dv.get("status"), "white")
     _console.print(f"Display     {(dv.get('request') or {}).get('mode')} → "
@@ -226,6 +245,92 @@ def render_preparation(prep) -> None:
                    f"failed={s['observables']['failed']}")
     if prep.dataset_path:
         _console.print(f"ReviewDataset {prep.dataset_path}")
+
+
+def _render_profile(p) -> None:
+    if not p:
+        return
+    colour = {"applicable": "green", "partially_applicable": "yellow"}.get(p["status"], "red")
+    _console.print(f"Profile     {p['id']} v{p['version']} ({p['source']}) → "
+                   f"[{colour}]{p['status']}[/{colour}]  [dim]{p['definition_identity'][:12]}[/dim]")
+    for r in p["requirements"]:
+        mark = "✓" if r["ok"] else "✗"
+        _console.print(f"            {mark} {r['requirement']} {r['component']}"
+                       + (f" — {r['reason']}" if r["reason"] else ""))
+    _console.print(f"            included: {len(p['requests'])} request(s) from the profile")
+    for o in p["optional"]:
+        if o["outcome"] == "included":
+            _console.print(f"            optional included: {o['instance_id']}")
+        else:
+            _console.print(f"            optional {o['outcome']}: {o['request']} — {o['reason']}")
+    ov = p["overrides"]
+    if ov["added"] or ov["hidden"]:
+        _console.print(f"            user added {ov['added']} · hidden {ov['hidden']}")
+    _console.print(f"            display from: {ov['display_source']}")
+
+
+def review_profiles_fn(
+    target: Annotated[Optional[Path], typer.Argument(
+        help="Optional RUN_DIR / TRAJECTORY: also check each profile's requirements "
+             "against that system (factual, unranked).")] = None,
+    topology: Annotated[Optional[Path], typer.Option("--topology", "-s")] = None,
+    structure: Annotated[Optional[Path], typer.Option("--structure")] = None,
+    system: Annotated[Optional[str], typer.Option("--system")] = None,
+    output: Annotated[Optional[str], typer.Option("--output", "-o")] = None,
+    profile: Annotated[Optional[list[str]], typer.Option("--profile",
+        help="Also list these profile files / ids.")] = None,
+    gmx: Annotated[str, typer.Option("--gmx")] = "gmx",
+    as_json: Annotated[bool, typer.Option("--json")] = False,
+) -> None:
+    """List review profiles; with a system, show whether each one's requirements hold."""
+    from analysis.review.profiles import ProfileError, get_profile, list_profiles, resolve_profile
+    try:
+        profiles = list_profiles() + [get_profile(x) for x in (profile or [])]
+    except ProfileError as exc:
+        _console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2)
+    rec = None
+    if target is not None:
+        from analysis.campaign.manifest import build_manifest
+        from analysis.review.prepare import ReviewError, _select_system, resolve_inputs
+        try:
+            root, _, _ = resolve_inputs(target, topology=topology, structure=structure,
+                                        output=output)
+            rec = _select_system(build_manifest(root, inspect_trajectories=False, gmx=gmx), system)
+        except ReviewError as exc:
+            _console.print(f"[red]Error:[/red] {exc}")
+            raise typer.Exit(2)
+    rows = []
+    for p in profiles:
+        row = p.to_dict()
+        if rec is not None:
+            res = resolve_profile(p, rec)
+            row["system"] = {"system_id": rec.system_id, "requirements_status": res.status,
+                             "requirements": res.requirements, "optional": res.optional}
+        rows.append(row)
+    if as_json:
+        print(json.dumps(rows, indent=2))
+        raise typer.Exit(0)
+    for r in rows:
+        _console.print(f"\n[bold cyan]{r['id']}[/bold cyan] v{r['version']} "
+                       f"[dim]({r['source']}; {r['definition_identity'][:12]})[/dim]")
+        _console.print(f"  {' '.join(r['description'].split())}")
+        req = r["requirements"]
+        _console.print(f"  requires: {req['components'] or '—'}"
+                       + (f"  absent: {req['absent_components']}" if req["absent_components"] else ""))
+        _console.print(f"  display: {r['display'] or 'raw (default)'}"
+                       + (f"  composition: {r['composition']}" if len(r["composition"]) > 1 else ""))
+        for o in r["observables"]:
+            _console.print(f"    • {o['observable']} {o['parameters'] or ''}")
+        for o in r["optional_observables"]:
+            _console.print(f"    ◦ if {o['when']}: {o['observable']} {o['parameters']}")
+        if "system" in r:
+            st = r["system"]["requirements_status"]
+            text = {"applicable": "requirements satisfied",
+                    "not_applicable": "requirements not satisfied",
+                    "review_required": "requirements need review"}.get(st, st)
+            why = "; ".join(x["reason"] for x in r["system"]["requirements"] if x["reason"])
+            _console.print(f"  on {r['system']['system_id']}: {text}" + (f" — {why}" if why else ""))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

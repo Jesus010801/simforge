@@ -207,8 +207,9 @@ class DisplayRequest:
 @dataclass
 class ReviewRequest:
     observables: list[ObservableRequest] = field(default_factory=list)
-    display: DisplayRequest = field(default_factory=DisplayRequest)
+    #: ``None`` = no explicit display choice (a profile's preference, else raw)
+    display: Optional[DisplayRequest] = field(default_factory=DisplayRequest)
 
     def to_dict(self) -> dict:
         return {"observables": [o.to_dict() for o in self.observables],
-                "display": self.display.to_dict()}
+                "display": self.display.to_dict() if self.display else None}

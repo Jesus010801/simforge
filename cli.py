@@ -2538,10 +2538,12 @@ from analysis.review.cli import (  # noqa: E402
     review_fn as _trajectory_review_fn,
     review_observables_fn as _trajectory_review_observables_fn,
     serve_fn as _trajectory_serve_fn,
+    review_profiles_fn as _trajectory_review_profiles_fn,
 )
 _trajectory_app.command(name="review")(_trajectory_review_fn)
 _trajectory_app.command(name="review-observables")(_trajectory_review_observables_fn)
 _trajectory_app.command(name="serve")(_trajectory_serve_fn)
+_trajectory_app.command(name="review-profiles")(_trajectory_review_profiles_fn)
 cli.add_typer(_trajectory_app)
 
 
