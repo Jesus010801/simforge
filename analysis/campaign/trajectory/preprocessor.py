@@ -89,6 +89,10 @@ def _plan_steps(requirements, src, topology_path, structure_path, semantic_index
     """Return ``(steps, error_warning)``.  Commands are built exactly as the
     original implementation built them; ``out_dir`` only sets where outputs go."""
     ref_for_center = structure_path or topology_path
+    # centring re-wraps with -pbc mol, which GROMACS only accepts with a .tpr
+    # (connectivity + masses); reference coordinates play no role in centring
+    center_s = (topology_path if topology_path and topology_path.lower().endswith(".tpr")
+                else ref_for_center)
     current = src
     steps: list[dict] = []
 
@@ -121,7 +125,7 @@ def _plan_steps(requirements, src, topology_path, structure_path, semantic_index
                 f"semantic index; refusing to guess", Severity.ERROR)
         out = out_dir / "centered.xtc"
         add("center",
-            ["trjconv", "-s", ref_for_center, "-f", current, "-o", str(out),
+            ["trjconv", "-s", center_s, "-f", current, "-o", str(out),
              "-pbc", "mol", "-center"],
             f"{grp}\nSystem", f"centre '{grp}' in the box",
             "centering only; no rotational fitting", True)

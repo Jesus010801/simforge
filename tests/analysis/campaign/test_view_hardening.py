@@ -229,7 +229,8 @@ def test_command_order_and_arguments_locked(env):
          "-pbc", "whole"],
         ["gmx", "trjconv", "-s", t, "-f", str(entry / "whole.xtc"),
          "-o", str(entry / "nojump.xtc"), "-pbc", "nojump"],
-        ["gmx", "trjconv", "-s", g, "-f", str(entry / "nojump.xtc"),
+        # -pbc mol needs a .tpr (GROMACS: "Option -pbc mol requires a .tpr file")
+        ["gmx", "trjconv", "-s", t, "-f", str(entry / "nojump.xtc"),
          "-o", str(entry / "centered.xtc"), "-pbc", "mol", "-center", "-n", n],
         ["gmx", "trjconv", "-s", g, "-f", str(entry / "centered.xtc"),
          "-o", str(entry / "fitted.xtc"), "-fit", "rot+trans", "-n", n],
@@ -237,6 +238,19 @@ def test_command_order_and_arguments_locked(env):
     assert [o.stdin for o in v.operations] == [
         "System", "System", "Protein\nSystem", "Protein\nSystem"]
     assert v.build_status == ViewBuildStatus.PLANNED and not entry.exists()
+
+
+def test_center_uses_tpr_for_pbc_mol_and_structure_only_without_one(env):
+    """GROMACS refuses ``-pbc mol`` without a .tpr; fitting keeps its reference."""
+    req = TrajectoryRequirements(centering_target="Protein")
+    v = build(env, req, dry_run=True)
+    (op,) = v.operations
+    assert op.command[op.command.index("-s") + 1] == str(env["tpr"])
+    top = env["tmp"] / "inputs" / "topol.top"
+    top.write_text("; no tpr\n")
+    v = build(env, req, dry_run=True, topology_path=str(top), work="w2")
+    (op,) = v.operations
+    assert op.command[op.command.index("-s") + 1] == str(env["gro"])   # nothing better exists
 
 
 def test_executed_commands_match_plan(env):
@@ -250,7 +264,7 @@ def test_executed_commands_match_plan(env):
         ["-pbc", "whole"], ["-pbc", "nojump"],
         ["-pbc", "mol", "-center", "-n", n], ["-fit", "rot+trans", "-n", n]]
     assert [c["args"][1:3] for c in tr] == [["-s", str(env["tpr"])], ["-s", str(env["tpr"])],
-                                            ["-s", str(env["gro"])], ["-s", str(env["gro"])]]
+                                            ["-s", str(env["tpr"])], ["-s", str(env["gro"])]]
     assert tr[0]["args"][4] == str(env["traj"])
     assert [c["stdin"] for c in tr] == ["System\n", "System\n", "Protein\nSystem\n",
                                         "Protein\nSystem\n"]
