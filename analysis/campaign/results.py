@@ -94,6 +94,15 @@ def read_column(ref: StorageRef) -> list[float]:
         return _read_xvg_column(Path(ref.path), ref.column)
     if ref.format == StorageFormat.CSV:
         return _read_csv_column(Path(ref.path), ref.column)
+    if ref.format == StorageFormat.NPY:
+        import numpy as np
+        arr = np.load(Path(ref.path), allow_pickle=False)
+        if arr.ndim == 1 and ref.column in (None, 0):
+            return arr.tolist()
+        if arr.ndim == 2 and ref.column is not None and 0 <= ref.column < arr.shape[1]:
+            return arr[:, ref.column].tolist()
+        raise ValueError(f"{Path(ref.path).name}: cannot address column {ref.column} of a "
+                         f"{arr.ndim}-D array")
     raise NotImplementedError(f"reading {ref.format!r} storage is not implemented yet")
 
 

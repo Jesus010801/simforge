@@ -103,6 +103,7 @@ def run_analyze(
     reuse: bool = True,
     reuse_roots: Optional[list] = None,
     use_imported: Optional[dict] = None,
+    intermediate_store: Optional[str | Path] = None,
 ) -> CampaignRunResult:
     """Discover/validate, then run the requested observables per system.
 
@@ -117,6 +118,12 @@ def run_analyze(
     a fully compatible one is returned as CACHED without running GROMACS.
     ``use_imported``: ``{analysis_id: ResultArray}`` explicitly chosen
     external series — labelled externally supplied, never verified equivalent.
+
+    Phase 13: the requested observables' declared dependencies are planned
+    once per system as a deduplicated DAG and resolved through the persistent
+    intermediate store (``intermediate_store``, default ``<output>/intermediates``)
+    before any observable runs; a failed / blocked dependency blocks only its
+    consumers.
     """
     registry.ensure_loaded()
     study_root = Path(study_root).resolve()
@@ -164,6 +171,11 @@ def run_analyze(
         diag_report, diag_ref = _system_diagnostics(
             rec, sys_out, gmx, result, diagnostics=diagnostics, dry_run=dry_run,
             cache_dir=diagnostics_cache_dir)
+        deps = _system_dependencies(
+            rec, valid_analyses, parameters, sys_out, gmx, force, result, dry_run=dry_run,
+            diag_report=diag_report, diag_ref=diag_ref,
+            tic=_time_index_cache(sys_out, diag_ref, diagnostics_cache_dir),
+            store_root=Path(intermediate_store) if intermediate_store else out_dir / "intermediates")
 
         for analysis_id in valid_analyses:
             spec = registry.get(analysis_id)
@@ -185,6 +197,10 @@ def run_analyze(
             if use_imported and analysis_id in use_imported:
                 result.results.append(_explicit_import(spec, rec, use_imported[analysis_id]))
                 continue
+            direct, blocked = deps.for_consumer(analysis_id)
+            if blocked is not None:
+                result.results.append(blocked)                # only this consumer is blocked
+                continue
             tic = _time_index_cache(sys_out, diag_ref, diagnostics_cache_dir)
             evaluated: list = []
             would_reuse = None
@@ -194,8 +210,9 @@ def run_analyze(
                 cached, evaluated = _try_reuse(
                     spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters,
                     policy_intent, diag_report, diag_ref, tic, reuse_roots or [],
-                    write_record=not dry_run)
+                    write_record=not dry_run, intermediates=direct)
                 if cached is not None and not dry_run:
+                    cached.dependencies = [r.reference() for r in direct.values()]
                     result.results.append(cached)
                     result.output_files.extend(cached.output_files)
                     continue
@@ -216,6 +233,7 @@ def run_analyze(
                 gmx=gmx,
                 dry_run=dry_run,
                 time_index_cache_dir=tic,
+                intermediates=direct,
             )
             try:
                 ares = spec.execute(ctx)
@@ -228,6 +246,7 @@ def run_analyze(
                     "observable_exception", ares.message, Severity.ERROR, scope=rec.system_id))
 
             ares.trajectory_view_kind = view.kind
+            ares.dependencies = [r.reference() for r in direct.values()]
             if would_reuse is not None:
                 ares.compatibility = {**would_reuse.compatibility, "decision": "would_reuse",
                                       "reuse_from": would_reuse.reused_from}
@@ -403,7 +422,8 @@ def _requested_timeline(view, tic: Path, gmx: str) -> Optional[list[float]]:
 
 
 def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, intent,
-               diag_report, diag_ref, tic, extra_roots, *, write_record: bool = True):
+               diag_report, diag_ref, tic, extra_roots, *, write_record: bool = True,
+               intermediates: Optional[dict] = None):
     """(CACHED result | None, evaluations).  Order: current applicability ->
     candidates -> policy-planned view identity (no build) -> definition
     evidence -> per-dimension compatibility.  ``write_record=False`` (dry run)
@@ -426,7 +446,8 @@ def _try_reuse(spec, rec, sys_out, out_dir, obs_out, gmx, result, parameters, in
     ctx = AnalysisContext(system=rec, semantic_index=rec.semantic_index, trajectory_view=planned,
                           topology_path=rec.topology_path or (rec.structure_path or ""),
                           structure_path=rec.structure_path, output_dir=obs_out,
-                          parameters=parameters, gmx=gmx, dry_run=True, time_index_cache_dir=tic)
+                          parameters=parameters, gmx=gmx, dry_run=True, time_index_cache_dir=tic,
+                          intermediates=intermediates or {})
     evidence = spec.definition_evidence(ctx)
     if evidence is None:
         return None, []
@@ -482,6 +503,65 @@ def _explicit_import(spec, rec, array) -> AnalysisResult:
                        "fingerprint": array.storage.fingerprint.digest, "user_selected": True}
     res.compatibility = {"decision": "explicit_import", "chosen": report.to_dict()}
     return res
+
+
+class _Dependencies:
+    """One system's resolved dependency DAG (or its planning failure)."""
+
+    def __init__(self, plan=None, results=None, error: str = "", consumers=(), system_id=""):
+        self.plan, self.results, self.error = plan, results or {}, error
+        self.consumers, self.system_id = set(consumers), system_id
+
+    def for_consumer(self, analysis_id: str) -> tuple[dict, Optional[AnalysisResult]]:
+        if analysis_id not in self.consumers:
+            return {}, None
+        if self.error:
+            return {}, AnalysisResult(analysis_id=analysis_id, system_id=self.system_id,
+                                      status=AnalysisStatus.FAILED,
+                                      message=f"dependency graph invalid: {self.error}")
+        from analysis.campaign.intermediates import IntermediateStatus, consumer_dependencies
+        direct, status, why = consumer_dependencies(self.plan, self.results, analysis_id)
+        if status is None:
+            return direct, None
+        return direct, AnalysisResult(
+            analysis_id=analysis_id, system_id=self.system_id,
+            status=(AnalysisStatus.FAILED if status == IntermediateStatus.FAILED
+                    else AnalysisStatus.REVIEW_REQUIRED),
+            message=why, dependencies=[r.reference() for r in direct.values()])
+
+
+def _system_dependencies(rec, analyses, parameters, sys_out, gmx, force, result, *, dry_run,
+                         diag_report, diag_ref, tic, store_root) -> _Dependencies:
+    """Plan + resolve every declared dependency of the requested observables once."""
+    from analysis.campaign.intermediates import (
+        DependencyCycleError, IntermediateStore, plan_dependencies, resolve_plan,
+    )
+    consumers = [(a, list(registry.get(a).dependencies(parameters))) for a in analyses]
+    consumers = [(a, reqs) for a, reqs in consumers if reqs]
+    if not consumers:
+        return _Dependencies()
+    ids = [a for a, _ in consumers]
+    try:
+        plan = plan_dependencies(consumers)
+    except DependencyCycleError as exc:
+        result.dependency_plans[rec.system_id] = {"error": str(exc), "cycle": exc.path}
+        return _Dependencies(error=str(exc), consumers=ids, system_id=rec.system_id)
+
+    def view_resolver(requirements, purpose):
+        # the intermediate's own view, judged by the policy for its own purpose
+        # (AUTO intent): never inherited from a consumer
+        return _resolve_view(rec, requirements, sys_out, gmx, force, result, dry_run=dry_run,
+                             purpose=purpose, diagnostics=diag_report, diagnostics_ref=diag_ref)
+    results = resolve_plan(plan, system=rec, semantic_index=rec.semantic_index,
+                           topology_path=rec.topology_path or (rec.structure_path or ""),
+                           structure_path=rec.structure_path, store=IntermediateStore(store_root),
+                           view_resolver=view_resolver, gmx=gmx, dry_run=dry_run,
+                           time_index_cache_dir=tic)
+    statuses = {k: r.status for k, r in results.items()}
+    result.dependency_plans[rec.system_id] = {
+        "plan": plan.to_dict(), "explain": plan.explain(statuses),
+        "results": {k: r.reference() for k, r in results.items()}}
+    return _Dependencies(plan, results, consumers=ids, system_id=rec.system_id)
 
 
 def _time_index_cache(sys_out: Path, diag_ref: Optional[dict], cache_dir) -> Path:

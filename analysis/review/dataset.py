@@ -100,6 +100,8 @@ class ObservableEntry:
     provenance_ref: Optional[dict[str, Any]] = None
     externally_supplied: bool = False
     independently_verified: bool = True
+    #: shared intermediates it was computed from (identities + status; no payload)
+    dependencies: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def available(self) -> bool:
@@ -123,6 +125,7 @@ class ObservableEntry:
             "reuse": self.reuse, "provenance_ref": self.provenance_ref,
             "externally_supplied": self.externally_supplied,
             "independently_verified": self.independently_verified,
+            "dependencies": self.dependencies,
         }
 
     @classmethod
@@ -142,6 +145,7 @@ class ObservableEntry:
             reuse=d.get("reuse"), provenance_ref=d.get("provenance_ref"),
             externally_supplied=d.get("externally_supplied", False),
             independently_verified=d.get("independently_verified", True),
+            dependencies=list(d.get("dependencies", [])),
         )
 
 

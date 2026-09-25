@@ -239,6 +239,9 @@ def render_preparation(prep) -> None:
         _console.print(f"  [{colour}]{how:<24}[/{colour}] {o.instance_id}{sync}")
         if o.state not in ("available", "planned") and o.reason:
             _console.print(f"      [dim]{o.reason[:300]}[/dim]")
+        for d in o.dependencies:                      # shared intermediates (provenance)
+            _console.print(f"      [dim]└── {d.get('key')}  [{d.get('status')}] "
+                           f"{(d.get('artifact_identity') or '')[:12]}[/dim]")
     _console.print(f"Summary     computed={s['observables']['computed']} "
                    f"reused={s['observables']['cached']} blocked={s['observables']['blocked']} "
                    f"not_applicable={s['observables']['not_applicable']} "

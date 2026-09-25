@@ -1819,6 +1819,8 @@ class AnalysisResult:
     # ── Phase 8: reuse (CACHED results reference, never copy, the original) ─
     reused_from: Optional[dict[str, Any]] = None
     compatibility: Optional[dict[str, Any]] = None
+    # ── Phase 13: intermediates this result was computed from (references only) ─
+    dependencies: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -1842,6 +1844,7 @@ class AnalysisResult:
             "definition_evidence": self.definition_evidence,
             "reused_from": self.reused_from,
             "compatibility": self.compatibility,
+            "dependencies": self.dependencies,
         }
 
     @classmethod
@@ -1866,6 +1869,7 @@ class AnalysisResult:
             definition_evidence=dict(d.get("definition_evidence", {})),
             reused_from=d.get("reused_from"),
             compatibility=d.get("compatibility"),
+            dependencies=list(d.get("dependencies", [])),
         )
 
 
@@ -1879,6 +1883,8 @@ class CampaignRunResult:
     results: list[AnalysisResult] = field(default_factory=list)
     output_files: list[str] = field(default_factory=list)
     warnings: list[CampaignWarning] = field(default_factory=list)
+    #: Phase 13: per system, the dependency plan and each node's outcome
+    dependency_plans: dict[str, Any] = field(default_factory=dict)
 
     def error_warnings(self) -> list[CampaignWarning]:
         return [w for w in self.warnings if w.severity == Severity.ERROR]
@@ -1894,4 +1900,5 @@ class CampaignRunResult:
             "results": [r.to_dict() for r in self.results],
             "output_files": self.output_files,
             "warnings": [w.to_dict() for w in self.warnings],
+            "dependency_plans": self.dependency_plans,
         }

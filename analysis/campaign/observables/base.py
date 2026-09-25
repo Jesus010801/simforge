@@ -34,6 +34,9 @@ class AnalysisContext:
     dry_run: bool = False
     #: Phase 1 time-index cache shared with the diagnostics pass (timeline reuse)
     time_index_cache_dir: Optional[Path] = None
+    #: Phase 13: this observable's resolved dependencies, by request key
+    #: (``IntermediateResult``; resolved by orchestration, never looked up by path)
+    intermediates: dict = field(default_factory=dict)
 
 
 @runtime_checkable
@@ -128,10 +131,19 @@ class ObservableSpec:
         from analysis.campaign.results import definition_token
         return definition_token(evidence)
 
-    def dependencies(self, params: Optional[dict] = None) -> list[tuple[str, dict]]:
-        """Reserved: ``(observable_id, parameters)`` this observable consumes.
-        Not orchestrated yet; must stay empty until it is."""
+    def dependencies(self, params: Optional[dict] = None) -> list:
+        """Shared scientific intermediates this observable consumes
+        (``IntermediateRequest``s; Phase 13).  Orchestration plans them as one
+        deduplicated DAG and passes the results in ``ctx.intermediates``.
+        An observable with dependencies must include
+        :meth:`dependency_evidence` in its definition evidence."""
         return []
+
+    @staticmethod
+    def dependency_evidence(ctx: "AnalysisContext") -> list:
+        """Identities of the resolved dependencies (for definition evidence)."""
+        return [[k, r.intermediate_id, r.version, r.definition_identity, r.input_identity]
+                for k, r in sorted((ctx.intermediates or {}).items())]
 
     def trajectory_requirements(self, ctx_params: dict) -> TrajectoryRequirements:  # pragma: no cover
         raise NotImplementedError

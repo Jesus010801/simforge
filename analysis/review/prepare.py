@@ -712,7 +712,10 @@ def _run_instance(req, rec, study_root, analysis_root, review_root, work, manife
                       # results are still reused (--no-reuse is the way to recompute)
                       gmx=gmx, inspect_trajectories=False, dry_run=dry_run,
                       parameters=params, diagnostics="auto", diagnostics_cache_dir=cache,
-                      reuse=reuse, reuse_roots=roots)
+                      reuse=reuse, reuse_roots=roots,
+                      # one shared intermediate store for every instance (and dry runs
+                      # only read it)
+                      intermediate_store=review_root / "intermediates")
     ares = next((r for r in res.results if r.system_id == rec.system_id), None)
     if ares is None:
         entry.state = CapabilityState.UNSUPPORTED
@@ -722,6 +725,7 @@ def _run_instance(req, rec, study_root, analysis_root, review_root, work, manife
     entry.execution_status = ares.status
     entry.reason = ares.message if entry.state != CapabilityState.AVAILABLE else ""
     entry.definition_token = ares.definition_token
+    entry.dependencies = list(ares.dependencies or [])
     entry.definition_identity = definition_identity(ares.definition_evidence)
     if entry.availability == Availability.EXPLICIT_IMPORT:
         entry.externally_supplied, entry.independently_verified = True, False
