@@ -18,7 +18,7 @@ Phase 0 validation: reviewed and accepted with no BLOCKER findings. `simforge/kn
 ---
 
 ## PHASE 1 — Pure scientific domain model
-**Status:** READY FOR DESIGN
+**Status:** DONE
 
 Objects: EntityId, ExternalIdentifier, Entity, Protein, ProteinSequence, ChemicalIdentity, ChemicalSpecies, ExperimentalStructure, ArtifactRef, Claim, Evidence, PolicyRef, Decision, DecisionContext, KnowledgeBundleManifest.
 
@@ -28,10 +28,43 @@ Forbidden: HTTP, SQLAlchemy/PostgreSQL, SQLite/DuckDB, simulation engines, CLI, 
 
 Acceptance: external IDs are not PKs; Claim != Evidence; deterministic serialization; SHA256 artifact semantics; no persistence/network/engine imports.
 
+Implementation: all 15 approved public contracts are implemented in the 12 allowed domain files, with 11 new domain test files. The approved contract uses kind-free UUIDv4 identities, separate internal/source revisions, deeply immutable Pydantic 2 values, typed SHA256 digests, canonical NFC/Decimal `sski-json-v1`, versioned sequence fingerprints, distinct claims/evidence and chemical identities/species, extensible experimental methods, four-state decisions, pinned deferred operations, and value-level manifest consistency. Parent-package exports remain unchanged.
+
+Final validation:
+
+- **Final domain validation:** 548 passed, no failures, existing warnings only.
+- **Final focused regression gate:** 770 passed, 2 skipped, 0 failed; matches the original focused baseline.
+- **Final isolated repository validation:** 3250 passed, 16 skipped, 4 deselected, 8 xfailed, 1 xpassed, 5 failed.
+
+The isolated repository validation was performed in a detached worktree based on `ad212fc` — `docs(knowledge): establish SSKI architecture contracts`. Only the final Phase 1 overlay was copied into that worktree:
+
+- `simforge/knowledge/domain/`
+- `tests/knowledge/domain/`
+- `docs/sski/09_IMPLEMENTATION_PLAN.md`
+
+Four isolated failures are the previously documented ligand hydrogenation baseline failures:
+
+1. `ligand/test_integrate.py::TestPrepareCLI::test_prepare_with_ambiguous_h_ratio_blocks_without_rdkit`
+2. `ligand/test_integrate.py::TestHydrogenationCLIOption::test_hydrogenation_none_unknown_status_exits_nonzero`
+3. `ligand/test_integrate.py::TestHydrationStatus::test_status_unknown_for_plausible_ratio`
+4. `ligand/test_integrate.py::TestHydrationStatus::test_complex_with_h_status_is_unknown`
+
+The fifth isolated failure is `tests/test_membrane_water_v2_stability.py::test_one_scale_connection_is_reported_as_unresolved_topology`. It was independently reproduced against clean `ad212fc` with no Phase 1 overlay and against the same baseline with the final Phase 1 overlay. Ten repeated executions on the clean baseline failed consistently; ten repeated executions with the overlay also failed consistently. This membrane-water failure is pre-existing relative to Phase 1, not an SSKI regression.
+
+**Phase 1 introduced zero new failures relative to the isolated baseline.** The repository validation still has the five pre-existing failures listed above; it is not a zero-failure result.
+
+A separate repository-wide run in the user's active dirty working tree produced additional `analysis/campaign` failures caused by concurrent user-owned campaign development. These failures disappear in the isolated `ad212fc` + Phase 1 worktree and are explicitly excluded from Phase 1 regression attribution.
+
+Static dependency checks, fresh-child-interpreter isolation, cross-process canonical serialization, golden vectors, immutability/bypass checks, and manifest consistency tests passed.
+
+Final architecture review: **Phase 1 final review passed.** No unresolved BLOCKER findings and no unresolved MAJOR findings remain. The scalar ownership, DEFERRED scientific-only schema, and ExperimentalStructure classification issues were remediated and adversarially revalidated. Exactly 15 approved public objects remain. No Phase 2 implementation was introduced. Unrelated user-owned work was preserved.
+
+Deferred: physical bundle/compiler/runtime guarantees, persistence, federation, registry access, scientific authenticity/equivalence resolution, and the accepted SimulationPlan/ADR-010 integration gap. Phase 2 has not started.
+
 ---
 
 ## PHASE 2 — Universal Entity Registry
-**Status:** TODO
+**Status:** READY FOR DESIGN
 
 Registry protocol + in-memory implementation + aliases/deprecation semantics.
 
