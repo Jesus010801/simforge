@@ -16,7 +16,7 @@ The system needs a byte-storage contract that does not conflate artifact IDs,
 content digests, source accessions, filenames, or scientific equivalence, and
 that remains independently testable across volatile and filesystem backends.
 
-## Proposed decision
+## Decision
 
 1. **Frozen dependencies.** Phase 1 `ArtifactRef`, `EntityId`, canonical
    serialization, the Phase 2 registry API, and Phase 2 errors remain unchanged.
@@ -118,4 +118,4 @@ available. Existing references become retrievable only after successful
 registration in a registry containing their bytes. Registry presence does not
 prove who supplied content or whether it is scientifically valid.
 
-This ADR remains Proposed pending review and acceptance. Acceptance does not authorize implementation; implementation still requires separate user authorization against the accepted Phase 3 design and exact allowlist.
+This ADR was accepted following final design review. Acceptance does not authorize implementation; implementation requires separate user authorization against the accepted Phase 3 design and exact allowlist.
